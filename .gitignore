@@ -1,0 +1,28 @@
+# Secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.*
+
+# Claude Code — local, machine-specific
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Logs / temp
+*.log
+tmp/
+.cache/
+
+# [TODO] add language-specific entries once the stack is chosen
+# Python:      __pycache__/  .venv/  *.pyc  .pytest_cache/
+# Node/TS:     node_modules/  dist/  build/  .next/
+# Go:          /bin/  *.test
+# Rust:        /target/
