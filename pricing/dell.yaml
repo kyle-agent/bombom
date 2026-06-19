@@ -1,0 +1,4 @@
+# 가격 오버레이 (원화, 시안 값) — 카탈로그/설계와 분리 보관
+entries:
+  - { slug: dell-poweredge-r760, unit_cost: 19500000, valid_from: 2025-01-01, source: "시안" }
+  - { slug: dell-poweredge-r660, unit_cost: 15000000, source: "시안" }

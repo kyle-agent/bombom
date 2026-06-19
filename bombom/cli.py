@@ -14,6 +14,9 @@ import argparse
 import json
 import sys
 
+from datetime import date
+
+from .bom import PriceBook, compute_bom
 from .catalog import Catalog, CatalogError, reindex, sync
 
 
@@ -80,6 +83,39 @@ def _cmd_counts(args) -> int:
     return 0
 
 
+def _won(n: int) -> str:
+    return "₩" + format(int(n), ",d")
+
+
+def _cmd_bom(args) -> int:
+    as_of = date.fromisoformat(args.as_of) if args.as_of else None
+    result = compute_bom(
+        args.path,
+        catalog=Catalog(),
+        pricebook=PriceBook.load(args.pricing),
+        release=args.release,
+        valuation_date=as_of,
+    )
+    print(f"BOM — {args.path}  (as of {result.valuation_date})")
+    print(f"  총 CAPEX : {_won(result.total_capex)}")
+    if args.release:
+        print(f"  릴리즈 {args.release} 추가분 : {_won(result.release_delta)}")
+    print(f"  전력 합계 : {result.power_w:,} W")
+    if result.by_category:
+        print("  카테고리별: " + ", ".join(f"{k}={_won(v)}" for k, v in sorted(result.by_category.items())))
+    if result.by_release:
+        print("  릴리즈별  : " + ", ".join(f"{k}={_won(v)}" for k, v in sorted(result.by_release.items())))
+    if result.unpriced:
+        print(f"  ⚠️ 미가격 {len(result.unpriced)}건: "
+              + ", ".join(f"{li.name}×{li.qty}" for li in result.unpriced[:8]))
+    errors = [i for i in result.issues if i.level == "error"]
+    if errors:
+        print(f"  ⚠️ 오류 {len(errors)}건 (집계 제외):")
+        for i in errors[: args.show_issues]:
+            print(f"      - {i.path}: {i.message}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="bombom")
     sub = parser.add_subparsers(dest="group", required=True)
@@ -115,6 +151,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_counts = catalog.add_parser("counts", help="row counts per kind")
     p_counts.set_defaults(func=_cmd_counts)
+
+    p_bom = sub.add_parser("bom", help="compute the BOM/CAPEX for a design subtree")
+    p_bom.add_argument("path", help="hierarchy path, e.g. offerings/cloud-a or a zone dir")
+    p_bom.add_argument("--release", help="highlight this release's added CAPEX")
+    p_bom.add_argument("--as-of", help="valuation date YYYY-MM-DD (default today)")
+    p_bom.add_argument("--pricing", default="pricing", help="pricing overlay dir (default: pricing/)")
+    p_bom.add_argument("--show-issues", type=int, default=10)
+    p_bom.set_defaults(func=_cmd_bom)
 
     return parser
 
