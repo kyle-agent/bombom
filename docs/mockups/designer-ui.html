@@ -89,6 +89,14 @@
   .mseg.new{outline:1.5px solid var(--new);outline-offset:-1px}
   .mseg.fade{opacity:.18;filter:grayscale(1)}
   .minifoot{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4}
+  /* full-size elevations side by side (NetBox-style) */
+  .elevrow{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+  .rackcol{flex:none}
+  .rackcolhead{display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:13px}
+  .rackcolhead .editlink{margin-left:auto;color:var(--accent);font-size:11px;cursor:pointer}
+  .rackcolhead .editlink:hover{text-decoration:underline}
+  .rack.ro .dev{cursor:default}
+  .winbtn{margin-left:auto;border:1px solid var(--accent);background:#eff6ff;color:#1e40af;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:12px}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase}
@@ -201,7 +209,7 @@ const RACKS=[
   {id:'R04',type:'network'},
 ];
 const RACK_U=42, BASE_USLOT=16, BASE_MINI_U=4;
-let zoom=1.4;                                // 0.6 ~ 3.0
+let zoom=1;                                  // 0.6 ~ 3.0 (1 = 개별 랙 100%)
 const uslot=()=>Math.max(7,Math.round(BASE_USLOT*zoom));
 const miniU=()=>Math.max(1.5,BASE_MINI_U*zoom);
 const miniW=()=>Math.round(58*zoom);
@@ -317,19 +325,39 @@ function buildRack(rid){
   });
   return rack;
 }
-function miniRackHTML(r){
-  const mu=miniU(), w=miniW();
-  const list=placements[r.id]; let used=0,nw=0,cap=0,relcap=0;
-  let segs='';
-  list.forEach(p=>{const m=byId(p.modelId);cap+=m.price; if(p.status==='new'){relcap+=m.price;}
+// Full-size read-only rack elevation (same dimensions as the editable detail at current zoom).
+function rackStaticHTML(rid,U,withEdit){
+  const r=rackById(rid),t=TYPE(r.type);
+  let used=0,nw=0,cap=0,relcap=0,blocks='';
+  placements[rid].forEach(p=>{const m=byId(p.modelId);cap+=m.price; if(p.status==='new')relcap+=m.price;
     if(m.u===0)return; used+=p.u; if(p.status==='new')nw++;
-    const label=zoom>=1.6?`<span style="font-size:${Math.round(7*zoom)}px;color:#fff;padding-left:3px;white-space:nowrap;overflow:hidden">${m.name}</span>`:'';
-    segs+=`<div class="mseg ${p.status} ${releaseOnly&&p.status!=='new'?'fade':''}" style="background:${CATCOLOR[m.cat]};bottom:${(p.startU-1)*mu+2}px;height:${p.u*mu-1}px;display:flex;align-items:center" title="${m.name} · U${p.startU} · ${STLABEL[p.status]}">${label}</div>`;});
-  return `<div class="mini" style="width:${w+16}px;font-size:${Math.round(12*Math.min(zoom,1.5))}px" onclick="drill('${r.id}')" title="클릭=상세/배치">
-      <div class="mininame">${r.id}</div>
-      <div class="minirack" style="width:${w}px;height:${RACK_U*mu+4}px">${segs}</div>
-      <div class="minifoot">${used}/42U${nw?` · <b style="color:var(--new)">+${nw}</b>`:''}<br>$${Math.round(cap/1000)}k${relcap?` <span style="color:var(--new)">(+$${Math.round(relcap/1000)}k)</span>`:''}</div>
-    </div>`;
+    const isNew=p.status==='new';
+    blocks+=`<div class="dev ${isNew?'new':'existing'} ${releaseOnly&&!isNew?'fade':''}" style="background:${CATCOLOR[m.cat]};bottom:${(p.startU-1)*U+6}px;height:${p.u*U-2}px;font-size:${Math.max(9,Math.round(11*Math.min(zoom,1.4)))}px" title="${m.name} · U${p.startU} · ${STLABEL[p.status]}">${m.name}<small>U${p.startU}</small>${isNew?'<span class="newpill">NEW</span>':''}</div>`;});
+  let slots='';
+  for(let u=RACK_U;u>=1;u--)slots+=`<div class="uslot" style="height:${U}px"><span class="uno">${u}</span></div>`;
+  const w=Math.round(180*zoom+60);
+  return `<div class="rackcol">
+     <div class="rackcolhead"><span class="rolebadge" style="background:${t.color}">${t.key.toUpperCase()}</span> <b>${r.id}</b>
+       ${withEdit?`<span class="editlink" onclick="drill('${r.id}')">편집 ✎</span>`:''}</div>
+     <div class="rack ro" style="width:${w}px;height:${RACK_U*U+12}px">${slots}${blocks}</div>
+     <div class="minifoot">${used}/42U${nw?` · <b style="color:var(--new)">+${nw}</b>`:''} · $${Math.round(cap/1000)}k${relcap?` <span style="color:var(--new)">(+$${Math.round(relcap/1000)}k)</span>`:''}</div>
+   </div>`;
+}
+// Open the current scope's elevations in a separate read-only window (NetBox-style page).
+function openWindow(){
+  const U=uslot();
+  const types=overviewType?[overviewType]:RACK_TYPES.map(t=>t.key);
+  let body='';
+  types.forEach(tk=>{const t=TYPE(tk),racks=RACKS.filter(r=>r.type===tk);
+    body+=`<h2><span class="rolebadge" style="background:${t.color}">${tk.toUpperCase()}</span> ${racks.length} racks · ${t.rt}</h2>
+      <div class="elevrow">${racks.map(r=>rackStaticHTML(r.id,U,false)).join('')}</div>`;});
+  const css=document.querySelector('style').innerHTML;
+  const scope=overviewType?overviewType.toUpperCase()+' 타입':'Zone az1 전체';
+  const win=window.open('','_blank');
+  win.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>bombom — ${scope} (읽기전용)</title>
+    <style>${css} body{padding:18px;background:#f8fafc}</style></head>
+    <body><h1 style="font-size:18px">읽기전용 실장도 — ${scope} <span style="color:#94a3b8;font-weight:400;font-size:13px">(Release R2025.07)</span></h1>${body}</body></html>`);
+  win.document.close();
 }
 function zoomBarHTML(){
   return `<div class="zoombar">
@@ -371,12 +399,14 @@ function renderMain(){
     const scopeName=overviewType?`${overviewType.toUpperCase()} 타입`:'Zone az1 (전체)';
     document.getElementById('mainhead').textContent='전체 보기 — '+scopeName;
     document.getElementById('crumb').innerHTML=`CloudA / kr-east / az1 / <b>${overviewType?overviewType:'전체 보기'}</b>`;
-    let h=`<div class="ovnote">랙 타입은 <b>분류</b>일 뿐 — 같은 타입이라도 각 랙은 개별 구성입니다(곱하기 ✕). 미니 실장도를 클릭하면 상세·배치로 들어갑니다. <b>이번 릴리즈만</b> 토글 시 추가분만 강조.</div>`;
+    let h=`<div class="ovnote" style="display:flex;align-items:center;gap:8px">
+        <span>NetBox 스타일 — 각 랙을 <b>개별 랙과 동일한 크기</b>로 나란히(읽기전용). 랙 타입은 <b>분류</b>일 뿐, 같은 타입도 랙마다 개별 구성입니다. <b>편집 ✎</b>=상세/배치, 줌으로 크기 조절(스크롤).</span>
+        <button class="winbtn" onclick="openWindow()">⧉ 새 창(읽기전용)</button></div>`;
     const types=overviewType?[overviewType]:RACK_TYPES.map(t=>t.key);
     types.forEach(tk=>{
       const t=TYPE(tk),racks=RACKS.filter(r=>r.type===tk);
       h+=`<div class="ovtype"><div class="ovtypehead"><span class="rolebadge" style="background:${t.color}">${tk.toUpperCase()}</span><span class="rackmeta">rack-type · ${racks.length} racks · ${t.rt}</span></div>
-        <div class="ovgrid">${racks.map(miniRackHTML).join('')}</div></div>`;
+        <div class="elevrow">${racks.map(r=>rackStaticHTML(r.id,uslot(),true)).join('')}</div></div>`;
     });
     mv.insertAdjacentHTML('beforeend',h);
   }
