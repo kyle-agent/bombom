@@ -61,6 +61,33 @@
   .model .rm{margin-left:auto;cursor:pointer;color:var(--muted);font-size:14px}
   .model .rm:hover{color:var(--bad)}
   .hint{color:var(--muted);font-size:11px;margin:0 0 8px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  /* ① model-select tabs (카탈로그 | 담은 목록) */
+  .mtabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+  .mtab{flex:1;border:none;background:#f8fafc;padding:9px 8px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:6px}
+  .mtab:hover{color:var(--accent)}
+  .mtab.active{color:var(--accent);background:#fff;border-bottom-color:var(--accent)}
+  .mtab .tabcnt{background:#eff6ff;color:var(--accent);border-radius:10px;font-size:10px;padding:0 7px;font-weight:700}
+  .mpane{display:flex;flex-direction:column;min-height:0;flex:1}
+  /* add-rack button + modal */
+  .addbtn{margin-left:auto;border:1px solid var(--accent);background:#eff6ff;color:var(--accent);border-radius:7px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;text-transform:none;letter-spacing:0}
+  .addbtn:hover{background:#dbeafe}
+  .modal-back{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal-back.show{display:flex}
+  .modal{background:#fff;border-radius:12px;width:440px;max-width:92vw;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .modal h4{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px}
+  .modal .mbody{padding:14px 16px}
+  .modal .mfoot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+  .modal .mfoot button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer}
+  .modal .mfoot button.primary{background:var(--ok);color:#fff;border-color:var(--ok);font-weight:600}
+  .modal .mfoot button.primary:disabled{opacity:.5;cursor:not-allowed}
+  .modal label.fl{display:block;font-size:12px;font-weight:600;margin:10px 0 3px}
+  .modal select,.modal input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:13px}
+  .modal .pickbox{border:1px solid var(--line);border-radius:8px;max-height:160px;overflow:auto;margin-top:6px}
+  .modal .pickrow{padding:7px 9px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12px}
+  .modal .pickrow:last-child{border-bottom:none}
+  .modal .pickrow:hover{background:#f1f5f9}
+  .modal .pickrow.sel{background:#dbeafe}
+  .modal .chosen{margin-top:6px;font-size:12px;color:var(--ok);font-weight:600}
   /* center / elevation (client-side) */
   .toolbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .toolbar label{font-size:12px;display:flex;align-items:center;gap:5px}
@@ -154,27 +181,30 @@
 <div class="app">
   <!-- LEFT: hierarchy -->
   <div class="card">
-    <h3>오퍼링 / 리전 / 존 · 랙-타입 · 랙</h3>
+    <h3 style="display:flex;align-items:center;gap:8px">Offering / Region / Zone · Rack-Type · Rack
+      <button class="addbtn" id="addRackBtn">＋ 랙 추가</button></h3>
     <div class="body tree" id="tree"><div class="empty">트리 로딩 중…</div></div>
   </div>
 
-  <!-- ① MODEL SELECT: catalog (담기) + shortlist (담은 것만 배치) -->
+  <!-- ① MODEL SELECT: tabs — 카탈로그(담기) | 담은 목록(배치 드래그 소스) -->
   <div class="card">
     <h3>① 모델 선택</h3>
     <div class="mselect">
-      <div class="msec cat">
-        <div class="sechead">카탈로그 검색</div>
+      <div class="mtabs">
+        <button class="mtab active" data-tab="cat">카탈로그</button>
+        <button class="mtab" data-tab="short">담은 목록 <span class="tabcnt" id="shortCnt">0</span></button>
+      </div>
+      <div class="mpane" id="paneCat">
         <div class="secbody">
-          <div class="hint">후보를 보고 <b>＋담기</b>. 배치는 아래 <b>담은 목록</b>에서만 드래그합니다.</div>
+          <div class="hint">후보를 보고 <b>＋담기</b>. 배치는 <b>담은 목록</b> 탭에서만 드래그합니다.</div>
           <div class="chips" id="catChips"></div>
           <input class="search" id="catSearch" placeholder="제조사/모델 검색…">
           <div id="catResults"><div class="empty">불러오는 중…</div></div>
         </div>
       </div>
-      <div class="msec short">
-        <div class="sechead">담은 목록 (이번 후보)<span class="cnt" id="shortCnt">0</span></div>
+      <div class="mpane" id="paneShort" style="display:none">
         <div class="secbody" id="shortBody">
-          <div class="empty">위에서 ＋담기 하세요.</div>
+          <div class="empty">카탈로그 탭에서 ＋담기 하세요.</div>
         </div>
       </div>
     </div>
@@ -209,6 +239,33 @@
         <div class="row sub"><span>해당 릴리즈 항목</span><span id="reldetail">0건</span></div>
       </div>
       <div class="note">※ 가격은 pricing/ 오버레이(원화). 합계는 클라이언트에서 placements + custom_line_items 기준으로 계산.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ＋ Add Rack modal -->
+<div class="modal-back" id="addRackModal">
+  <div class="modal">
+    <h4>＋ 랙 추가</h4>
+    <div class="mbody">
+      <label class="fl">Region</label>
+      <select id="arRegion"></select>
+      <label class="fl">Zone</label>
+      <select id="arZone"></select>
+      <label class="fl">Rack-Type (용도)</label>
+      <input type="text" id="arRackType" list="arRackTypeList" placeholder="data / control / storage / network">
+      <datalist id="arRackTypeList"></datalist>
+      <label class="fl">Rack 이름</label>
+      <input type="text" id="arRackName" placeholder="예: R09">
+      <label class="fl">Rack Model (카탈로그에서 선택)</label>
+      <input type="text" id="arModelSearch" placeholder="랙 모델 검색 (제조사/모델)…">
+      <div class="pickbox" id="arModelResults"><div class="empty" style="padding:10px">검색어를 입력하세요.</div></div>
+      <div class="chosen" id="arModelChosen" style="display:none"></div>
+      <div id="arErr" class="banner err" style="display:none;margin:12px 0 0"></div>
+    </div>
+    <div class="mfoot">
+      <button id="arCancel">취소</button>
+      <button class="primary" id="arCreate" disabled>생성 (git commit)</button>
     </div>
   </div>
 </div>
@@ -840,6 +897,115 @@ function renderReleaseSel(){
   }else rc.style.display='none';
 }
 
+// ── ① model-select tabs ──────────────────────────────────────────────────
+function switchMTab(name){
+  document.querySelectorAll('.mtab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.getElementById('paneCat').style.display = name==='cat'?'':'none';
+  document.getElementById('paneShort').style.display = name==='short'?'':'none';
+}
+
+// ── ＋ add rack (POST /api/rack/new) ─────────────────────────────────────
+let arSelectedModel=null;
+let arTimer=null;
+function offeringId(){ return TREE_PATH.replace(/^offerings\//,'').split('/')[0]; }
+function arRegions(){ return (TREE&&TREE.regions)||[]; }
+function arFillRegions(){
+  document.getElementById('arRegion').innerHTML =
+    arRegions().map(r=>`<option value="${esc(r.region)}">${esc(r.region)}</option>`).join('');
+  arFillZones();
+}
+function arFillZones(){
+  const rg=arRegions().find(r=>r.region===document.getElementById('arRegion').value);
+  const zones=(rg&&rg.zones)||[];
+  document.getElementById('arZone').innerHTML =
+    zones.map(z=>`<option value="${esc(z.zone)}">${esc(z.zone)}</option>`).join('');
+  arFillRackTypes();
+}
+function arFillRackTypes(){
+  const rg=arRegions().find(r=>r.region===document.getElementById('arRegion').value);
+  const z=((rg&&rg.zones)||[]).find(x=>x.zone===document.getElementById('arZone').value);
+  const rts=((z&&z.rack_types)||[]).map(g=>g.rack_type);
+  document.getElementById('arRackTypeList').innerHTML = rts.map(t=>`<option value="${esc(t)}">`).join('');
+}
+function arValidate(){
+  const ok = document.getElementById('arRegion').value &&
+             document.getElementById('arZone').value &&
+             document.getElementById('arRackType').value.trim() &&
+             document.getElementById('arRackName').value.trim() &&
+             arSelectedModel;
+  document.getElementById('arCreate').disabled=!ok;
+}
+function openAddRack(){
+  if(!TREE){ toast('트리 로딩 중…', true); return; }
+  arSelectedModel=null;
+  document.getElementById('arModelSearch').value='';
+  document.getElementById('arModelResults').innerHTML='<div class="empty" style="padding:10px">검색어를 입력하세요.</div>';
+  document.getElementById('arModelChosen').style.display='none';
+  document.getElementById('arRackName').value='';
+  document.getElementById('arRackType').value='';
+  document.getElementById('arErr').style.display='none';
+  arFillRegions();
+  arValidate();
+  document.getElementById('addRackModal').classList.add('show');
+}
+function closeAddRack(){ document.getElementById('addRackModal').classList.remove('show'); }
+function arScheduleSearch(){ clearTimeout(arTimer); arTimer=setTimeout(arDoSearch, 250); }
+async function arDoSearch(){
+  const q=document.getElementById('arModelSearch').value.trim();
+  const box=document.getElementById('arModelResults');
+  if(!q){ box.innerHTML='<div class="empty" style="padding:10px">검색어를 입력하세요.</div>'; return; }
+  box.innerHTML='<div class="empty" style="padding:10px">검색 중…</div>';
+  try{
+    const res=await apiGet('/api/catalog/search?kind=rack&q='+encodeURIComponent(q));
+    if(!res.length){ box.innerHTML='<div class="empty" style="padding:10px">검색 결과 없음.</div>'; return; }
+    box.innerHTML=res.map((r,i)=>`<div class="pickrow" data-i="${i}">${esc(r.model||r.slug)}
+        <span style="color:var(--muted)">· ${esc(r.manufacturer||'')} · ${(r.u_height|0)}U · ${esc(r.slug)}</span></div>`).join('');
+    box.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click', ()=>{
+      arSelectedModel=res[+el.dataset.i];
+      box.querySelectorAll('.pickrow').forEach(x=>x.classList.remove('sel'));
+      el.classList.add('sel');
+      const c=document.getElementById('arModelChosen');
+      c.style.display=''; c.textContent='선택됨: '+arSelectedModel.slug+' ('+(arSelectedModel.u_height|0)+'U)';
+      arValidate();
+    }));
+  }catch(e){ box.innerHTML='<div class="banner err">검색 실패: '+esc(e.message)+'</div>'; }
+}
+function detailMsg(data, status){
+  if(data && data.detail!=null){
+    if(typeof data.detail==='string') return data.detail;
+    if(data.detail.message) return data.detail.message;
+    if(Array.isArray(data.detail) && data.detail[0]) return (data.detail[0].msg||JSON.stringify(data.detail[0]));
+    return JSON.stringify(data.detail);
+  }
+  return 'HTTP '+status;
+}
+async function createRack(){
+  if(!arSelectedModel) return;
+  const body={
+    offering: offeringId(),
+    region: document.getElementById('arRegion').value,
+    zone: document.getElementById('arZone').value,
+    rack_type: document.getElementById('arRackType').value.trim(),
+    rack: document.getElementById('arRackName').value.trim(),
+    rack_model: arSelectedModel.slug
+  };
+  const btn=document.getElementById('arCreate'); btn.disabled=true; btn.textContent='생성 중…';
+  const errBox=document.getElementById('arErr'); errBox.style.display='none';
+  try{
+    const r=await fetch('/api/rack/new', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data=await r.json().catch(()=>null);
+    if(!r.ok) throw new Error(detailMsg(data, r.status));
+    closeAddRack();
+    toast('랙 생성됨: '+body.rack+' (commit '+((data.commit||'').slice(0,7)||'?')+')');
+    await loadTree();
+    loadRack(body.rack, data.path);
+  }catch(e){
+    errBox.style.display=''; errBox.textContent='생성 실패: '+(e.message||e);
+  }finally{
+    btn.textContent='생성 (git commit)'; arValidate();
+  }
+}
+
 // ── render all ──────────────────────────────────────────────────────────
 function renderAll(){ renderReleaseSel(); renderMain(); renderMeta(); renderBom(); renderShortlist(); renderState(); }
 
@@ -855,6 +1021,18 @@ function init(){
     loadRack(selectedRackId, selectedRackFile);
   });
   document.getElementById('catSearch').addEventListener('input', scheduleCatSearch);
+  // ① model-select tabs
+  document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click', ()=>switchMTab(t.dataset.tab)));
+  // ＋ add rack
+  document.getElementById('addRackBtn').addEventListener('click', openAddRack);
+  document.getElementById('arCancel').addEventListener('click', closeAddRack);
+  document.getElementById('arCreate').addEventListener('click', createRack);
+  document.getElementById('arRegion').addEventListener('change', ()=>{ arFillZones(); arValidate(); });
+  document.getElementById('arZone').addEventListener('change', ()=>{ arFillRackTypes(); arValidate(); });
+  document.getElementById('arRackType').addEventListener('input', arValidate);
+  document.getElementById('arRackName').addEventListener('input', arValidate);
+  document.getElementById('arModelSearch').addEventListener('input', arScheduleSearch);
+  document.getElementById('addRackModal').addEventListener('click', e=>{ if(e.target.id==='addRackModal') closeAddRack(); });
   renderCatChips();
   renderShortlist();
   doCatSearch();   // auto-load top 50 candidates on open (empty q)

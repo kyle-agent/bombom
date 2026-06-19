@@ -110,6 +110,49 @@ def test_edit_route_serves_editor(gitws):
     assert r.status_code == 200 and "에디터" in r.text
 
 
+def test_new_rack_creates_file_and_commits(gitws):
+    client, root = _client(gitws)
+    before = _count(root)
+    body = {"offering": "cloud-a", "region": "kr-east", "zone": "az1",
+            "rack_type": "data", "rack": "R09", "rack_model": "acme-rack42"}
+    r = client.post("/api/rack/new", json=body)
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["commit"] and out["rack"] == "R09"
+    target = root / out["path"]
+    assert target.exists()
+    assert _count(root) == before + 1
+    d = load_racks(target).racks[0].design
+    assert d.rack_model.slug == "acme-rack42" and d.placements == []
+
+
+def test_new_rack_rejects_unknown_model(gitws):
+    client, root = _client(gitws)
+    before = _count(root)
+    body = {"offering": "cloud-a", "region": "kr-east", "zone": "az1",
+            "rack_type": "data", "rack": "R10", "rack_model": "does-not-exist"}
+    r = client.post("/api/rack/new", json=body)
+    assert r.status_code == 400
+    assert _count(root) == before
+
+
+def test_new_rack_rejects_duplicate(gitws):
+    client, root = _client(gitws)
+    body = {"offering": "cloud-a", "region": "kr-east", "zone": "az1",
+            "rack_type": "data", "rack": "R02", "rack_model": "acme-rack42"}
+    r = client.post("/api/rack/new", json=body)
+    assert r.status_code == 409
+
+
+def test_new_rack_rejects_traversal_id(gitws):
+    client, root = _client(gitws)
+    body = {"offering": "cloud-a", "region": "kr-east", "zone": "az1",
+            "rack_type": "data", "rack": "../../../evil", "rack_model": "acme-rack42"}
+    r = client.post("/api/rack/new", json=body)
+    assert r.status_code == 422  # pydantic validation rejects the id
+    assert not (root.parent / "evil.yaml").exists()
+
+
 def test_writer_roundtrip(gitws):
     _, root = _client(gitws)
     d = load_racks(root / RACKFILE).racks[0].design

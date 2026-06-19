@@ -3,21 +3,55 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from pydantic import BaseModel, field_validator
 
 from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, validate_rack
 from ..design.writer import write_rack
 from ..export import build_data, inject
 from ..gitops import add_commit
 from ..render import rack_elevation_svg
+from ..scaffold import scaffold_rack
 from ..workspace import Workspace
 
 _VIEWER = Path(__file__).resolve().parents[2] / "web" / "viewer.html"
+
+# Org-node identifiers become directory/file names — keep them filesystem-safe and traversal-proof.
+_SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def _safe_id(value: str, field: str) -> str:
+    value = (value or "").strip()
+    if not _SAFE_ID.match(value) or ".." in value:
+        raise ValueError(f"{field} must match [A-Za-z0-9._-] (no leading dot, no '..')")
+    return value
+
+
+class NewRackBody(BaseModel):
+    """Create a rack under an existing Offering→Region→Zone→Rack-Type path."""
+
+    offering: str
+    region: str
+    zone: str
+    rack_type: str
+    rack: str
+    rack_model: str  # catalog RackTypeSpec slug, e.g. vertiv-vr3300
+
+    @field_validator("offering", "region", "zone", "rack_type", "rack")
+    @classmethod
+    def _check_id(cls, v: str, info) -> str:
+        return _safe_id(v, info.field_name)
+
+    @field_validator("rack_model")
+    @classmethod
+    def _check_model(cls, v: str) -> str:
+        return _safe_id(v, "rack_model")
 
 
 def _search_catalog(db_path: str, q: str, limit: int = 50, kind: str = "device") -> list[dict]:
@@ -118,6 +152,28 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             "issues": data["bom"]["issues"],          # non-blocking (e.g. meta required missing)
             "rack": next(iter(data["racks"].values()), None),
         }
+
+    @app.post("/api/rack/new")
+    def new_rack(body: NewRackBody, message: str = ""):
+        if ws.catalog.get_rack_type(body.rack_model) is None:
+            raise HTTPException(400, f"unknown rack_model: {body.rack_model}")
+        base = Path(root)
+        zone_dir = (base / "offerings" / body.offering / "regions" / body.region
+                    / "zones" / body.zone)
+        if not zone_dir.is_dir():
+            raise HTTPException(404, "zone does not exist (scaffold the hierarchy first)")
+        target = zone_dir / "rack-types" / body.rack_type / "racks" / f"{body.rack}.yaml"
+        if target.exists():
+            raise HTTPException(409, f"rack already exists: {body.rack}")
+        try:
+            scaffold_rack(base, body.offering, body.region, body.zone, body.rack_type,
+                          body.rack, rack_model_slug=body.rack_model)
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        msg = (message or f"add rack {body.rack}").replace("\n", " ").strip()[:500] or f"add rack {body.rack}"
+        sha = add_commit([target], msg, cwd=base)
+        rel = target.relative_to(base).as_posix()
+        return {"ok": True, "commit": sha, "path": rel, "rack": body.rack}
 
     return app
 
