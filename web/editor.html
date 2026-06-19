@@ -560,13 +560,12 @@ function scheduleCatSearch(){ clearTimeout(catTimer); catTimer=setTimeout(doCatS
 async function doCatSearch(){
   const q=document.getElementById('catSearch').value.trim();
   const box=document.getElementById('catResults');
-  if(!q){ box.innerHTML='<div class="empty">검색어를 입력하세요.</div>'; return; }
-  box.innerHTML='<div class="empty">검색 중…</div>';
+  box.innerHTML='<div class="empty">불러오는 중…</div>';
   try{
-    let url='/api/catalog/search?q='+encodeURIComponent(q)+'&limit=50';
+    let url='/api/catalog/search?q='+encodeURIComponent(q)+'&limit=50';   // empty q → top 50 후보
     if(catCategory) url+='&category='+encodeURIComponent(catCategory);
     const res=await apiGet(url);
-    if(!res.length){ box.innerHTML='<div class="empty">검색 결과 없음.</div>'; return; }
+    if(!res.length){ box.innerHTML='<div class="empty">결과 없음. 인덱스가 비었으면 <code>bombom catalog reindex</code> 실행.</div>'; return; }
     box.innerHTML=res.map(r=>{
       const cat=r.category||'other';
       const item={slug:r.slug, u_height:r.u_height||0, name:(r.model||r.slug), category:cat, manufacturer:r.manufacturer||''};
@@ -820,6 +819,7 @@ function init(){
   });
   document.getElementById('catSearch').addEventListener('input', scheduleCatSearch);
   renderCatChips();
+  doCatSearch();   // load candidate devices immediately so the list is visible on open
   // allow ?path= override of tree root
   const qp=new URLSearchParams(location.search);
   if(qp.get('path')) TREE_PATH=qp.get('path');
