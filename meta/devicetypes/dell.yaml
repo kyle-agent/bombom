@@ -1,0 +1,3 @@
+entries:
+  - { slug: dell-poweredge-r760, asset_class: compute, lead_time_weeks: 8 }
+  - { slug: dell-poweredge-r660, asset_class: compute }

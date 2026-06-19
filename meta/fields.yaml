@@ -1,0 +1,7 @@
+# 디바이스 메타(커스텀 필드) 정의 — NetBox Custom Fields에 해당
+fields:
+  - { key: asset_class, label: 자산분류, type: enum, options: [compute, gpu, storage, network],
+      required: true, applies_to: device_type, scope: "category:server" }
+  - { key: serial, label: 시리얼, type: string, required: true,
+      applies_to: placement, scope: "category:server" }
+  - { key: owner, label: 담당팀, type: string, required: false, applies_to: placement, scope: all }

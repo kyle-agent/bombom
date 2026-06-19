@@ -2,9 +2,9 @@
 rack_type: { slug: vertiv-vr3300 }
 role: data
 placements:
-  - { device: dell-poweredge-r760, position: 1, release: R25.01 }
-  - { device: dell-poweredge-r760, position: 3, release: R26.07 }
-  - { device: dell-poweredge-r660, position: 5, release: R26.07 }
+  - { device: dell-poweredge-r760, position: 1, release: R25.01, meta: { serial: "R760-0001", owner: infra } }
+  - { device: dell-poweredge-r760, position: 3, release: R26.07, meta: { owner: infra } }   # serial 누락(필수)
+  - { device: dell-poweredge-r660, position: 5, release: R26.07, meta: { serial: "R660-0007" } }
   - { device: arista-dcs-7050cx3-32s, position: 42, release: R25.01 }
 custom_line_items:
   - { name: "DAC 100G 3m", qty: 8, unit_cost: 90000, release: R26.07, category: other }

@@ -7,7 +7,7 @@ the pricing overlay at BOM time (ADR spec-cost-separation).
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -26,6 +26,7 @@ class Placement(BaseModel):
     position: int                        # bottom-most rack unit (U)
     release: str                         # release tag, e.g. "R26.07"
     qty: int = Field(default=1, ge=1)    # multiplies this line (default 1); see BRIEF risk note
+    meta: dict[str, Any] = Field(default_factory=dict)   # instance-level designer fields
 
 
 class CustomLineItem(BaseModel):

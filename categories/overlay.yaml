@@ -1,0 +1,5 @@
+# 카테고리 오버레이 (slug → category). 미지정은 휴리스틱 폴백.
+categories:
+  dell-poweredge-r760: server
+  dell-poweredge-r660: server
+  arista-dcs-7050cx3-32s: network

@@ -8,10 +8,12 @@ dependencies = [
     "jsonschema>=4.20",
     "referencing>=0.30",
     "pydantic>=2",
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.4"]
+dev = ["pytest>=8", "ruff>=0.4", "httpx>=0.27"]
 
 [project.scripts]
 bombom = "bombom.cli:main"

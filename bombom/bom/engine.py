@@ -14,6 +14,7 @@ from typing import Optional
 
 from ..catalog import Catalog
 from ..design import Issue, load_racks, validate_rack
+from ..overlay import CategoryBook, FieldDef, TypeMetaBook, required_missing
 from .pricing import PriceBook
 
 
@@ -53,19 +54,6 @@ class BomResult:
         return self.by_release.get(self.release, 0)
 
 
-# Placeholder category heuristic until the dedicated category overlay feature lands
-# (ADR device-categorization). Keys off model/slug name cues only.
-def _category(name: str) -> str:
-    n = name.lower()
-    if any(k in n for k in ("switch", "nexus", "dcs-", "catalyst", "router", "arista")):
-        return "network"
-    if any(k in n for k in ("storage", "powerstore", "aff", "netapp", "isilon", "vsp")):
-        return "storage"
-    if any(k in n for k in ("poweredge", "proliant", "server", "blade", "ucs")):
-        return "server"
-    return "other"
-
-
 def compute_bom(
     root: Path,
     *,
@@ -73,9 +61,16 @@ def compute_bom(
     pricebook: PriceBook,
     release: Optional[str] = None,
     valuation_date: Optional[date] = None,
+    categories: Optional[CategoryBook] = None,
+    fields: Optional[list[FieldDef]] = None,
+    type_meta: Optional[TypeMetaBook] = None,
 ) -> BomResult:
     as_of = valuation_date or date.today()
     result = BomResult(valuation_date=as_of, release=release)
+    categories = categories or CategoryBook()
+    fields = fields or []
+    type_meta = type_meta or TypeMetaBook()
+    seen_type_slugs: set[str] = set()
 
     loaded = load_racks(Path(root))
     result.issues.extend(loaded.issues)
@@ -86,6 +81,7 @@ def compute_bom(
         rack_issues = validate_rack(lr, catalog)
         result.issues.extend(rack_issues)
         skip = {iss.index for iss in rack_issues if iss.index is not None and iss.level == "error"}
+        role = lr.design.role
 
         for idx, pl in enumerate(lr.design.placements):
             if idx in skip:
@@ -93,16 +89,27 @@ def compute_bom(
             device = catalog.get_device_type(pl.device)
             if device is None:
                 continue
+            cat = categories.get(pl.device, model=device.model, manufacturer=device.manufacturer)
+
+            # meta / custom fields: type-level + instance-level, conditional-required check
+            type_vals = type_meta.get(pl.device)
+            merged = {**type_vals, **(pl.meta or {})}
+            for key in required_missing(fields, merged, applies_to="placement", category=cat, role=role):
+                result.issues.append(Issue(lr.path, "error", f"{pl.device} 메타 필수 누락: {key}", idx))
+            if pl.device not in seen_type_slugs:
+                seen_type_slugs.add(pl.device)
+                for key in required_missing(fields, type_vals, applies_to="device_type", category=cat):
+                    result.issues.append(Issue(lr.path, "error", f"{pl.device} 타입 메타 필수 누락: {key}"))
+
             price = pricebook.lookup(as_of, slug=pl.device, part_number=device.part_number)
-            watts = _max_draw(device)
             li = LineItem(
                 rack_id=lr.rack_id,
                 name=device.model,
-                category=_category(device.model + " " + device.manufacturer),
+                category=cat,
                 release=pl.release,
                 qty=pl.qty,
                 unit_cost=price.unit_cost if price else None,
-                watts=watts,
+                watts=_max_draw(device),
             )
             _accumulate(result, li)
 

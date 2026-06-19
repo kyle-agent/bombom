@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 뷰어 (읽기전용)</title>
+<style>
+  :root{
+    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+    --accent:#2563eb;--accent2:#0ea5e9;--ok:#16a34a;--warn:#d97706;--new:#f59e0b;--bad:#dc2626;
+    --server:#2563eb;--network:#16a34a;--storage:#9333ea;--other:#64748b;
+    --t-control:#f59e0b;--t-data:#2563eb;--t-storage:#9333ea;--t-network:#16a34a;--rackbg:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
+  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px}
+  header .logo{font-weight:700;color:#fff}
+  header .crumb{color:#94a3b8}
+  header .relchip{background:#1e293b;border:1px solid #334155;color:#fde68a;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600}
+  header .flag{margin-left:auto;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff}
+  header .flag.mock{background:var(--warn)}
+  header .flag.real{background:var(--ok)}
+  .app{display:grid;grid-template-columns:260px 1fr 400px;gap:10px;padding:10px;height:calc(100vh - 44px)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0}
+  .card h3{margin:0;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line)}
+  .card .body{padding:10px 12px;overflow:auto;min-height:0}
+  /* tree */
+  .tree{font-size:13px}
+  .tree .node{padding:3px 6px;border-radius:6px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+  .tree .node.rack{cursor:pointer}
+  .tree .node.rack:hover{background:#f1f5f9}
+  .tree .node.sel{background:#dbeafe;color:#1e40af;font-weight:600}
+  .tree .lvl1{padding-left:6px}.tree .lvl2{padding-left:18px}.tree .lvl3{padding-left:30px}.tree .lvl4{padding-left:42px}.tree .lvl5{padding-left:56px}
+  .tree .relcount{margin-left:auto;background:var(--new);color:#fff;border-radius:8px;font-size:10px;padding:0 6px}
+  .rolebadge{font-size:10px;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px;letter-spacing:.3px}
+  /* center / elevation */
+  .rackhead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .rackmeta{color:var(--muted);font-size:11px}
+  .zoombar{position:sticky;top:-10px;z-index:5;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-bottom:12px;flex-wrap:wrap}
+  .zoombar button{border:1px solid var(--line);background:#fff;border-radius:6px;min-width:26px;height:24px;cursor:pointer;font-size:12px;line-height:1;padding:0 6px}
+  .zoombar input[type=range]{width:140px}
+  .zoombar .zval{min-width:42px;text-align:right;color:var(--muted)}
+  .zoombar .zlbl{color:var(--muted);font-size:11px}
+  .elevwrap{overflow:auto}
+  .elev{transform-origin:top left;display:inline-block}
+  .elev svg{display:block}
+  .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:12px}
+  .legend{font-size:11px;color:var(--muted);line-height:1.7;margin-top:14px}
+  .legend .cat{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  /* right: device list + BOM */
+  .toolbar{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .toolbar label{font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer}
+  .toolbar select{border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;white-space:nowrap}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr.selrow td{background:#fffbeb}
+  .catdot{display:inline-block;width:9px;height:9px;border-radius:2px}
+  .mfr{color:var(--muted);font-size:11px}
+  .relpill{font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;color:#fff;white-space:nowrap}
+  .relpill.sel{background:var(--new)}
+  .relpill.other{background:#94a3b8}
+  .miss{color:var(--bad);font-weight:700}
+  .dash{color:#cbd5e1}
+  .bom{margin-top:auto;border-top:1px solid var(--line);padding:12px;background:#f8fafc;border-radius:0 0 10px 10px}
+  .bom .row{display:flex;justify-content:space-between;margin:3px 0}
+  .bom .total{font-size:17px;font-weight:700}
+  .bom .release{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin:8px 0 4px}
+  .bom .release .lbl{color:var(--warn);font-weight:700}
+  .bom .release .amt{font-size:18px;font-weight:800;color:var(--warn)}
+  .bom .sub{color:var(--muted);font-size:11px}
+  .note{font-size:11px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom</span>
+  <span class="crumb">— 뷰어 (읽기전용)</span>
+  <span class="relchip" id="relchip">● 현재 릴리즈 —</span>
+  <span class="crumb" id="crumb"></span>
+  <span class="flag" id="dataflag">—</span>
+</header>
+
+<div class="app">
+  <div class="card"><h3>오퍼링 / 리전 / 존 · 랙그룹 · 랙</h3><div class="body tree" id="tree"></div></div>
+
+  <div class="card">
+    <h3 id="mainhead">랙 실장도</h3>
+    <div class="body" id="mainview"><div class="empty">좌측에서 랙을 선택하세요.</div></div>
+  </div>
+
+  <div class="card">
+    <h3>장비 / BOM — <span id="scopelbl">—</span></h3>
+    <div class="toolbar">
+      <label>릴리즈 <select id="relSel"></select></label>
+      <label><input type="checkbox" id="relOnly"> 선택 릴리즈만</label>
+    </div>
+    <div class="body" style="flex:1">
+      <table id="devtable"><thead><tr id="devhead"></tr></thead><tbody id="devrows"></tbody></table>
+      <div id="devempty" class="empty">배치된 장비가 없습니다.</div>
+    </div>
+    <div class="bom">
+      <div class="row sub"><span id="ulbl">장착 U</span><span id="uused">—</span></div>
+      <div class="row sub"><span>전력 합계</span><span id="watts">0 W</span></div>
+      <div class="row"><span class="total">총 CAPEX</span><span class="total" id="capex">—</span></div>
+      <div class="release">
+        <div class="row"><span class="lbl" id="rellbl">선택 릴리즈 추가분 CAPEX</span><span class="amt" id="capexrel">—</span></div>
+        <div class="row sub"><span>해당 릴리즈 항목</span><span id="reldetail">0건</span></div>
+      </div>
+      <div class="note">※ 가격은 pricing/ 오버레이(원화). 합계는 placements + custom_line_items 기준으로 클라이언트에서 계산.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA INJECTION POINT ─────────────────────────────────────────────
+// A Python exporter replaces everything between the markers with real JSON.
+const BOMBOM_DATA = /*__BOMBOM_DATA__*/ {
+  "currency": "₩",
+  "is_mock": true,
+  "releases": ["R25.01", "R25.07", "R26.07"],
+  "current_release": "R26.07",
+  "fields": [
+    {"key": "serial", "label": "시리얼", "type": "string", "required": true, "applies_to": "placement", "scope": "category:server"},
+    {"key": "owner", "label": "담당팀", "type": "string", "required": false, "applies_to": "placement", "scope": "all"}
+  ],
+  "tree": {
+    "offering": "cloud-a", "name": "Cloud A",
+    "regions": [
+      {"region": "kr-east", "zones": [
+        {"zone": "az1", "rack_groups": [
+          {"rack_group": "row-3", "racks": ["R02", "R04"]}
+        ]}
+      ]}
+    ]
+  },
+  "racks": {
+    "R02": {
+      "id": "R02", "role": "data", "rack_type": {"slug": "vertiv-vr3300", "u_height": 42},
+      "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='240' height='446' viewBox='0 0 240 446'><rect x='0' y='0' width='240' height='446' rx='6' fill='#f1f5f9' stroke='#cbd5e1' stroke-width='2'/><text x='6' y='14' font-size='9' fill='#94a3b8' font-family='sans-serif'>42</text><rect x='28' y='8' width='204' height='9' rx='2' fill='#16a34a'/><text x='32' y='15' font-size='8' fill='#fff' font-family='sans-serif'>DCS-7050SX3 · U42 · R25.01</text><rect x='28' y='17' width='204' height='9' rx='2' fill='#16a34a'/><text x='32' y='24' font-size='8' fill='#fff' font-family='sans-serif'>DCS-7050SX3 · U41 · R25.01</text><rect x='28' y='406' width='204' height='18' rx='2' fill='#2563eb'/><text x='32' y='418' font-size='8' fill='#fff' font-family='sans-serif'>PowerEdge R760 · U1 · R25.01</text><rect x='28' y='386' width='204' height='18' rx='2' fill='#2563eb'/><text x='32' y='398' font-size='8' fill='#fff' font-family='sans-serif'>PowerEdge R760 · U3 · R25.07</text><rect x='28' y='366' width='204' height='18' rx='2' fill='#2563eb' stroke='#f59e0b' stroke-width='2' stroke-dasharray='3'/><text x='32' y='378' font-size='8' fill='#fff' font-family='sans-serif'>PowerEdge R760 · U5 · R26.07</text></svg>",
+      "placements": [
+        {"device": "arista-dcs-7050sx3-48yc8", "name": "DCS-7050SX3-48YC8", "category": "network", "position": 42, "u": 1, "release": "R25.01", "unit_cost": 29500000, "meta": {"owner": "net-team"}, "meta_missing": []},
+        {"device": "arista-dcs-7050sx3-48yc8", "name": "DCS-7050SX3-48YC8", "category": "network", "position": 41, "u": 1, "release": "R25.01", "unit_cost": 29500000, "meta": {"owner": "net-team"}, "meta_missing": []},
+        {"device": "dell-poweredge-r760", "name": "PowerEdge R760", "category": "server", "position": 1, "u": 2, "release": "R25.01", "unit_cost": 19500000, "meta": {"serial": "SN-R760-001", "owner": "compute"}, "meta_missing": []},
+        {"device": "dell-poweredge-r760", "name": "PowerEdge R760", "category": "server", "position": 3, "u": 2, "release": "R25.07", "unit_cost": 19500000, "meta": {"serial": "SN-R760-002"}, "meta_missing": ["owner"]},
+        {"device": "dell-poweredge-r760", "name": "PowerEdge R760", "category": "server", "position": 5, "u": 2, "release": "R26.07", "unit_cost": 19500000, "meta": {}, "meta_missing": ["serial"]}
+      ],
+      "custom_line_items": [
+        {"name": "DAC 100G 케이블", "qty": 8, "unit_cost": 90000, "release": "R26.07", "category": "other"}
+      ],
+      "summary": {"used_u": 6, "capex": 118220000, "power_w": 4500}
+    },
+    "R04": {
+      "id": "R04", "role": "network", "rack_type": {"slug": "apc-netshelter-sx-42u", "u_height": 42},
+      "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='240' height='446' viewBox='0 0 240 446'><rect x='0' y='0' width='240' height='446' rx='6' fill='#f1f5f9' stroke='#cbd5e1' stroke-width='2'/><text x='6' y='14' font-size='9' fill='#94a3b8' font-family='sans-serif'>42</text><rect x='28' y='8' width='204' height='9' rx='2' fill='#16a34a'/><text x='32' y='15' font-size='8' fill='#fff' font-family='sans-serif'>DCS-7280CR3 · U42 · R25.01</text><rect x='28' y='18' width='204' height='9' rx='2' fill='#16a34a' stroke='#f59e0b' stroke-width='2' stroke-dasharray='3'/><text x='32' y='25' font-size='8' fill='#fff' font-family='sans-serif'>Nexus 93180YC · U41 · R26.07</text></svg>",
+      "placements": [
+        {"device": "arista-dcs-7280cr3-32p4", "name": "DCS-7280CR3-32P4", "category": "network", "position": 42, "u": 1, "release": "R25.01", "unit_cost": 51000000, "meta": {"owner": "net-team"}, "meta_missing": []},
+        {"device": "cisco-nexus-93180yc-fx", "name": "Nexus 93180YC-FX", "category": "network", "position": 41, "u": 1, "release": "R26.07", "unit_cost": 36000000, "meta": {"owner": "net-team"}, "meta_missing": []}
+      ],
+      "custom_line_items": [],
+      "summary": {"used_u": 2, "capex": 87000000, "power_w": 800}
+    }
+  }
+} /*__END__*/;
+// ─────────────────────────────────────────────────────────────────────
+
+const D = BOMBOM_DATA;
+const CUR = D.currency || '₩';
+const CATCOLOR = {server:'var(--server)', network:'var(--network)', storage:'var(--storage)', other:'var(--other)'};
+const CATLABEL = {server:'Server', network:'Network', storage:'Storage', other:'Other'};
+const ROLECOLOR = {control:'var(--t-control)', data:'var(--t-data)', storage:'var(--t-storage)', network:'var(--t-network)'};
+
+let selectedRelease = D.current_release || (D.releases && D.releases[0]) || '';
+let selectedRack = null;
+let zoom = 1;
+let releaseOnly = false;
+
+// ── formatting (₩ + ko-KR comma; 억/만 short for big numbers) ─────────
+function won(n){ return CUR + Math.round(n||0).toLocaleString('ko-KR'); }
+function wonShort(n){
+  n = n||0;
+  if(n >= 1e8) return CUR + (n/1e8).toLocaleString('ko-KR',{maximumFractionDigits:1}) + '억';
+  if(n >= 1e4) return CUR + Math.round(n/1e4).toLocaleString('ko-KR') + '만';
+  return CUR + Math.round(n).toLocaleString('ko-KR');
+}
+
+// ── line-item aggregation for a rack (placements + custom) ───────────
+// Returns a flat list of {category, name, sub(label), release, qty, unit_cost, meta, meta_missing, kind}
+function lineItems(rid){
+  const rk = D.racks[rid]; if(!rk) return [];
+  const out = [];
+  (rk.placements||[]).forEach(p=>{
+    out.push({kind:'placement', category:p.category||'other', name:p.name||p.device,
+      device:p.device, position:p.position, u:p.u, release:p.release,
+      qty:1, unit_cost:p.unit_cost||0, meta:p.meta||{}, meta_missing:p.meta_missing||[]});
+  });
+  (rk.custom_line_items||[]).forEach(c=>{
+    out.push({kind:'custom', category:c.category||'other', name:c.name,
+      device:null, position:null, u:0, release:c.release,
+      qty:c.qty||1, unit_cost:c.unit_cost||0, meta:{}, meta_missing:[]});
+  });
+  return out;
+}
+
+// ── tree (offering → region → zone → rack_group → rack) ──────────────
+function relCount(rid){
+  return lineItems(rid).filter(li=>li.release===selectedRelease).reduce((s,li)=>s+(li.qty||1),0);
+}
+function renderTree(){
+  const t = D.tree; if(!t){ document.getElementById('tree').innerHTML = '<div class="empty">트리 데이터 없음</div>'; return; }
+  let h = `<div class="node lvl1">📦 ${esc(t.name||t.offering||'')}</div>`;
+  (t.regions||[]).forEach(rg=>{
+    h += `<div class="node lvl2">🌏 ${esc(rg.region)}</div>`;
+    (rg.zones||[]).forEach(z=>{
+      h += `<div class="node lvl3">🏢 ${esc(z.zone)}</div>`;
+      (z.rack_groups||[]).forEach(grp=>{
+        h += `<div class="node lvl4">▦ ${esc(grp.rack_group)}</div>`;
+        (grp.racks||[]).forEach(rid=>{
+          const rk = D.racks[rid];
+          const role = rk && rk.role ? rk.role : 'other';
+          const color = ROLECOLOR[role] || 'var(--other)';
+          const sel = rid===selectedRack;
+          const rc = relCount(rid);
+          h += `<div class="node rack lvl5 ${sel?'sel':''}" data-rack="${esc(rid)}">
+                  <span class="rolebadge" style="background:${color}">${esc(role.toUpperCase())}</span>
+                  ▣ ${esc(rid)}${rc?`<span class="relcount">+${rc}</span>`:''}</div>`;
+        });
+      });
+    });
+  });
+  const el = document.getElementById('tree');
+  el.innerHTML = h;
+  el.querySelectorAll('.node.rack').forEach(n=>{
+    n.addEventListener('click', ()=>selectRack(n.dataset.rack));
+  });
+}
+function selectRack(rid){ selectedRack = rid; renderAll(); }
+
+// ── center: elevation (inject pre-rendered svg as-is) + zoom ─────────
+function renderMain(){
+  const mv = document.getElementById('mainview');
+  if(!selectedRack || !D.racks[selectedRack]){
+    document.getElementById('mainhead').textContent = '랙 실장도';
+    mv.innerHTML = '<div class="empty">좌측에서 랙을 선택하세요.</div>';
+    return;
+  }
+  const rk = D.racks[selectedRack];
+  const role = rk.role || 'other';
+  const color = ROLECOLOR[role] || 'var(--other)';
+  const slug = rk.rack_type && rk.rack_type.slug ? rk.rack_type.slug : '—';
+  const uh = rk.rack_type && rk.rack_type.u_height ? rk.rack_type.u_height : '';
+  document.getElementById('mainhead').textContent = '랙 실장도 — ' + rk.id;
+  document.getElementById('crumb').innerHTML = crumbFor(selectedRack);
+
+  mv.innerHTML = '';
+  // zoom bar
+  const bar = document.createElement('div');
+  bar.className = 'zoombar';
+  bar.innerHTML = `<span class="zlbl">확대/축소</span>
+    <button id="zminus">−</button>
+    <input type="range" id="zrange" min="0.5" max="3" step="0.1" value="${zoom}">
+    <button id="zplus">＋</button>
+    <span class="zval" id="zval">${Math.round(zoom*100)}%</span>
+    <button id="z100">100%</button>`;
+  mv.appendChild(bar);
+
+  // rack header (role badge + id + rack_type slug)
+  const head = document.createElement('div');
+  head.className = 'rackhead';
+  head.innerHTML = `<span class="rolebadge" style="background:${color}">${esc(role.toUpperCase())}</span>
+    <b>${esc(rk.id)}</b>
+    <span class="rackmeta">· rack-type: ${esc(slug)}${uh?` (${esc(String(uh))}U)`:''} · Front</span>`;
+  mv.appendChild(head);
+
+  // elevation — inject server-rendered SVG as-is, scale via CSS transform
+  const wrap = document.createElement('div');
+  wrap.className = 'elevwrap';
+  const elev = document.createElement('div');
+  elev.className = 'elev';
+  elev.style.transform = `scale(${zoom})`;
+  elev.innerHTML = rk.svg || '<div class="empty">실장도(SVG)가 없습니다.</div>';
+  // keep the scroll area tall enough for the scaled SVG
+  const svgEl = elev.querySelector('svg');
+  const baseH = svgEl ? parseFloat(svgEl.getAttribute('height')) || 0 : 0;
+  const baseW = svgEl ? parseFloat(svgEl.getAttribute('width')) || 0 : 0;
+  if(baseH) wrap.style.height = (baseH*zoom + 8) + 'px';
+  if(baseW) wrap.style.minWidth = Math.min(baseW*zoom + 8, 100000) + 'px';
+  wrap.appendChild(elev);
+  mv.appendChild(wrap);
+
+  // legend
+  const lg = document.createElement('div');
+  lg.className = 'legend';
+  lg.innerHTML = `<b style="color:var(--ink)">카테고리</b>
+    <div><span class="cat" style="background:var(--server)"></span>Server
+      <span class="cat" style="background:var(--network);margin-left:10px"></span>Network
+      <span class="cat" style="background:var(--storage);margin-left:10px"></span>Storage
+      <span class="cat" style="background:var(--other);margin-left:10px"></span>Other</div>
+    <div style="margin-top:6px">※ 실장도는 서버에서 렌더링된 이미지입니다(읽기전용). 선택 릴리즈(<b>${esc(selectedRelease)}</b>) 강조는 우측 표/금액에 반영됩니다.</div>`;
+  mv.appendChild(lg);
+
+  // wire zoom controls
+  document.getElementById('zminus').addEventListener('click', ()=>setZoom(zoom-0.2));
+  document.getElementById('zplus').addEventListener('click', ()=>setZoom(zoom+0.2));
+  document.getElementById('z100').addEventListener('click', ()=>setZoom(1));
+  document.getElementById('zrange').addEventListener('input', e=>setZoom(+e.target.value));
+}
+function setZoom(z){ zoom = Math.min(3, Math.max(0.5, Math.round(z*10)/10)); renderMain(); }
+
+// ── right: device list table + BOM ───────────────────────────────────
+function renderList(){
+  // release dropdown
+  const sel = document.getElementById('relSel');
+  sel.innerHTML = (D.releases||[]).map(r=>`<option ${r===selectedRelease?'selected':''}>${esc(r)}</option>`).join('');
+  document.getElementById('rellbl').textContent = `선택 릴리즈(${selectedRelease}) 추가분 CAPEX`;
+  document.getElementById('scopelbl').textContent = selectedRack || '—';
+
+  const fields = D.fields || [];
+  // header: Cat, Model, 릴리즈, + one col per meta field
+  let head = `<th>Cat</th><th>Model</th><th>릴리즈</th>`;
+  fields.forEach(f=>{ head += `<th>${esc(f.label||f.key)}</th>`; });
+  head += `<th class="num">수량</th><th class="num">소계(${CUR})</th>`;
+  document.getElementById('devhead').innerHTML = head;
+
+  const rows = document.getElementById('devrows');
+  rows.innerHTML = '';
+
+  if(!selectedRack || !D.racks[selectedRack]){
+    document.getElementById('devempty').style.display = 'block';
+    document.getElementById('devempty').textContent = '랙을 선택하세요.';
+    setBom(0,0,0,0,0);
+    return;
+  }
+
+  const items = lineItems(selectedRack);
+  let capex=0, watts=0, usedU=0, relCapex=0, relQty=0, shown=0;
+  // power: prefer rack summary; placement-level power isn't in contract
+  const summary = D.racks[selectedRack].summary || {};
+
+  items.forEach(li=>{
+    const sub = (li.qty||1) * (li.unit_cost||0);
+    const isSel = li.release === selectedRelease;
+    capex += sub;
+    usedU += (li.u||0) * (li.qty||1);
+    if(isSel){ relCapex += sub; relQty += (li.qty||1); }
+    if(releaseOnly && !isSel) return;
+    shown++;
+
+    let metaCells = '';
+    fields.forEach(f=>{
+      const missing = (li.meta_missing||[]).includes(f.key);
+      if(missing){
+        metaCells += f.required
+          ? `<td><span class="miss">필수누락</span></td>`
+          : `<td><span class="dash">—</span></td>`;
+      } else {
+        const v = li.meta && (f.key in li.meta) ? li.meta[f.key] : null;
+        metaCells += (v===null || v===undefined || v==='')
+          ? `<td><span class="dash">—</span></td>`
+          : `<td>${esc(String(v))}</td>`;
+      }
+    });
+
+    const mfr = li.kind==='custom' ? '커스텀 항목' : (li.device || '');
+    rows.insertAdjacentHTML('beforeend', `<tr class="${isSel?'selrow':''}">
+      <td><span class="catdot" style="background:${CATCOLOR[li.category]||'var(--other)'}"></span></td>
+      <td>${esc(li.name)}<div class="mfr">${esc(mfr)}${li.position?` · U${esc(String(li.position))}`:''}</div></td>
+      <td><span class="relpill ${isSel?'sel':'other'}">${esc(li.release||'')}</span></td>
+      ${metaCells}
+      <td class="num">${li.qty||1}</td>
+      <td class="num">${won(sub)}</td>
+    </tr>`);
+  });
+
+  document.getElementById('devempty').style.display = shown ? 'none' : 'block';
+  document.getElementById('devempty').textContent = '배치된 장비가 없습니다.';
+  // power from summary (sum of summary.power_w for the rack) or 0
+  watts = summary.power_w || 0;
+  setBom(capex, watts, usedU, relCapex, relQty);
+}
+function setBom(capex, watts, usedU, relCapex, relQty){
+  document.getElementById('capex').textContent = capex>=1e6 ? `${won(capex)} (${wonShort(capex)})` : won(capex);
+  document.getElementById('watts').textContent = (watts||0).toLocaleString('ko-KR') + ' W';
+  document.getElementById('uused').textContent = usedU + 'U';
+  document.getElementById('capexrel').textContent = relCapex>=1e6 ? `${won(relCapex)} (${wonShort(relCapex)})` : won(relCapex);
+  document.getElementById('reldetail').textContent = relQty + '건';
+}
+
+// ── misc ─────────────────────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function crumbFor(rid){
+  const t = D.tree; if(!t) return '';
+  let path = null;
+  (t.regions||[]).forEach(rg=>(rg.zones||[]).forEach(z=>(z.rack_groups||[]).forEach(grp=>{
+    if((grp.racks||[]).includes(rid)) path = [t.offering, rg.region, z.zone, grp.rack_group, rid];
+  })));
+  if(!path) return '';
+  return path.map((p,i)=> i>=3 ? `<b>${esc(p)}</b>` : esc(p)).join(' / ');
+}
+
+function initStatic(){
+  document.getElementById('relchip').textContent = '● 현재 릴리즈 ' + (D.current_release||'—');
+  const flag = document.getElementById('dataflag');
+  if(D.is_mock){ flag.className = 'flag mock'; flag.textContent = 'MOCKUP · 샘플 데이터'; }
+  else { flag.className = 'flag real'; flag.textContent = '實데이터'; }
+  document.getElementById('relSel').addEventListener('change', e=>{ selectedRelease = e.target.value; renderAll(); });
+  document.getElementById('relOnly').addEventListener('change', e=>{ releaseOnly = e.target.checked; renderList(); });
+}
+
+function renderAll(){ renderTree(); renderMain(); renderList(); }
+
+initStatic();
+// auto-select the first rack so the viewer is non-empty on open
+(function(){
+  const t = D.tree;
+  outer:
+  for(const rg of (t&&t.regions)||[])
+    for(const z of rg.zones||[])
+      for(const grp of z.rack_groups||[])
+        for(const rid of grp.racks||[]){ if(D.racks[rid]){ selectedRack = rid; break outer; } }
+})();
+renderAll();
+</script>
+</body>
+</html>

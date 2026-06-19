@@ -1,61 +1,56 @@
-# 브리프: 설계 모델 + BOM 엔진 (릴리즈 인식, 원화 CAPEX)
+# 브리프: 실제 동작 뷰어 + 기초데이터 입력 + 디바이스 메타(커스텀 필드)
 
 **목표**
-랙 설계를 비용으로 환산한다 — 조직계층/랙/배치 YAML과 원화 가격 오버레이를 읽어 기존 카탈로그
-인덱스와 조인하고, CAPEX 집계(전체 + 릴리즈별 델타)와 전력 용량 집계를 산출한다. Python API와
-`bombom bom` CLI로 제공.
+mock을 실데이터로 동작하는 화면으로 만든다 — 카탈로그/설계/원화 BOM을 NetBox식 랙 SVG로 보여주는
+FastAPI 백엔드와 뷰어, 기초데이터(계층)를 CLI로 생성·복제하는 수단, 카테고리 오버레이, 디바이스
+메타(커스텀 필드: 타입+인스턴스, 조건부 필수), 릴리즈↔git(경량)을 추가한다.
 
-## Scope IN (포함)
-- **설계 스키마 + 로더**: `offerings/<o>/regions/<r>/zones/<z>/rack-groups/<g>/racks/<rack>.yaml`.
-  랙 파일은 카탈로그 `rack_type`(manufacturer+slug)을 참조하고
-  `placements[] = {device: <slug>, position: <U>, release: <태그>, qty?}` 와 선택적
-  `custom_line_items[] = {name, qty, unit_cost, release?}` 를 가진다.
-- **검증**(카탈로그 인덱스 대조): device/rack slug 존재, `position`+u_height가 랙 `u_height` 내,
-  같은 랙 내 U 중복 없음. 위반 항목은 (경로+사유) 보고하고 집계 제외 — 조용히 버리지 않음.
-- **가격 오버레이 로더** `pricing/<vendor>.yaml` — `PriceEntry: 키(manufacturer+slug | model |
-  part_number) → {unit_cost: <정수 KRW>, currency: KRW, valid_from?, valid_to?, source?}`.
-  `pricing/`에만 두고 카탈로그·설계 파일에는 절대 쓰지 않음.
-- **BOM 엔진**: 임의 서브트리 순회 → 라인아이템 `(부품키, 수량)`으로 평탄화 (**수량 = 배치 인스턴스
-  수** + custom line items) → 카탈로그 스펙 + 가격 조인(`valuation_date` 기준 시점가, 기본 오늘)
-  → **원화 CAPEX 집계**: 전체, 랙별, 카테고리별, **릴리즈별** + **선택 릴리즈 델타**. 병행
-  **전력 집계**(Σ max draw, W).
-- **미가격 처리**: 가격 매칭 안 되는 항목은 `unpriced` 목록에 (수량과 함께) 표기·플래그 — 크래시
-  금지, 조용한 ₩0 금지.
-- **CLI + API**: `bombom bom <계층경로> [--release R26.07] [--as-of YYYY-MM-DD]` 출력;
-  `from bombom.bom import compute_bom(...)` 가 구조화된 결과 반환.
+## Scope IN
+- **기초데이터 입력(CLI)**: `bombom scaffold offering|region|zone|rack-group|rack <…>` 가 올바른
+  경로에 YAML 스켈레톤 생성; `bombom scaffold clone <기존경로> <새이름>` 서브트리 복제+식별자 치환.
+- **카테고리 오버레이**: `categories/overlay.yaml`(slug→category) + 휴리스틱 폴백;
+  `bombom category set <slug> <cat>`. 카탈로그 검색·BOM `by_category`가 사용.
+- **디바이스 메타 / 커스텀 필드**:
+  - 정의 `meta/fields.yaml`: `{key,label,type(string|int|enum|bool|date),options?,required,
+    applies_to(device_type|placement),scope(all|category:X|role:Y)}`.
+  - 타입값 오버레이 `meta/devicetypes/<vendor>.yaml`(slug→필드값), 카탈로그와 분리.
+  - 인스턴스값: 랙 YAML `placements[].meta{}`.
+  - 합성(카탈로그+타입메타+placement.meta) + **조건부 필수 검증**(category/role scope에 맞는
+    required 누락 → issue). `bombom meta set-type <slug> k=v`, `bombom meta fields`(정의 출력).
+- **FastAPI 백엔드** `bombom/api/`: `/api/tree`, `/api/catalog/search`, `/api/bom?path=&release=`,
+  `/api/rack/elevation.svg?path=`(서버 렌더 SVG), 정적 프론트 서빙. `bombom serve`.
+- **뷰어 프론트** `web/`: 트리 → 랙 SVG 실장도 → 장비 리스트(+메타 컬럼) + 원화 BOM + 릴리즈 필터 + 줌.
+- **정적 내보내기(보기용)** `bombom export <out.html>`: 실데이터(트리·설계·메타·카탈로그 부분·BOM·SVG)를
+  한 파일에 구워 서버 없이 열람.
+- **릴리즈↔git(경량)**: `bombom release list`(git 태그), `bombom release tag <name>`. 델타는 placement
+  태그 기준(기존).
 
-## Scope OUT (제외)
-- 웹 UI / FastAPI / REST / 랙 SVG 렌더링.
-- OPEX / TCO / 전력의 비용 환산, 감가상각.
-- 다중 통화 (원화 전용, 환율 환산 없음).
-- git 커밋-온-라이트 (working tree YAML 읽기만; 설계 저장/커밋은 이후).
-- 릴리즈를 실제 git 태그/브랜치와 결합 (지금은 placement의 텍스트 태그).
-- 실제 전체 계층 데이터 작성 (테스트/데모용 소형 샘플 트리만).
+## Scope OUT
+- 웹에서 드래그-배치 편집 후 YAML 기록/커밋(이번엔 뷰어 + CLI 입력).
+- 두 git ref/태그 간 BOM diff(릴리즈 델타는 태그 필터로).
+- 인증/멀티유저/배포 호스팅, OPEX/TCO, 다중통화.
+- 메타 필드 타입의 고급 검증(정규식/범위 등)·UI 위젯 커스터마이즈(기본 입력만).
 
-## Constraints (제약)
-- 파일: `bombom/catalog/**`, `vendor/devicetype-library/**` 읽기전용 유지 (`Catalog`/인덱스 재사용,
-  카탈로그 패키지 수정 금지).
-- 동작: 가격/분류 데이터는 카탈로그·설계 YAML에 **절대 기록하지 않음** (ADR spec-cost-separation).
-  git이 원본, 인덱스는 재생성 캐시.
-- 연동: 조인 키는 카탈로그 식별자와 정확히 일치 — device/rack은 `manufacturer+slug`, module은
-  `model`(+part_number).
+## Constraints
+- `bombom/catalog/**`, `vendor/**` 읽기전용 재사용. 가격/카테고리/메타/설계는 각자 오버레이로 분리(ADR).
+- git이 원본; API는 이번엔 **읽기 전용**(쓰기는 CLI). 새 의존성 `fastapi`,`uvicorn`.
 
-## Exit Criteria (완료 기준)
-- [ ] 샘플 계층 + 가격 오버레이에서 `bombom bom offerings/cloud-a` 가 손계산 픽스처와 일치하는 총
-  CAPEX(₩) 출력 (Σ 수량×단가).
-- [ ] `bombom bom <경로> --release R26.07` 가 `release==R26.07` 배치만의 합 = 릴리즈 델타 출력;
-  `--release` 변경 시 값이 결정적으로 변함.
-- [ ] 존재하지 않는 device slug, U 범위 초과/중복 배치는 (파일경로+사유) 오류 보고되고 집계 제외
-  (정상 항목은 계속 합산).
-- [ ] 가격 없는 배치 장비는 `unpriced` 목록에 수량과 함께 표기되고 CLI에서 플래그 (조용한 ₩0 아님).
-- [ ] `compute_bom()` 가 총 CAPEX, 랙별·카테고리별 분해, 릴리즈별 합계, 총 전력(W) 반환; `pytest`로
-  (집계·검증·미가격) 커버 — 전부 통과.
-- [ ] `valuation_date` 가 `valid_from/valid_to` 구간 가격을 선택; 한 키 가격 2건 픽스처에서 날짜에
-  맞는 단가 반환.
+## Exit Criteria
+- [ ] `bombom scaffold offering demo` → 유효 YAML 생성, `bombom bom offerings/demo` 오류 없이 동작.
+- [ ] `bombom scaffold clone .../zones/az1 az2` 가 서브트리 복제 후 새 경로로 로드됨.
+- [ ] `bombom category set dell-poweredge-r760 server` 후 BOM `by_category`·검색에 반영.
+- [ ] `meta/fields.yaml`에 `applies_to:placement, scope:category:server, required:true` 필드 정의 +
+  서버 배치에 값 누락 → BOM/검증이 해당 placement를 **메타 누락 issue**로 보고; 값 채우면 사라짐.
+- [ ] `bombom meta set-type dell-poweredge-r760 asset_class=compute` 가 타입 오버레이에 기록되고 합성됨.
+- [ ] `bombom serve` 후 `/api/bom?path=offerings/cloud-a`=₩84,220,000, `/api/rack/elevation.svg?path=…`
+  가 SVG(랙 높이·U 위치 반영) 반환.
+- [ ] `bombom export /tmp/out.html` → 브라우저로 열면 트리·랙 SVG·원화 BOM·릴리즈 필터·메타 컬럼이
+  실데이터로 보임(서버 불필요).
+- [ ] `pytest` 로 scaffold·category·meta(조건부 필수)·api(TestClient)·svg·release 커버 — 전부 통과.
 
-## Risk Flags (위험)
-- 조인 키 불일치 (device slug는 제조사 접두·전역 고유, module은 slug 없음) — 카탈로그 `Catalog`
-  조회 재사용. 아니면 합계 누락.
-- 시점가 모호성 (구간 겹침/개방형) — 규칙: `valid_from` ≤ 날짜 중 가장 최근 채택, 테스트.
-- "배치 수량" vs placement `qty` 중복 계산 — 규칙: `qty`는 단일 배치 라인 배수(기본 1), 문서·테스트.
-- 0U 장비(PDU)·`custom_line_items` 는 U 미점유여도 CAPEX 포함.
+## Risk Flags
+- 범위 큼 → 동작하는 수직 슬라이스로 진행, 미완은 정직 표기.
+- 원격 환경 `serve` 직접 열람 불가 가능 → 정적 export가 1차 보기 경로.
+- meta scope(category/role) 평가: category는 오버레이/휴리스틱, role은 랙 `role` 필드 — 둘 다 없을 때
+  required 판정 기준 정의 필요(없으면 'all'만 필수).
+- 조인 키 일관성(device slug) 재사용; 카탈로그 패키지 수정 금지.

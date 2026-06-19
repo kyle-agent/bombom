@@ -15,9 +15,15 @@ import json
 import sys
 
 from datetime import date
+from pathlib import Path
 
-from .bom import PriceBook, compute_bom
+from . import release as release_mod
+from . import scaffold as scaffold_mod
+from .bom import compute_bom
 from .catalog import Catalog, CatalogError, reindex, sync
+from .export import build_data, write_export
+from .overlay import CategoryBook, TypeMetaBook
+from .workspace import Workspace
 
 
 def _split(value: str | None) -> list[str] | None:
@@ -89,12 +95,16 @@ def _won(n: int) -> str:
 
 def _cmd_bom(args) -> int:
     as_of = date.fromisoformat(args.as_of) if args.as_of else None
+    ws = Workspace.open(".")
     result = compute_bom(
         args.path,
-        catalog=Catalog(),
-        pricebook=PriceBook.load(args.pricing),
+        catalog=ws.catalog,
+        pricebook=ws.pricebook,
         release=args.release,
         valuation_date=as_of,
+        categories=ws.categories,
+        fields=ws.fields,
+        type_meta=ws.type_meta,
     )
     print(f"BOM — {args.path}  (as of {result.valuation_date})")
     print(f"  총 CAPEX : {_won(result.total_capex)}")
@@ -115,6 +125,72 @@ def _cmd_bom(args) -> int:
             print(f"      - {i.path}: {i.message}")
     # Non-zero exit when anything was excluded, so CI/callers can distinguish a clean run.
     return 1 if errors else 0
+
+
+def _cmd_scaffold(args) -> int:
+    root = "."
+    if args.kind == "offering":
+        p = scaffold_mod.scaffold_offering(root, args.names[0])
+    elif args.kind == "region":
+        p = scaffold_mod.scaffold_region(root, *args.names[:2])
+    elif args.kind == "zone":
+        p = scaffold_mod.scaffold_zone(root, *args.names[:3])
+    elif args.kind == "rack-group":
+        p = scaffold_mod.scaffold_rack_group(root, *args.names[:4])
+    elif args.kind == "rack":
+        p = scaffold_mod.scaffold_rack(root, *args.names[:5],
+                                       rack_type_slug=args.rack_type, role=args.role)
+    else:  # clone
+        p = scaffold_mod.clone_subtree(args.names[0], args.names[1])
+    print(f"created: {p}")
+    return 0
+
+
+def _cmd_category(args) -> int:
+    book = CategoryBook.load(Path("categories") / "overlay.yaml")
+    book.set(args.slug, args.category)
+    print(f"category set: {args.slug} → {args.category}")
+    return 0
+
+
+def _cmd_meta(args) -> int:
+    if args.meta_cmd == "fields":
+        for f in Workspace.open(".").fields:
+            req = "필수" if f.required else "선택"
+            print(f"  {f.key} ({f.label or f.key}) {f.type} · {req} · {f.applies_to} · {f.scope}")
+        return 0
+    # set-type slug key=value
+    book = TypeMetaBook.load(Path("meta") / "devicetypes")
+    key, _, value = args.assignment.partition("=")
+    book.set(args.slug, key.strip(), value.strip(), vendor=args.vendor)
+    print(f"type meta set: {args.slug}.{key.strip()} = {value.strip()}")
+    return 0
+
+
+def _cmd_release(args) -> int:
+    if args.release_cmd == "list":
+        tags = release_mod.list_tags(Path("."))
+        print("\n".join(tags) if tags else "(no release tags)")
+    else:
+        print("tagged:", release_mod.tag_release(args.name, cwd=Path(".")))
+    return 0
+
+
+def _cmd_export(args) -> int:
+    ws = Workspace.open(".")
+    payload = build_data(ws, args.path, release=args.release, is_mock=False)
+    out = write_export(payload, args.out, template=Path("web") / "viewer.html")
+    print(f"exported: {out}  (총 CAPEX {_won(payload['bom']['total_capex'])})")
+    return 0
+
+
+def _cmd_serve(args) -> int:
+    import uvicorn
+
+    from .api import create_app
+
+    uvicorn.run(create_app("."), host=args.host, port=args.port)
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -160,6 +236,47 @@ def build_parser() -> argparse.ArgumentParser:
     p_bom.add_argument("--pricing", default="pricing", help="pricing overlay dir (default: pricing/)")
     p_bom.add_argument("--show-issues", type=int, default=10)
     p_bom.set_defaults(func=_cmd_bom)
+
+    p_sc = sub.add_parser("scaffold", help="create base data (hierarchy) / clone a subtree")
+    p_sc.add_argument("kind", choices=("offering", "region", "zone", "rack-group", "rack", "clone"))
+    p_sc.add_argument("names", nargs="+", help="positional names; for rack: o r z g rack")
+    p_sc.add_argument("--rack-type", help="rack-type slug (for 'rack')")
+    p_sc.add_argument("--role", help="control|data|storage|network (for 'rack')")
+    p_sc.set_defaults(func=_cmd_scaffold)
+
+    p_cat = sub.add_parser("category", help="device category overlay").add_subparsers(
+        dest="cat_cmd", required=True)
+    p_cat_set = p_cat.add_parser("set")
+    p_cat_set.add_argument("slug")
+    p_cat_set.add_argument("category", choices=("server", "network", "storage", "other"))
+    p_cat_set.set_defaults(func=_cmd_category)
+
+    p_meta = sub.add_parser("meta", help="device meta / custom fields").add_subparsers(
+        dest="meta_cmd", required=True)
+    p_meta.add_parser("fields").set_defaults(func=_cmd_meta)
+    p_meta_set = p_meta.add_parser("set-type", help="set a type-level meta value")
+    p_meta_set.add_argument("slug")
+    p_meta_set.add_argument("assignment", help="key=value")
+    p_meta_set.add_argument("--vendor", default="misc")
+    p_meta_set.set_defaults(func=_cmd_meta)
+
+    p_rel = sub.add_parser("release", help="release ↔ git tags").add_subparsers(
+        dest="release_cmd", required=True)
+    p_rel.add_parser("list").set_defaults(func=_cmd_release)
+    p_rel_tag = p_rel.add_parser("tag")
+    p_rel_tag.add_argument("name")
+    p_rel_tag.set_defaults(func=_cmd_release)
+
+    p_exp = sub.add_parser("export", help="bake a static viewer HTML with real data")
+    p_exp.add_argument("out", help="output .html path")
+    p_exp.add_argument("--path", default="offerings", help="hierarchy subtree to export")
+    p_exp.add_argument("--release")
+    p_exp.set_defaults(func=_cmd_export)
+
+    p_srv = sub.add_parser("serve", help="run the read-only web app (uvicorn)")
+    p_srv.add_argument("--host", default="127.0.0.1")
+    p_srv.add_argument("--port", type=int, default=8000)
+    p_srv.set_defaults(func=_cmd_serve)
 
     return parser
 
