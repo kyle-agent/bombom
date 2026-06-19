@@ -13,12 +13,28 @@ from pathlib import Path
 from typing import Optional
 
 from .bom import compute_bom
-from .design import load_racks
+from .design import load_racks, validate_rack
 from .overlay import required_missing
 from .render import rack_elevation_svg
 from .workspace import Workspace
 
 _MARKER = re.compile(r"/\*__BOMBOM_DATA__\*/.*?/\*__END__\*/", re.S)
+
+
+def safe_data_blob(payload: dict) -> str:
+    """JSON for embedding in the viewer's <script>. Escapes HTML-significant chars so a
+    "</script>" (or U+2028/2029) in any YAML-sourced field cannot break out of the block."""
+    raw = json.dumps(payload, ensure_ascii=False)
+    raw = (raw.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+              .replace(" ", "\\u2028").replace(" ", "\\u2029"))
+    return "/*__BOMBOM_DATA__*/ " + raw + " /*__END__*/"
+
+
+def inject(template_text: str, payload: dict) -> str:
+    if not _MARKER.search(template_text):
+        raise ValueError("template missing /*__BOMBOM_DATA__*/ … /*__END__*/ markers")
+    # function replacement → backslash sequences in the blob are inserted literally
+    return _MARKER.sub(lambda _: safe_data_blob(payload), template_text, count=1)
 
 
 def _device_u(catalog, slug) -> int:
@@ -56,7 +72,12 @@ def build_data(
         used_u = 0
         cap = 0
         power = 0
-        for pl in design.placements:
+        # Mirror the engine's exclusions so per-rack summaries reconcile with bom.total_capex.
+        skip = {i.index for i in validate_rack(lr, ws.catalog)
+                if i.index is not None and i.level == "error"}
+        for idx, pl in enumerate(design.placements):
+            if idx in skip:
+                continue
             dev = ws.catalog.get_device_type(pl.device)
             if dev is None:
                 continue
@@ -133,11 +154,8 @@ def write_export(payload: dict, out_path: Path, *, template: Path) -> Path:
     template = Path(template)
     if not template.exists():
         raise FileNotFoundError(f"viewer template not found: {template}")
-    html = template.read_text()
-    blob = "/*__BOMBOM_DATA__*/ " + json.dumps(payload, ensure_ascii=False) + " /*__END__*/"
-    if not _MARKER.search(html):
-        raise ValueError("template missing /*__BOMBOM_DATA__*/ … /*__END__*/ markers")
-    out = _MARKER.sub(lambda _: blob, html, count=1)
     out_path = Path(out_path)
-    out_path.write_text(out)
+    if out_path.resolve() == template.resolve():
+        raise ValueError("export out_path must differ from the viewer template")
+    out_path.write_text(inject(template.read_text(), payload))
     return out_path

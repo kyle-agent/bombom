@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import json
-import re
+import logging
 import sqlite3
 from pathlib import Path
 from typing import Optional
@@ -12,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from ..design import load_racks
-from ..export import build_data
+from ..export import build_data, inject
 from ..render import rack_elevation_svg
 from ..workspace import Workspace
 
@@ -44,11 +43,9 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             return HTMLResponse("<h1>viewer not built</h1>", status_code=500)
         try:
             payload = build_data(ws, _resolve(root, path), is_mock=False)
-            blob = "/*__BOMBOM_DATA__*/ " + json.dumps(payload, ensure_ascii=False) + " /*__END__*/"
-            html = re.sub(r"/\*__BOMBOM_DATA__\*/.*?/\*__END__\*/", lambda _: blob,
-                          _VIEWER.read_text(), count=1, flags=re.S)
-            return HTMLResponse(html)
+            return HTMLResponse(inject(_VIEWER.read_text(), payload))
         except Exception:
+            logging.exception("index: build_data failed for path=%s", path)
             return HTMLResponse(_VIEWER.read_text())
 
     @app.get("/api/tree")
@@ -57,7 +54,7 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
 
     @app.get("/api/catalog/search")
     def catalog_search(q: str = "", category: Optional[str] = None, limit: int = 50):
-        rows = _search_catalog(ws.catalog.db_path, q, limit)
+        rows = _search_catalog(ws.catalog.db_path, q, min(max(limit, 1), 500))
         for r in rows:
             r["category"] = ws.categories.get(r["slug"], model=r["model"], manufacturer=r["manufacturer"])
         if category:
@@ -82,8 +79,12 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
 
 
 def _resolve(root: Path | str, path: str) -> Path:
-    # Prefer root-relative (the workspace) before an ambiguous cwd-relative match.
-    rooted = Path(root) / path
-    if rooted.exists():
-        return rooted
-    return Path(path)
+    # Resolve under the workspace root and reject traversal outside it (read-only API,
+    # but we still don't want arbitrary-path reads from a query string).
+    base = Path(root).resolve()
+    cand = (base / path).resolve()
+    if cand != base and base not in cand.parents:
+        raise HTTPException(400, "path outside workspace")
+    if not cand.exists():
+        raise HTTPException(404, "path not found")
+    return cand

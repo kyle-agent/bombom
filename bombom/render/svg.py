@@ -67,11 +67,12 @@ def rack_elevation_svg(
         stroke = '#f59e0b' if sel else 'rgba(255,255,255,.3)'
         sw = 2 if sel else 1
         label = html.escape(device.model)
+        rel = html.escape(str(pl.release))
         parts.append(
             f'<g><rect x="{pad_left + 1}" y="{y + 1}" width="{body_w}" height="{bh}" rx="3" '
             f'fill="{fill}" stroke="{stroke}" stroke-width="{sw}"/>'
             f'<text x="{pad_left + 6}" y="{y + 1 + bh / 2 + 3}" font-size="9" fill="#fff">'
-            f'{label} <tspan fill="#e2e8f0">U{pl.position}·{pl.release}</tspan></text></g>'
+            f'{label} <tspan fill="#e2e8f0">U{pl.position}·{rel}</tspan></text></g>'
         )
 
     parts.append("</svg>")

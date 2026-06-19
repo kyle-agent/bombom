@@ -11,7 +11,7 @@ from bombom.api import create_app
 from bombom.bom import compute_bom
 from bombom.catalog import Catalog, reindex
 from bombom.design import load_racks
-from bombom.export import build_data, write_export
+from bombom.export import build_data, inject, safe_data_blob, write_export
 from bombom.overlay import CategoryBook, FieldDef, required_missing
 from bombom.render import rack_elevation_svg
 from bombom.workspace import Workspace
@@ -125,6 +125,51 @@ def test_build_and_write_export(ws_root, tmp_path):
 
 
 # ---- api ----
+def test_safe_blob_escapes_script_breakout():
+    blob = safe_data_blob({"x": "</script><img src=x onerror=alert(1)>"})
+    assert "</script>" not in blob and "\\u003c/script" in blob
+
+
+def test_inject_no_breakout():
+    tpl = "<script>const D = /*__BOMBOM_DATA__*/ {} /*__END__*/;</script>"
+    out = inject(tpl, {"x": "</script>"})
+    assert out.count("</script>") == 1  # only the template's own closing tag
+
+
+def test_svg_escapes_release(ws_root):
+    root, db = ws_root
+    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks"
+    (racks / "R02.yaml").write_text(
+        "rack_type: { slug: acme-rack42 }\n"
+        "placements:\n  - { device: dell-poweredge-test1, position: 1, release: '</text><x>' }\n"
+    )
+    design = load_racks(root / "offerings/cloud-a").racks[0].design
+    svg = rack_elevation_svg(design, Catalog(db))
+    assert "</text><x>" not in svg and "&lt;/text&gt;" in svg
+
+
+def test_build_data_summary_excludes_invalid(ws_root):
+    root, db = ws_root
+    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks"
+    # two devices overlapping at U1 → second excluded by validation
+    (racks / "R02.yaml").write_text(
+        "rack_type: { slug: acme-rack42 }\nrole: data\n"
+        "placements:\n"
+        "  - { device: dell-poweredge-test1, position: 1, release: R26.07, meta: { serial: S } }\n"
+        "  - { device: dell-poweredge-test1, position: 2, release: R26.07, meta: { serial: T } }\n"
+    )
+    ws = Workspace.open(root, db_path=db)
+    payload = build_data(ws, root / "offerings/cloud-a")
+    # rack summary must reconcile with engine total (only the first, non-overlapping device)
+    assert payload["racks"]["R02"]["summary"]["capex"] == payload["bom"]["total_capex"] == 1_000_000
+
+
+def test_api_path_traversal_blocked(ws_root):
+    root, db = ws_root
+    client = TestClient(create_app(root, db_path=db), raise_server_exceptions=False)
+    assert client.get("/api/tree?path=../../etc").status_code == 400
+
+
 def test_api_endpoints(ws_root):
     root, db = ws_root
     client = TestClient(create_app(root, db_path=db))

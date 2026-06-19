@@ -78,7 +78,13 @@ class TypeMetaBook:
         self._values.setdefault(slug, {})[key] = value
         if self._dir is not None:
             self._dir.mkdir(parents=True, exist_ok=True)
+            # reuse the file that already holds this slug (avoid split-slug across vendors)
             path = self._dir / f"{vendor}.yaml"
+            for p in sorted(self._dir.glob("*.y*ml")):
+                doc = yaml.safe_load(p.read_text()) or {}
+                if any(e.get("slug") == slug for e in doc.get("entries", [])):
+                    path = p
+                    break
             existing = {}
             if path.exists():
                 existing = yaml.safe_load(path.read_text()) or {}

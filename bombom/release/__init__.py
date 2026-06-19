@@ -24,7 +24,9 @@ def list_tags(cwd: Path | None = None) -> list[str]:
 
 def tag_release(name: str, *, message: str | None = None, cwd: Path | None = None) -> str:
     """Create an annotated git tag marking the current state as a release."""
-    args = ["tag", "-a", name, "-m", message or f"bombom release {name}"]
+    if name.startswith("-"):
+        raise ValueError("release name must not start with '-'")
+    args = ["tag", "-a", "-m", message or f"bombom release {name}", name]
     res = _git(*args, cwd=cwd)
     if res.returncode != 0:
         raise RuntimeError(f"git tag failed: {res.stderr.strip()}")
