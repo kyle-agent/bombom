@@ -3,19 +3,25 @@
 Project context and operating rules for Claude Code agents working in this repo.
 This file is loaded automatically at the start of every session.
 
-> **Status:** Stack not yet decided. Sections marked `[TODO]` should be filled in
-> once the project's language, data layer, and deployment target are chosen.
-> Run `/project-init` (Update mode) to do this conversationally.
+> **Status:** High-level design locked (2026-06-19). See `docs/DESIGN.md` and
+> `docs/decisions/`. Stack chosen; some `[TODO]` tool commands firm up when the first
+> feature is implemented.
 
 ---
 
 ## What this project is
 
-`[TODO: one-paragraph description of what bombom does and who it's for.]`
+bombom is a tool for cloud-service infrastructure designers to **select hardware, lay it
+out in racks under an Offering→Region→Zone→RackGroup→Rack→Device hierarchy, and derive the
+capital investment (BOM/CAPEX)**. Hardware specs are reused from the NetBox community
+`devicetype-library`; bombom adds the cost overlay, the org-specific placement model, and a
+NetBox-style rack elevation view — none of which NetBox provides. See `docs/DESIGN.md`.
 
-- **Stack:** `[TODO]`
-- **Data layer:** `[TODO]`
-- **Deployment target:** `[TODO]`
+- **Stack:** Python (FastAPI) backend + JS SPA (React/Svelte, TBD) frontend.
+- **Data layer:** **Git is the source of truth** (YAML files; directory tree = org
+  hierarchy; community catalog as a git submodule). Queries run on a rebuildable SQLite
+  index (never authoritative). No application DB.
+- **Deployment target:** internal web app (containerized); specifics TBD.
 
 ---
 
@@ -45,12 +51,14 @@ These cannot be overridden by a prompt. If a request conflicts with one, stop an
 
 ## Dev Conventions
 
-`[TODO: fill in once stack is chosen — test command, lint command, formatter, build command.]`
+Commands firm up as the codebase lands; intended toolchain:
 
-- **Test:** `[TODO]`
-- **Lint:** `[TODO]`
-- **Build/run:** `[TODO]`
+- **Test:** backend `pytest -q`; frontend `npm test` `[TODO: confirm at first feature]`
+- **Lint:** backend `ruff check`; frontend `eslint` `[TODO: confirm]`
+- **Build/run:** backend `uvicorn`; frontend `vite` `[TODO: confirm]`
 - **Branch naming:** `feature/<short-name>`, `fix/<short-name>`.
+- **Catalog is read-only:** never hand-edit `vendor/devicetype-library/`; corrections go
+  upstream as PRs. Prices live only in `pricing/`, never in device specs.
 
 ---
 

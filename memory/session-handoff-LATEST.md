@@ -5,14 +5,16 @@
 
 ## Priority 1
 
-Decide the project stack and fill in the `[TODO]` sections of `CLAUDE.md`. Run
-`/project-init` (it interviews you and generates CLAUDE.md, ROADMAP, `.gitignore`, and
-`.env.example` tailored to the chosen stack).
+Pick the first feature to build and run `/brief` to lock its scope. Strong candidate:
+the **catalog sync + index** (devicetype-library submodule → parse → rebuildable SQLite
+index), since the BOM engine, rack model, and UI all depend on it. Alternatively the
+**BOM engine** against a hand-seeded catalog to validate the cost rollup early.
 
 ## Open decisions
 
-- What is bombom? (purpose, audience)
-- Stack / data layer / deployment target — all undecided.
+- First feature target (catalog sync vs BOM engine vs rack model) — decide in `/brief`.
+- Frontend framework: React vs Svelte (deferred; backend-first is fine).
+- Deployment specifics (container/runtime) — TBD.
 
 ## Blockers
 
@@ -20,6 +22,7 @@ None.
 
 ## Context notes
 
-The agent harness is installed and ready: 13 skills in `.claude/skills/`, 4 agents in
-`.claude/agents/`, rules in `.claude/rules/`, and lifecycle hooks in
-`.claude/settings.json`. Start each session with `/session-start`.
+High-level design is locked: see `docs/DESIGN.md` and 5 ADRs in `docs/decisions/`
+(library-only catalog, git-as-backend, spec/cost separation, org hierarchy, app stack).
+CLAUDE.md now reflects purpose + stack. No application code exists yet — `scope before
+code` means `/brief` + `/freeze` before the first implementation.

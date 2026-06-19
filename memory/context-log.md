@@ -10,3 +10,7 @@ external events) · `ttl:30d` (temporary states, short-lived issues).
 
 - [2026-06-18] Agent harness bootstrapped from claude-code-skills (13 skills, 4 agents,
   rules, hooks, memory scaffold). `ttl:permanent`
+- [2026-06-19] Project identity + high-level architecture locked: cloud-infra BOM/CAPEX
+  tool; library-only catalog (devicetype-library), git-as-backend, spec/cost separation,
+  Offering→Region→Zone→RackGroup→Rack→Device hierarchy, FastAPI+JS, CAPEX-first. 5 ADRs +
+  docs/DESIGN.md written. `ttl:permanent`
