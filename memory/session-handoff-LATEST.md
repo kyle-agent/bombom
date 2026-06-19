@@ -5,16 +5,20 @@
 
 ## Priority 1
 
-Pick the first feature to build and run `/brief` to lock its scope. Strong candidate:
-the **catalog sync + index** (devicetype-library submodule → parse → rebuildable SQLite
-index), since the BOM engine, rack model, and UI all depend on it. Alternatively the
-**BOM engine** against a hand-seeded catalog to validate the cost rollup early.
+Build the **price overlay + BOM engine** (next feature; run `/brief` first). The catalog
+query API (`bombom.catalog.Catalog`) is the read side; add `pricing/<vendor>.yaml`
+(PriceEntry: key→unit_cost/currency/source/valid_from/valid_to), join by
+`manufacturer+slug` (device/rack) or `model`/`part_number` (module), and compute a CAPEX
+rollup. Keep price strictly separate from the catalog (ADR spec-cost-separation).
+
+Alternative next feature: the **org hierarchy + rack model** (Offering→…→Rack YAML +
+placement), which the rack-elevation UI later renders.
 
 ## Open decisions
 
-- First feature target (catalog sync vs BOM engine vs rack model) — decide in `/brief`.
-- Frontend framework: React vs Svelte (deferred; backend-first is fine).
-- Deployment specifics (container/runtime) — TBD.
+- Which feature next: BOM engine vs rack model. (BOM validates cost early; rack model
+  unblocks the UI.)
+- Frontend framework: React vs Svelte (deferred until UI work).
 
 ## Blockers
 
@@ -22,7 +26,11 @@ None.
 
 ## Context notes
 
-High-level design is locked: see `docs/DESIGN.md` and 5 ADRs in `docs/decisions/`
-(library-only catalog, git-as-backend, spec/cost separation, org hierarchy, app stack).
-CLAUDE.md now reflects purpose + stack. No application code exists yet — `scope before
-code` means `/brief` + `/freeze` before the first implementation.
+Catalog sync is DONE and pushed (commit 71841e8). All BRIEF.md exit criteria verified
+against real data: `device=5802, module=1863, rack=65`, idempotent + reproducible.
+- Entry points: `from bombom.catalog import Catalog, reindex, sync`; CLI `bombom catalog …`.
+- Dev: `python -m venv .venv && pip install -e .`; tests `pytest -q` (15 pass);
+  lint `ruff check bombom tests`.
+- The devicetype-library is a submodule pinned at bb6a9b1 — run `bombom catalog sync` after
+  a fresh clone (`git submodule update --init`), then `bombom catalog reindex` (~47s full).
+- Index `.index/` is a gitignored rebuildable cache; git is the source of truth.

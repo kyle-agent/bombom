@@ -14,3 +14,7 @@ external events) · `ttl:30d` (temporary states, short-lived issues).
   tool; library-only catalog (devicetype-library), git-as-backend, spec/cost separation,
   Offering→Region→Zone→RackGroup→Rack→Device hierarchy, FastAPI+JS, CAPEX-first. 5 ADRs +
   docs/DESIGN.md written. `ttl:permanent`
+- [2026-06-19] Catalog sync feature shipped (commit 71841e8): submodule pinned bb6a9b1,
+  Decimal-safe parse + strict schema validation + quarantine, rebuildable SQLite index,
+  query API, `bombom catalog` CLI. Real data: device=5802/module=1863/rack=65. 15 tests.
+  `ttl:90d`
