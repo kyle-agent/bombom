@@ -108,6 +108,11 @@
   .bom .release .amt{font-size:18px;font-weight:800;color:var(--warn)}
   .bom .sub{color:var(--muted);font-size:11px}
   .note{font-size:11px;color:var(--warn);margin-top:6px}
+  .zoombar{position:sticky;top:-10px;z-index:5;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-bottom:10px}
+  .zoombar button{border:1px solid var(--line);background:#fff;border-radius:6px;width:26px;height:24px;cursor:pointer;font-size:14px;line-height:1}
+  .zoombar input[type=range]{flex:1}
+  .zoombar .zval{min-width:42px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .zoombar .zlbl{color:var(--muted);font-size:11px}
 </style>
 </head>
 <body>
@@ -195,7 +200,11 @@ const RACKS=[
   {id:'R03',type:'storage'},{id:'R07',type:'storage'},
   {id:'R04',type:'network'},
 ];
-const RACK_U=42, USLOT=16, MINI_U=3;
+const RACK_U=42, BASE_USLOT=16, BASE_MINI_U=4;
+let zoom=1.4;                                // 0.6 ~ 3.0
+const uslot=()=>Math.max(7,Math.round(BASE_USLOT*zoom));
+const miniU=()=>Math.max(1.5,BASE_MINI_U*zoom);
+const miniW=()=>Math.round(58*zoom);
 const byId=id=>MODELS.find(m=>m.id===id);
 const rackById=id=>RACKS.find(r=>r.id===id);
 
@@ -283,9 +292,11 @@ function addShort(id){if(!shortlist.includes(id))shortlist.push(id);renderStep()
 /* ---------- main view: rack detail OR zone overview ---------- */
 function occupied(list,exceptIdx){const s=new Set();list.forEach((p,i)=>{if(i===exceptIdx)return;for(let u=p.startU;u<p.startU+p.u;u++)s.add(u);});return s;}
 function buildRack(rid){
-  const rack=document.createElement('div'); rack.className='rack'; rack.style.height=(RACK_U*USLOT+12)+'px';
+  const U=uslot();
+  const rack=document.createElement('div'); rack.className='rack'; rack.style.height=(RACK_U*U+12)+'px';
+  rack.style.width=Math.round(180*zoom+60)+'px';
   for(let u=RACK_U;u>=1;u--){
-    const slot=document.createElement('div'); slot.className='uslot'; slot.dataset.u=u;
+    const slot=document.createElement('div'); slot.className='uslot'; slot.dataset.u=u; slot.style.height=U+'px';
     slot.innerHTML=`<span class="uno">${u}</span>`;
     slot.ondragover=e=>{e.preventDefault();slot.classList.add('drophover');};
     slot.ondragleave=()=>slot.classList.remove('drophover');
@@ -298,7 +309,8 @@ function buildRack(rid){
     const blk=document.createElement('div'); blk.draggable=true;
     blk.className='dev '+(isNew?'new':'existing')+(releaseOnly&&!isNew?' fade':'');
     blk.style.background=CATCOLOR[m.cat];
-    blk.style.bottom=((p.startU-1)*USLOT+6)+'px'; blk.style.height=(p.u*USLOT-2)+'px';
+    blk.style.bottom=((p.startU-1)*U+6)+'px'; blk.style.height=(p.u*U-2)+'px';
+    blk.style.fontSize=Math.max(9,Math.round(11*Math.min(zoom,1.4)))+'px';
     blk.innerHTML=`${m.name}<small>U${p.startU}</small>${isNew?'<span class="newpill">NEW</span>':''}<span class="rm" title="제거" onclick="event.stopPropagation();removeP(${idx})">✕</span>`;
     blk.ondragstart=e=>e.dataTransfer.setData('text/plain','move:'+idx);
     rack.appendChild(blk);
@@ -306,19 +318,34 @@ function buildRack(rid){
   return rack;
 }
 function miniRackHTML(r){
+  const mu=miniU(), w=miniW();
   const list=placements[r.id]; let used=0,nw=0,cap=0,relcap=0;
   let segs='';
   list.forEach(p=>{const m=byId(p.modelId);cap+=m.price; if(p.status==='new'){relcap+=m.price;}
     if(m.u===0)return; used+=p.u; if(p.status==='new')nw++;
-    segs+=`<div class="mseg ${p.status} ${releaseOnly&&p.status!=='new'?'fade':''}" style="background:${CATCOLOR[m.cat]};bottom:${(p.startU-1)*MINI_U+2}px;height:${p.u*MINI_U-1}px" title="${m.name} · U${p.startU} · ${STLABEL[p.status]}"></div>`;});
-  return `<div class="mini" onclick="drill('${r.id}')" title="클릭=상세/배치">
+    const label=zoom>=1.6?`<span style="font-size:${Math.round(7*zoom)}px;color:#fff;padding-left:3px;white-space:nowrap;overflow:hidden">${m.name}</span>`:'';
+    segs+=`<div class="mseg ${p.status} ${releaseOnly&&p.status!=='new'?'fade':''}" style="background:${CATCOLOR[m.cat]};bottom:${(p.startU-1)*mu+2}px;height:${p.u*mu-1}px;display:flex;align-items:center" title="${m.name} · U${p.startU} · ${STLABEL[p.status]}">${label}</div>`;});
+  return `<div class="mini" style="width:${w+16}px;font-size:${Math.round(12*Math.min(zoom,1.5))}px" onclick="drill('${r.id}')" title="클릭=상세/배치">
       <div class="mininame">${r.id}</div>
-      <div class="minirack" style="height:${RACK_U*MINI_U+4}px">${segs}</div>
+      <div class="minirack" style="width:${w}px;height:${RACK_U*mu+4}px">${segs}</div>
       <div class="minifoot">${used}/42U${nw?` · <b style="color:var(--new)">+${nw}</b>`:''}<br>$${Math.round(cap/1000)}k${relcap?` <span style="color:var(--new)">(+$${Math.round(relcap/1000)}k)</span>`:''}</div>
     </div>`;
 }
+function zoomBarHTML(){
+  return `<div class="zoombar">
+    <span class="zlbl">확대/축소</span>
+    <button onclick="setZoom(zoom-0.2)" title="축소">−</button>
+    <input type="range" min="0.6" max="3" step="0.1" value="${zoom}" oninput="setZoom(+this.value)">
+    <button onclick="setZoom(zoom+0.2)" title="확대">＋</button>
+    <span class="zval">${Math.round(zoom*100)}%</span>
+    <button onclick="setZoom(1)" title="100%로" style="width:auto;padding:0 6px;font-size:11px">100%</button>
+    ${view==='zone'?'<button onclick="setZoom(0.6)" title="전체 한눈에" style="width:auto;padding:0 6px;font-size:11px">전체</button>':''}
+  </div>`;
+}
+function setZoom(z){zoom=Math.min(3,Math.max(0.6,Math.round(z*10)/10));renderMain();}
 function renderMain(){
   const mv=document.getElementById('mainview'); mv.innerHTML='';
+  mv.insertAdjacentHTML('beforeend',zoomBarHTML());
   if(view==='rack'){
     const r=rackById(selectedRack),t=TYPE(r.type);
     document.getElementById('mainhead').textContent='랙 실장도 — '+r.id;
@@ -351,7 +378,7 @@ function renderMain(){
       h+=`<div class="ovtype"><div class="ovtypehead"><span class="rolebadge" style="background:${t.color}">${tk.toUpperCase()}</span><span class="rackmeta">rack-type · ${racks.length} racks · ${t.rt}</span></div>
         <div class="ovgrid">${racks.map(miniRackHTML).join('')}</div></div>`;
     });
-    mv.innerHTML=h;
+    mv.insertAdjacentHTML('beforeend',h);
   }
 }
 function onDrop(data,startU){if(data.startsWith('move:'))return relocate(+data.slice(5),startU);if(data.startsWith('new:'))placeNew(data.slice(4),startU);}
