@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from ..catalog import Catalog
-from ..design import load_racks, validate_rack
+from ..design import Issue, load_racks, validate_rack
 from .pricing import PriceBook
 
 
@@ -79,6 +79,8 @@ def compute_bom(
 
     loaded = load_racks(Path(root))
     result.issues.extend(loaded.issues)
+    # Surface any pricing-overlay load problems (malformed entries are skipped, not fatal).
+    result.issues.extend(Issue(path, "error", msg) for path, msg in pricebook.issues)
 
     for lr in loaded.racks:
         rack_issues = validate_rack(lr, catalog)

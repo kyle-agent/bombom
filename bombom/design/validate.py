@@ -27,8 +27,12 @@ def validate_rack(loaded: LoadedRack, catalog: Catalog) -> list[Issue]:
     rack = catalog.get_rack_type(design.rack_type.slug)
     if rack is None:
         issues.append(Issue(path, "error", f"rack_type slug not in catalog: {design.rack_type.slug}"))
+    # NOTE: if the rack_type is unknown, rack_u is None and per-placement height checks below
+    # are skipped (the rack-level error is still reported). Placements still total — deliberate.
     rack_u = int(rack.u_height) if rack else None
 
+    # NOTE: a placement's `qty` is a cost-line multiplier (BRIEF), not stacked physical units —
+    # overlap is checked for the single footprint at `position` only, not qty×footprint.
     occupied: dict[int, str] = {}
     for idx, pl in enumerate(design.placements):
         device = catalog.get_device_type(pl.device)

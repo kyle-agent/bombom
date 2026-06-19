@@ -169,6 +169,22 @@ def test_parse_hierarchy():
     assert h == {"offering": "cloud-a", "region": "kr-east", "zone": "az1", "rack_group": "row-3"}
 
 
+def test_malformed_pricing_does_not_crash(catalog, tmp_path):
+    root = _rack(tmp_path, "R02", GOOD_RACK)
+    # one valid entry + two malformed (bad type, and no join key) must not raise
+    bad = (
+        "entries:\n"
+        "  - { slug: dell-poweredge-test1, unit_cost: 1000000 }\n"
+        "  - { slug: arista-test-sw, unit_cost: not-a-number }\n"
+        "  - { unit_cost: 5 }\n"
+    )
+    book = PriceBook.load(_pricing(tmp_path, bad))
+    assert len(book.issues) == 2                 # two bad entries recorded, not raised
+    r = compute_bom(root, catalog=catalog, pricebook=book)
+    assert any(i.level == "error" for i in r.issues)   # pricing issues surfaced
+    assert r.total_capex == 2_040_000           # valid price still applied (2×1,000,000 + DAC)
+
+
 def test_schema_error_reported(catalog, tmp_path):
     root = _rack(tmp_path, "R02", "rack_type: { slug: acme-rack42 }\nplacements:\n  - { device: x, position: 1, release: R1, bogus: 9 }\n")
     book = PriceBook.load(_pricing(tmp_path, PRICING))

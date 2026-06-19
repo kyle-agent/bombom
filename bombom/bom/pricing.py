@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 
 class PriceEntry(BaseModel):
@@ -52,10 +52,11 @@ class PriceEntry(BaseModel):
 
 def _pick(entries: list[PriceEntry], as_of: date) -> Optional[PriceEntry]:
     # Most recent valid_from that brackets as_of wins; undated entries are the fallback.
+    # Ties (equal valid_from) break on unit_cost so the result is deterministic, not file-order.
     covering = [e for e in entries if e.covers(as_of)]
     if not covering:
         return None
-    return max(covering, key=lambda e: (e.valid_from is not None, e.valid_from or date.min))
+    return max(covering, key=lambda e: (e.valid_from is not None, e.valid_from or date.min, e.unit_cost))
 
 
 class PriceBook:
@@ -63,6 +64,7 @@ class PriceBook:
         self._by_slug: dict[str, list[PriceEntry]] = {}
         self._by_pn: dict[str, list[PriceEntry]] = {}
         self._by_model: dict[str, list[PriceEntry]] = {}
+        self.issues: list[tuple[str, str]] = []          # (path, message) — never raised
 
     @classmethod
     def load(cls, pricing_dir: Path) -> "PriceBook":
@@ -70,10 +72,19 @@ class PriceBook:
         pricing_dir = Path(pricing_dir)
         if not pricing_dir.exists():
             return book
-        for path in sorted(pricing_dir.glob("*.y*ml")):
-            doc = yaml.safe_load(path.read_text()) or {}
+        files = sorted([*pricing_dir.glob("*.yaml"), *pricing_dir.glob("*.yml")])
+        for path in files:
+            try:
+                doc = yaml.safe_load(path.read_text()) or {}
+            except yaml.YAMLError as exc:
+                book.issues.append((str(path), f"YAML parse error: {exc}"))
+                continue
             for raw in doc.get("entries", []):
-                entry = PriceEntry.model_validate(raw)
+                try:
+                    entry = PriceEntry.model_validate(raw)
+                except ValidationError as exc:
+                    book.issues.append((str(path), f"invalid price entry: {exc.errors()[0]['msg']}"))
+                    continue
                 if entry.slug:
                     book._by_slug.setdefault(entry.slug, []).append(entry)
                 if entry.part_number:

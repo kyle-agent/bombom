@@ -113,7 +113,8 @@ def _cmd_bom(args) -> int:
         print(f"  ⚠️ 오류 {len(errors)}건 (집계 제외):")
         for i in errors[: args.show_issues]:
             print(f"      - {i.path}: {i.message}")
-    return 0
+    # Non-zero exit when anything was excluded, so CI/callers can distinguish a clean run.
+    return 1 if errors else 0
 
 
 def build_parser() -> argparse.ArgumentParser:
