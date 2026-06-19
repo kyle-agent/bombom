@@ -105,7 +105,8 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         if errors:
             raise HTTPException(400, {"issues": [vars(i) for i in errors]})
         write_rack(target, body)
-        sha = add_commit([target], message or f"edit {target.stem}", cwd=Path(root))
+        msg = (message or f"edit {target.stem}").replace("\n", " ").strip()[:500] or f"edit {target.stem}"
+        sha = add_commit([target], msg, cwd=Path(root))
         data = build_data(ws, target)
         return {
             "ok": True, "commit": sha,

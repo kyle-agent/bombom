@@ -104,6 +104,12 @@ def test_put_path_traversal_blocked(gitws):
     assert not (root.parent / "evil").exists()
 
 
+def test_edit_route_serves_editor(gitws):
+    client, _ = _client(gitws)
+    r = client.get("/edit")
+    assert r.status_code == 200 and "에디터" in r.text
+
+
 def test_writer_roundtrip(gitws):
     _, root = _client(gitws)
     d = load_racks(root / RACKFILE).racks[0].design
