@@ -40,15 +40,14 @@ class CustomLineItem(BaseModel):
 
 class RackDesign(BaseModel):
     model_config = _BASE
-    rack_type: CatalogRef                 # the physical rack from the catalog
-    role: Optional[str] = None            # our classification: control/data/storage/network
+    rack_model: CatalogRef                # the physical rack from the catalog (was rack_type)
     placements: list[Placement] = Field(default_factory=list)
     custom_line_items: list[CustomLineItem] = Field(default_factory=list)
 
-    @field_validator("rack_type", mode="before")
+    @field_validator("rack_model", mode="before")
     @classmethod
-    def _coerce_rack_type(cls, value: Union[str, dict, CatalogRef]):
-        # Allow `rack_type: some-slug` shorthand in addition to `{slug: ...}`.
+    def _coerce_rack_model(cls, value: Union[str, dict, CatalogRef]):
+        # Allow `rack_model: some-slug` shorthand in addition to `{slug: ...}`.
         if isinstance(value, str):
             return {"slug": value}
         return value

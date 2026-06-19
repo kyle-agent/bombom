@@ -12,7 +12,7 @@ This file is loaded automatically at the start of every session.
 ## What this project is
 
 bombom is a tool for cloud-service infrastructure designers to **select hardware, lay it
-out in racks under an Offering→Region→Zone→RackGroup→Rack→Device hierarchy, and derive the
+out in racks under an Offering→Region→Zone→Rack-Type→Rack→Device hierarchy, and derive the
 capital investment (BOM/CAPEX)**. Hardware specs are reused from the NetBox community
 `devicetype-library`; bombom adds the cost overlay, the org-specific placement model, and a
 NetBox-style rack elevation view — none of which NetBox provides. See `docs/DESIGN.md`.

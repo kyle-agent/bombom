@@ -18,7 +18,7 @@ def catalog(library, tmp_path):
 
 
 def _rack(tmp_path, rack_id, body):
-    d = tmp_path / "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks"
+    d = tmp_path / "offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks"
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{rack_id}.yaml").write_text(body)
     return tmp_path / "offerings/cloud-a"
@@ -32,8 +32,7 @@ def _pricing(tmp_path, body):
 
 
 GOOD_RACK = """\
-rack_type: { slug: acme-rack42 }
-role: data
+rack_model: { slug: acme-rack42 }
 placements:
   - { device: dell-poweredge-test1, position: 1, release: R25.01 }
   - { device: dell-poweredge-test1, position: 5, release: R26.07 }
@@ -86,7 +85,7 @@ def test_unpriced_flagged_not_silent_zero(catalog, tmp_path):
 
 def test_bad_slug_reported_and_excluded(catalog, tmp_path):
     body = """\
-rack_type: { slug: acme-rack42 }
+rack_model: { slug: acme-rack42 }
 placements:
   - { device: dell-poweredge-test1, position: 1, release: R26.07 }
   - { device: does-not-exist, position: 10, release: R26.07 }
@@ -100,7 +99,7 @@ placements:
 
 def test_overlap_excludes_only_second(catalog, tmp_path):
     body = """\
-rack_type: { slug: acme-rack42 }
+rack_model: { slug: acme-rack42 }
 placements:
   - { device: dell-poweredge-test1, position: 1, release: R26.07 }
   - { device: dell-poweredge-test1, position: 2, release: R26.07 }
@@ -114,7 +113,7 @@ placements:
 
 def test_exceeds_rack_height(catalog, tmp_path):
     body = """\
-rack_type: { slug: acme-rack42 }
+rack_model: { slug: acme-rack42 }
 placements:
   - { device: dell-poweredge-test1, position: 42, release: R26.07 }
 """
@@ -127,7 +126,7 @@ placements:
 
 def test_valuation_date_picks_point_in_time(catalog, tmp_path):
     body = """\
-rack_type: { slug: acme-rack42 }
+rack_model: { slug: acme-rack42 }
 placements:
   - { device: dell-poweredge-test1, position: 1, release: R26.07 }
 """
@@ -145,7 +144,7 @@ entries:
 
 def test_qty_multiplier(catalog, tmp_path):
     body = """\
-rack_type: { slug: acme-rack42 }
+rack_model: { slug: acme-rack42 }
 placements:
   - { device: dell-poweredge-test1, position: 1, release: R26.07, qty: 3 }
 """
@@ -165,8 +164,8 @@ def test_breakdowns_present(catalog, tmp_path):
 
 
 def test_parse_hierarchy():
-    h = parse_hierarchy(Path("offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks/R02.yaml"))
-    assert h == {"offering": "cloud-a", "region": "kr-east", "zone": "az1", "rack_group": "row-3"}
+    h = parse_hierarchy(Path("offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks/R02.yaml"))
+    assert h == {"offering": "cloud-a", "region": "kr-east", "zone": "az1", "rack_type": "data"}
 
 
 def test_malformed_pricing_does_not_crash(catalog, tmp_path):
@@ -186,7 +185,7 @@ def test_malformed_pricing_does_not_crash(catalog, tmp_path):
 
 
 def test_schema_error_reported(catalog, tmp_path):
-    root = _rack(tmp_path, "R02", "rack_type: { slug: acme-rack42 }\nplacements:\n  - { device: x, position: 1, release: R1, bogus: 9 }\n")
+    root = _rack(tmp_path, "R02", "rack_model: { slug: acme-rack42 }\nplacements:\n  - { device: x, position: 1, release: R1, bogus: 9 }\n")
     book = PriceBook.load(_pricing(tmp_path, PRICING))
     r = compute_bom(root, catalog=catalog, pricebook=book)
     assert any(i.level == "error" for i in r.issues)

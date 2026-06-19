@@ -1,7 +1,7 @@
 """Load rack design YAML from the org-hierarchy directory tree.
 
 The directory tree IS the hierarchy:
-    offerings/<o>/regions/<r>/zones/<z>/rack-groups/<g>/racks/<rack>.yaml
+    offerings/<o>/regions/<r>/zones/<z>/rack-types/<type>/racks/<rack>.yaml
 
 `load_racks(root)` accepts any node in the tree (the whole `offerings/`, a single offering,
 a zone, …) and returns every rack design beneath it, each tagged with the hierarchy parsed
@@ -20,11 +20,12 @@ from pydantic import ValidationError
 from .models import RackDesign
 
 # Path segment markers → hierarchy level name.
+# Rack-Type (control/data/storage/network) is the purpose grouping under a zone.
 _MARKERS = {
     "offerings": "offering",
     "regions": "region",
     "zones": "zone",
-    "rack-groups": "rack_group",
+    "rack-types": "rack_type",
 }
 
 

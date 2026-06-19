@@ -13,12 +13,10 @@ from .models import RackDesign
 
 
 def rack_to_dict(design: RackDesign) -> dict:
-    rt: dict = {"slug": design.rack_type.slug}
-    if design.rack_type.manufacturer:
-        rt["manufacturer"] = design.rack_type.manufacturer
-    out: dict = {"rack_type": rt}
-    if design.role:
-        out["role"] = design.role
+    rm: dict = {"slug": design.rack_model.slug}
+    if design.rack_model.manufacturer:
+        rm["manufacturer"] = design.rack_model.manufacturer
+    out: dict = {"rack_model": rm}
     placements = []
     for p in design.placements:
         item = {"device": p.device, "position": p.position, "release": p.release}

@@ -129,15 +129,16 @@ const BOMBOM_DATA = /*__BOMBOM_DATA__*/ {
     "offering": "cloud-a", "name": "Cloud A",
     "regions": [
       {"region": "kr-east", "zones": [
-        {"zone": "az1", "rack_groups": [
-          {"rack_group": "row-3", "racks": ["R02", "R04"]}
+        {"zone": "az1", "rack_types": [
+          {"rack_type": "data", "racks": ["R02"]},
+          {"rack_type": "network", "racks": ["R04"]}
         ]}
       ]}
     ]
   },
   "racks": {
     "R02": {
-      "id": "R02", "role": "data", "rack_type": {"slug": "vertiv-vr3300", "u_height": 42},
+      "id": "R02", "role": "data", "rack_model": {"slug": "vertiv-vr3300", "u_height": 42},
       "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='240' height='446' viewBox='0 0 240 446'><rect x='0' y='0' width='240' height='446' rx='6' fill='#f1f5f9' stroke='#cbd5e1' stroke-width='2'/><text x='6' y='14' font-size='9' fill='#94a3b8' font-family='sans-serif'>42</text><rect x='28' y='8' width='204' height='9' rx='2' fill='#16a34a'/><text x='32' y='15' font-size='8' fill='#fff' font-family='sans-serif'>DCS-7050SX3 · U42 · R25.01</text><rect x='28' y='17' width='204' height='9' rx='2' fill='#16a34a'/><text x='32' y='24' font-size='8' fill='#fff' font-family='sans-serif'>DCS-7050SX3 · U41 · R25.01</text><rect x='28' y='406' width='204' height='18' rx='2' fill='#2563eb'/><text x='32' y='418' font-size='8' fill='#fff' font-family='sans-serif'>PowerEdge R760 · U1 · R25.01</text><rect x='28' y='386' width='204' height='18' rx='2' fill='#2563eb'/><text x='32' y='398' font-size='8' fill='#fff' font-family='sans-serif'>PowerEdge R760 · U3 · R25.07</text><rect x='28' y='366' width='204' height='18' rx='2' fill='#2563eb' stroke='#f59e0b' stroke-width='2' stroke-dasharray='3'/><text x='32' y='378' font-size='8' fill='#fff' font-family='sans-serif'>PowerEdge R760 · U5 · R26.07</text></svg>",
       "placements": [
         {"device": "arista-dcs-7050sx3-48yc8", "name": "DCS-7050SX3-48YC8", "category": "network", "position": 42, "u": 1, "release": "R25.01", "unit_cost": 29500000, "meta": {"owner": "net-team"}, "meta_missing": []},
@@ -152,7 +153,7 @@ const BOMBOM_DATA = /*__BOMBOM_DATA__*/ {
       "summary": {"used_u": 6, "capex": 118220000, "power_w": 4500}
     },
     "R04": {
-      "id": "R04", "role": "network", "rack_type": {"slug": "apc-netshelter-sx-42u", "u_height": 42},
+      "id": "R04", "role": "network", "rack_model": {"slug": "apc-netshelter-sx-42u", "u_height": 42},
       "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='240' height='446' viewBox='0 0 240 446'><rect x='0' y='0' width='240' height='446' rx='6' fill='#f1f5f9' stroke='#cbd5e1' stroke-width='2'/><text x='6' y='14' font-size='9' fill='#94a3b8' font-family='sans-serif'>42</text><rect x='28' y='8' width='204' height='9' rx='2' fill='#16a34a'/><text x='32' y='15' font-size='8' fill='#fff' font-family='sans-serif'>DCS-7280CR3 · U42 · R25.01</text><rect x='28' y='18' width='204' height='9' rx='2' fill='#16a34a' stroke='#f59e0b' stroke-width='2' stroke-dasharray='3'/><text x='32' y='25' font-size='8' fill='#fff' font-family='sans-serif'>Nexus 93180YC · U41 · R26.07</text></svg>",
       "placements": [
         {"device": "arista-dcs-7280cr3-32p4", "name": "DCS-7280CR3-32P4", "category": "network", "position": 42, "u": 1, "release": "R25.01", "unit_cost": 51000000, "meta": {"owner": "net-team"}, "meta_missing": []},
@@ -214,8 +215,8 @@ function renderTree(){
     h += `<div class="node lvl2">🌏 ${esc(rg.region)}</div>`;
     (rg.zones||[]).forEach(z=>{
       h += `<div class="node lvl3">🏢 ${esc(z.zone)}</div>`;
-      (z.rack_groups||[]).forEach(grp=>{
-        h += `<div class="node lvl4">▦ ${esc(grp.rack_group)}</div>`;
+      (z.rack_types||[]).forEach(grp=>{
+        h += `<div class="node lvl4" title="Rack-Type">▦ ${esc(grp.rack_type)}</div>`;
         (grp.racks||[]).forEach(rid=>{
           const rk = D.racks[rid];
           const role = rk && rk.role ? rk.role : 'other';
@@ -248,8 +249,8 @@ function renderMain(){
   const rk = D.racks[selectedRack];
   const role = rk.role || 'other';
   const color = ROLECOLOR[role] || 'var(--other)';
-  const slug = rk.rack_type && rk.rack_type.slug ? rk.rack_type.slug : '—';
-  const uh = rk.rack_type && rk.rack_type.u_height ? rk.rack_type.u_height : '';
+  const slug = rk.rack_model && rk.rack_model.slug ? rk.rack_model.slug : '—';
+  const uh = rk.rack_model && rk.rack_model.u_height ? rk.rack_model.u_height : '';
   document.getElementById('mainhead').textContent = '랙 실장도 — ' + rk.id;
   document.getElementById('crumb').innerHTML = crumbFor(selectedRack);
 
@@ -392,8 +393,8 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;
 function crumbFor(rid){
   const t = D.tree; if(!t) return '';
   let path = null;
-  (t.regions||[]).forEach(rg=>(rg.zones||[]).forEach(z=>(z.rack_groups||[]).forEach(grp=>{
-    if((grp.racks||[]).includes(rid)) path = [t.offering, rg.region, z.zone, grp.rack_group, rid];
+  (t.regions||[]).forEach(rg=>(rg.zones||[]).forEach(z=>(z.rack_types||[]).forEach(grp=>{
+    if((grp.racks||[]).includes(rid)) path = [t.offering, rg.region, z.zone, grp.rack_type, rid];
   })));
   if(!path) return '';
   return path.map((p,i)=> i>=3 ? `<b>${esc(p)}</b>` : esc(p)).join(' / ');
@@ -417,7 +418,7 @@ initStatic();
   outer:
   for(const rg of (t&&t.regions)||[])
     for(const z of rg.zones||[])
-      for(const grp of z.rack_groups||[])
+      for(const grp of z.rack_types||[])
         for(const rid of grp.racks||[]){ if(D.racks[rid]){ selectedRack = rid; break outer; } }
 })();
 renderAll();

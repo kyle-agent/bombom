@@ -32,7 +32,7 @@ def rack_elevation_svg(
     width: int = 240,
 ) -> str:
     categories = categories or CategoryBook()
-    rack = catalog.get_rack_type(design.rack_type.slug)
+    rack = catalog.get_rack_type(design.rack_model.slug)
     rack_u = int(rack.u_height) if rack else 42
     h = rack_u * u_px
     pad_left = 26

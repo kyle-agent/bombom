@@ -11,7 +11,7 @@ from bombom.catalog import reindex
 from bombom.design import RackDesign, load_racks
 from bombom.design.writer import rack_to_dict
 
-RACKFILE = "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks/R02.yaml"
+RACKFILE = "offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks/R02.yaml"
 
 
 def _git(*args, cwd):
@@ -27,10 +27,10 @@ def gitws(library, tmp_path):
     db = tmp_path / "idx" / "catalog.db"
     reindex(db_path=db, paths=library)
     root = tmp_path / "ws"
-    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks"
+    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks"
     racks.mkdir(parents=True)
     (racks / "R02.yaml").write_text(
-        "rack_type: { slug: acme-rack42 }\nrole: data\n"
+        "rack_model: { slug: acme-rack42 }\n"
         "placements:\n  - { device: dell-poweredge-test1, position: 1, release: R26.07 }\n"
     )
     files = {
@@ -60,7 +60,7 @@ def _client(gitws):
 def test_put_writes_yaml_and_commits(gitws):
     client, root = _client(gitws)
     before = _count(root)
-    body = {"rack_type": {"slug": "acme-rack42"}, "role": "data", "placements": [
+    body = {"rack_model": {"slug": "acme-rack42"}, "placements": [
         {"device": "dell-poweredge-test1", "position": 1, "release": "R26.07", "meta": {"serial": "S1"}},
         {"device": "arista-test-sw", "position": 40, "release": "R26.07"},
     ]}
@@ -75,7 +75,7 @@ def test_put_writes_yaml_and_commits(gitws):
 def test_put_rejects_overlap_no_write_no_commit(gitws):
     client, root = _client(gitws)
     before = _count(root)
-    body = {"rack_type": {"slug": "acme-rack42"}, "placements": [
+    body = {"rack_model": {"slug": "acme-rack42"}, "placements": [
         {"device": "dell-poweredge-test1", "position": 1, "release": "R1"},
         {"device": "dell-poweredge-test1", "position": 2, "release": "R1"},  # 2U → overlaps U2
     ]}
@@ -89,7 +89,7 @@ def test_get_then_meta_persist_clears_missing(gitws):
     client, root = _client(gitws)
     got = client.get(f"/api/rack?path={RACKFILE}").json()
     assert any("serial" in p["meta_missing"] for p in got["rack"]["placements"])
-    body = {"rack_type": {"slug": "acme-rack42"}, "role": "data", "placements": [
+    body = {"rack_model": {"slug": "acme-rack42"}, "placements": [
         {"device": "dell-poweredge-test1", "position": 1, "release": "R26.07", "meta": {"serial": "S9"}},
     ]}
     out = client.put(f"/api/rack?path={RACKFILE}&message=meta", json=body).json()
@@ -99,7 +99,7 @@ def test_get_then_meta_persist_clears_missing(gitws):
 def test_put_path_traversal_blocked(gitws):
     client, root = _client(gitws)
     r = client.put("/api/rack?path=../evil/racks/x.yaml&message=x",
-                   json={"rack_type": {"slug": "acme-rack42"}, "placements": []})
+                   json={"rack_model": {"slug": "acme-rack42"}, "placements": []})
     assert r.status_code == 400
     assert not (root.parent / "evil").exists()
 
@@ -114,6 +114,5 @@ def test_writer_roundtrip(gitws):
     _, root = _client(gitws)
     d = load_racks(root / RACKFILE).racks[0].design
     d2 = RackDesign.model_validate(rack_to_dict(d))
-    assert d2.role == d.role
-    assert d2.rack_type.slug == d.rack_type.slug
+    assert d2.rack_model.slug == d.rack_model.slug
     assert [p.device for p in d2.placements] == [p.device for p in d.placements]

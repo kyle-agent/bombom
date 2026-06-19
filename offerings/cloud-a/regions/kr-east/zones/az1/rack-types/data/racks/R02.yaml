@@ -1,6 +1,5 @@
-# 데모용 샘플 — data 랙
-rack_type: { slug: vertiv-vr3300 }
-role: data
+# 데모용 샘플 — data 랙타입의 R02 (물리 랙 모델 = vertiv-vr3300)
+rack_model: { slug: vertiv-vr3300 }
 placements:
   - { device: dell-poweredge-r760, position: 1, release: R25.01, meta: { serial: "R760-0001", owner: infra } }
   - { device: dell-poweredge-r760, position: 3, release: R26.07, meta: { owner: infra } }   # serial 누락(필수)

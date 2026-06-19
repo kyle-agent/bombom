@@ -28,11 +28,11 @@ def catalog(library, tmp_path):
 def ws_root(tmp_path, catalog):
     """A tmp workspace: hierarchy + pricing + categories + meta fields."""
     root = tmp_path / "wsroot"
-    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks"
+    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks"
     racks.mkdir(parents=True)
     (racks / "R02.yaml").write_text(
-        "rack_type: { slug: acme-rack42 }\n"
-        "role: data\n"
+        "rack_model: { slug: acme-rack42 }\n"
+        ""
         "placements:\n"
         "  - { device: dell-poweredge-test1, position: 1, release: R26.07, meta: { serial: S1 } }\n"
         "  - { device: dell-poweredge-test1, position: 5, release: R26.07 }\n"   # serial missing
@@ -61,8 +61,8 @@ def test_scaffold_creates_loadable_rack(tmp_path):
     scaffold.scaffold_offering(tmp_path, "demo")
     scaffold.scaffold_region(tmp_path, "demo", "r1")
     scaffold.scaffold_zone(tmp_path, "demo", "r1", "z1")
-    scaffold.scaffold_rack_group(tmp_path, "demo", "r1", "z1", "g1")
-    p = scaffold.scaffold_rack(tmp_path, "demo", "r1", "z1", "g1", "R1", rack_type_slug="acme-rack42")
+    scaffold.scaffold_rack_type(tmp_path, "demo", "r1", "z1", "g1")
+    p = scaffold.scaffold_rack(tmp_path, "demo", "r1", "z1", "g1", "R1", rack_model_slug="acme-rack42")
     assert p.exists()
     loaded = load_racks(tmp_path / "offerings/demo")
     assert len(loaded.racks) == 1 and loaded.racks[0].rack_id == "R1"
@@ -138,9 +138,9 @@ def test_inject_no_breakout():
 
 def test_svg_escapes_release(ws_root):
     root, db = ws_root
-    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks"
+    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks"
     (racks / "R02.yaml").write_text(
-        "rack_type: { slug: acme-rack42 }\n"
+        "rack_model: { slug: acme-rack42 }\n"
         "placements:\n  - { device: dell-poweredge-test1, position: 1, release: '</text><x>' }\n"
     )
     design = load_racks(root / "offerings/cloud-a").racks[0].design
@@ -150,10 +150,10 @@ def test_svg_escapes_release(ws_root):
 
 def test_build_data_summary_excludes_invalid(ws_root):
     root, db = ws_root
-    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks"
+    racks = root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks"
     # two devices overlapping at U1 → second excluded by validation
     (racks / "R02.yaml").write_text(
-        "rack_type: { slug: acme-rack42 }\nrole: data\n"
+        "rack_model: { slug: acme-rack42 }\n"
         "placements:\n"
         "  - { device: dell-poweredge-test1, position: 1, release: R26.07, meta: { serial: S } }\n"
         "  - { device: dell-poweredge-test1, position: 2, release: R26.07, meta: { serial: T } }\n"
@@ -180,5 +180,5 @@ def test_api_endpoints(ws_root):
     assert any(h["slug"] == "dell-poweredge-test1" for h in hits)
     svg = client.get(
         "/api/rack/elevation.svg"
-        "?path=offerings/cloud-a/regions/kr-east/zones/az1/rack-groups/row-3/racks/R02.yaml")
+        "?path=offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks/R02.yaml")
     assert svg.status_code == 200 and svg.headers["content-type"] == "image/svg+xml"

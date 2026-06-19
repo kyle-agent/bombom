@@ -1,5 +1,10 @@
 # 2026-06-19 — Org hierarchy: Offering→Region→Zone→RackGroup→Rack→Device
 
+> **Update (2026-06-19):** the "Rack Group" level was renamed **Rack-Type** (purpose:
+> control/data/storage/network) and the catalog physical-rack reference renamed
+> **Rack Model** (`rack_model`). Directory `rack-groups/` → `rack-types/`. See
+> ADR 2026-06-19-rack-type-vs-rack-model. The structure below is otherwise unchanged.
+
 ## Context
 Our cloud org model differs from NetBox's. We need a placement hierarchy that matches how
 designers think and that is reflected directly in git.

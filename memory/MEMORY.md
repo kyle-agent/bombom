@@ -21,8 +21,10 @@ detection) and `/retro`. Keep this small — it loads every session.
   (ADR git-as-backend)
 - **Spec vs cost:** community spec and bombom price book kept separate, joined by
   `manufacturer+slug | part_number`. Prices never enter device YAML. (ADR spec-cost-separation)
-- **Hierarchy:** Offering→Region→Zone→RackGroup→Rack→Device; directory tree mirrors it.
-  (ADR org-hierarchy) — NetBox map: Offering=new, Region=Region, Zone=Site, RackGroup=Location.
+- **Hierarchy:** Offering→Region→Zone→**Rack-Type**(control/data/storage/network)→Rack→Device;
+  directory tree mirrors it (dir `rack-types/<type>/`). A rack picks a **Rack Model**
+  (`rack_model` → catalog RackTypeSpec, e.g. vertiv-vr3300). (ADRs org-hierarchy,
+  rack-type-vs-rack-model) — terms: Rack-Type=purpose, Rack Model=catalog physical rack.
 - **Stack:** FastAPI backend (server-side rack elevation SVG, BOM engine) + JS SPA; form-based
   editing, commit-on-save; CAPEX-first. (ADR app-stack)
 

@@ -67,7 +67,8 @@ def build_data(
     nest: dict = {}
     for lr in loaded.racks:
         design = lr.design
-        rt = ws.catalog.get_rack_type(design.rack_type.slug)
+        purpose = lr.hierarchy.get("rack_type")     # Rack-Type (control/data/…) from the dir
+        rt = ws.catalog.get_rack_type(design.rack_model.slug)
         placements = []
         used_u = 0
         cap = 0
@@ -84,7 +85,7 @@ def build_data(
             cat = ws.categories.get(pl.device, model=dev.model, manufacturer=dev.manufacturer)
             merged = {**ws.type_meta.get(pl.device), **(pl.meta or {})}
             missing = required_missing(ws.fields, merged, applies_to="placement",
-                                       category=cat, role=design.role)
+                                       category=cat, role=purpose)
             price = ws.pricebook.lookup(valuation_date or date.today(), slug=pl.device,
                                         part_number=dev.part_number)
             u = _device_u(ws.catalog, pl.device)
@@ -105,8 +106,8 @@ def build_data(
             customs.append({"name": ci.name, "qty": ci.qty, "unit_cost": ci.unit_cost,
                             "release": ci.release, "category": ci.category})
         racks[lr.rack_id] = {
-            "id": lr.rack_id, "role": design.role,
-            "rack_type": {"slug": design.rack_type.slug, "u_height": int(rt.u_height) if rt else 42},
+            "id": lr.rack_id, "role": purpose,
+            "rack_model": {"slug": design.rack_model.slug, "u_height": int(rt.u_height) if rt else 42},
             "svg": rack_elevation_svg(design, ws.catalog, categories=ws.categories,
                                       highlight_release=current),
             "placements": placements, "custom_line_items": customs,
@@ -117,15 +118,15 @@ def build_data(
         tree_offering = tree_offering or hp.get("offering", "offering")
         (nest.setdefault(hp.get("region", "?"), {})
              .setdefault(hp.get("zone", "?"), {})
-             .setdefault(hp.get("rack_group", "?"), [])
+             .setdefault(hp.get("rack_type", "?"), [])
              .append(lr.rack_id))
 
     tree = {
         "offering": tree_offering or "offering", "name": tree_offering or "offering",
         "regions": [
             {"region": r, "zones": [
-                {"zone": z, "rack_groups": [
-                    {"rack_group": g, "racks": rk} for g, rk in zs.items()
+                {"zone": z, "rack_types": [
+                    {"rack_type": g, "racks": rk} for g, rk in zs.items()
                 ]} for z, zs in rs.items()
             ]} for r, rs in nest.items()
         ],

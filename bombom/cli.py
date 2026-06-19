@@ -135,11 +135,10 @@ def _cmd_scaffold(args) -> int:
         p = scaffold_mod.scaffold_region(root, *args.names[:2])
     elif args.kind == "zone":
         p = scaffold_mod.scaffold_zone(root, *args.names[:3])
-    elif args.kind == "rack-group":
-        p = scaffold_mod.scaffold_rack_group(root, *args.names[:4])
+    elif args.kind == "rack-type":
+        p = scaffold_mod.scaffold_rack_type(root, *args.names[:4])
     elif args.kind == "rack":
-        p = scaffold_mod.scaffold_rack(root, *args.names[:5],
-                                       rack_type_slug=args.rack_type, role=args.role)
+        p = scaffold_mod.scaffold_rack(root, *args.names[:5], rack_model_slug=args.rack_model)
     else:  # clone
         p = scaffold_mod.clone_subtree(args.names[0], args.names[1])
     print(f"created: {p}")
@@ -238,10 +237,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_bom.set_defaults(func=_cmd_bom)
 
     p_sc = sub.add_parser("scaffold", help="create base data (hierarchy) / clone a subtree")
-    p_sc.add_argument("kind", choices=("offering", "region", "zone", "rack-group", "rack", "clone"))
-    p_sc.add_argument("names", nargs="+", help="positional names; for rack: o r z g rack")
-    p_sc.add_argument("--rack-type", help="rack-type slug (for 'rack')")
-    p_sc.add_argument("--role", help="control|data|storage|network (for 'rack')")
+    p_sc.add_argument("kind", choices=("offering", "region", "zone", "rack-type", "rack", "clone"))
+    p_sc.add_argument("names", nargs="+",
+                      help="positional names; rack-type: o r z type · rack: o r z type rack")
+    p_sc.add_argument("--rack-model", help="catalog rack model slug, e.g. vertiv-vr3300 (for 'rack')")
     p_sc.set_defaults(func=_cmd_scaffold)
 
     p_cat = sub.add_parser("category", help="device category overlay").add_subparsers(

@@ -34,10 +34,13 @@ weight, airflow, is_powered, power_ports[], interfaces[], module_bays[], device_
 **B. Cost overlay (ours)** — `PriceEntry`: key → unit_cost, currency, source,
 valid_from/valid_to, note.
 
-**C. Org hierarchy + placement (ours)** — Offering → Region → Zone → RackGroup → Rack →
-Device. The **directory tree IS the hierarchy** (see git layout). A rack file references a
-`RackTypeSpec` and lists mounted devices/modules at positions, plus `custom_line_items`
-for non-catalog parts (cables, optics, PDUs, labor, spares).
+**C. Org hierarchy + placement (ours)** — Offering → Region → Zone → **Rack-Type** → Rack →
+Device. **Rack-Type** is the purpose grouping (control/data/storage/network) and is the
+directory level; the **directory tree IS the hierarchy** (see git layout). A rack file
+references a **Rack Model** (`rack_model` → a catalog `RackTypeSpec`, the physical enclosure
+that the designer *chooses*, e.g. vertiv-vr3300) and lists placements at positions, plus
+`custom_line_items` for non-catalog parts. Terminology: **Rack-Type = purpose**,
+**Rack Model = catalog physical rack** (ADR 2026-06-19-rack-type-vs-rack-model).
 
 **D. BOM engine** — walk a design subtree → flatten to (part key, qty) → join PriceEntry
 at a valuation date → CAPEX rollup (by manufacturer/category/rack/zone/offering). Power
@@ -51,8 +54,9 @@ rollup (Σ maximum/allocated draw, watts) for capacity only; cost conversion def
 | Offering | (none — new top tier) | service/product unit |
 | Region | Region | |
 | Zone | Site | availability zone / physical site |
-| Rack Group | Location (formerly RackGroup) | |
-| Rack | Rack | references RackTypeSpec |
+| Rack-Type (purpose) | Rack Role | control/data/storage/network — the dir level |
+| Rack | Rack | references a Rack Model (`rack_model`) |
+| Rack Model | RackType / Rack | catalog physical enclosure (RackTypeSpec) the designer picks |
 | Device | Device | references DeviceTypeSpec, U position + face |
 
 Catalog (DeviceType/ModuleType/RackType) is reused as-is from NetBox/community; only the
@@ -66,25 +70,19 @@ pricing/<vendor>.yaml                            # price overlay
 offerings/<offering>/offering.yaml
   regions/<region>/region.yaml
     zones/<zone>/zone.yaml
-      rack-groups/<rack-group>/rack-group.yaml
-        racks/<rack>.yaml                        # designer's output
+      rack-types/<control|data|storage|network>/rack-type.yaml
+        racks/<rack>.yaml                        # designer's output (references a rack_model)
 .index/                                          # rebuildable SQLite cache (gitignored)
 ```
 
 Example `racks/<rack>.yaml`:
 ```yaml
-rack_type: { manufacturer: vertiv, slug: vertiv-vr3300 }   # u_height=42, etc. from catalog
-mounted:
-  - device_type: { manufacturer: dell, slug: poweredge-r760 }
-    position: 40
-    face: front
-    qty: 1
-  - device_type: { manufacturer: arista, slug: dcs-7050sx3-48yc8 }
-    position: 1
-    face: front
-    qty: 2
+rack_model: { slug: vertiv-vr3300 }              # chosen physical rack (u_height etc. from catalog)
+placements:
+  - { device: dell-poweredge-r760, position: 40, release: R26.07, meta: { serial: SN1 } }
+  - { device: arista-dcs-7050cx3-32s, position: 1, release: R26.07 }
 custom_line_items:
-  - { name: "DAC 100G 3m", qty: 24, unit_cost: 90, currency: USD }
+  - { name: "DAC 100G 3m", qty: 24, unit_cost: 90000, release: R26.07 }
 ```
 
 ## Application architecture

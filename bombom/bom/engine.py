@@ -81,7 +81,7 @@ def compute_bom(
         rack_issues = validate_rack(lr, catalog)
         result.issues.extend(rack_issues)
         skip = {iss.index for iss in rack_issues if iss.index is not None and iss.level == "error"}
-        role = lr.design.role
+        role = lr.hierarchy.get("rack_type")     # purpose comes from the Rack-Type directory
 
         for idx, pl in enumerate(lr.design.placements):
             if idx in skip:

@@ -20,14 +20,16 @@ from ..workspace import Workspace
 _VIEWER = Path(__file__).resolve().parents[2] / "web" / "viewer.html"
 
 
-def _search_catalog(db_path: str, q: str, limit: int = 50) -> list[dict]:
+def _search_catalog(db_path: str, q: str, limit: int = 50, kind: str = "device") -> list[dict]:
+    if kind not in ("device", "rack", "module"):
+        kind = "device"
     con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     try:
         rows = con.execute(
             "SELECT kind, manufacturer, model, slug, u_height FROM specs "
-            "WHERE kind='device' AND (model LIKE ? OR slug LIKE ?) ORDER BY model LIMIT ?",
-            (f"%{q}%", f"%{q}%", limit),
+            "WHERE kind = ? AND (model LIKE ? OR slug LIKE ?) ORDER BY model LIMIT ?",
+            (kind, f"%{q}%", f"%{q}%", limit),
         ).fetchall()
     finally:
         con.close()
@@ -62,12 +64,15 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         return build_data(ws, _resolve(root, path))["tree"]
 
     @app.get("/api/catalog/search")
-    def catalog_search(q: str = "", category: Optional[str] = None, limit: int = 50):
-        rows = _search_catalog(ws.catalog.db_path, q, min(max(limit, 1), 500))
-        for r in rows:
-            r["category"] = ws.categories.get(r["slug"], model=r["model"], manufacturer=r["manufacturer"])
-        if category:
-            rows = [r for r in rows if r["category"] == category]
+    def catalog_search(q: str = "", category: Optional[str] = None, limit: int = 50,
+                       kind: str = "device"):
+        rows = _search_catalog(ws.catalog.db_path, q, min(max(limit, 1), 500), kind=kind)
+        if kind == "device":
+            for r in rows:
+                r["category"] = ws.categories.get(r["slug"], model=r["model"],
+                                                  manufacturer=r["manufacturer"])
+            if category:
+                rows = [r for r in rows if r["category"] == category]
         return rows
 
     @app.get("/api/bom")

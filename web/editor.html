@@ -147,7 +147,7 @@
 <div class="app">
   <!-- LEFT: hierarchy -->
   <div class="card">
-    <h3>오퍼링 / 리전 / 존 · 랙그룹 · 랙</h3>
+    <h3>오퍼링 / 리전 / 존 · 랙-타입 · 랙</h3>
     <div class="body tree" id="tree"><div class="empty">트리 로딩 중…</div></div>
   </div>
 
@@ -227,7 +227,7 @@ let selectedRelease = '';
 let selectedRackId = null;
 let selectedRackFile = null;
 // working copy
-let work = null;            // {rack_type, role, placements:[...], custom_line_items:[...]}
+let work = null;            // {rack_model, role, placements:[...], custom_line_items:[...]}
 let selIdx = -1;            // selected placement index in work.placements
 let dirty = false;
 let zoom = 1;
@@ -243,7 +243,7 @@ function wonShort(n){ n=n||0;
   if(n>=1e4) return CUR + Math.round(n/1e4).toLocaleString('ko-KR') + '만';
   return CUR + Math.round(n).toLocaleString('ko-KR'); }
 function uslotPx(){ return Math.max(7, Math.round(BASE_USLOT*zoom)); }
-function rackUHeight(){ return (work && work.rack_type && work.rack_type.u_height) || (RACK && RACK.rack_type && RACK.rack_type.u_height) || RACK_U_DEFAULT; }
+function rackUHeight(){ return (work && work.rack_model && work.rack_model.u_height) || (RACK && RACK.rack_model && RACK.rack_model.u_height) || RACK_U_DEFAULT; }
 function toast(msg, isErr){
   const t=document.getElementById('toast');
   t.textContent=msg; t.className='show'+(isErr?' err':'');
@@ -275,8 +275,8 @@ async function loadTree(){
     el.innerHTML = '<div class="banner err">트리를 불러오지 못했습니다: '+esc(e.message)+'<br>API 서버가 떠 있는지 확인하세요.</div>';
   }
 }
-function rackFilePath(region, zone, rg, rackId){
-  return `${TREE_PATH}/regions/${region}/zones/${zone}/rack-groups/${rg}/racks/${rackId}.yaml`;
+function rackFilePath(region, zone, rt, rackId){
+  return `${TREE_PATH}/regions/${region}/zones/${zone}/rack-types/${rt}/racks/${rackId}.yaml`;
 }
 function renderTree(){
   const t=TREE; const el=document.getElementById('tree');
@@ -287,10 +287,10 @@ function renderTree(){
     h+=`<div class="node lvl2">🌏 ${esc(rg.region)}</div>`;
     (rg.zones||[]).forEach(z=>{
       h+=`<div class="node lvl3">🏢 ${esc(z.zone)}</div>`;
-      (z.rack_groups||[]).forEach(grp=>{
-        h+=`<div class="node lvl4">▦ ${esc(grp.rack_group)}</div>`;
+      (z.rack_types||[]).forEach(grp=>{
+        h+=`<div class="node lvl4" title="Rack-Type">▦ ${esc(grp.rack_type)}</div>`;
         (grp.racks||[]).forEach(rid=>{
-          const file=rackFilePath(rg.region, z.zone, grp.rack_group, rid);
+          const file=rackFilePath(rg.region, z.zone, grp.rack_type, rid);
           rackFiles[rid]=file;
           const sel=rid===selectedRackId;
           h+=`<div class="node rack lvl5 ${sel?'sel':''}" data-rack="${esc(rid)}" data-file="${esc(file)}">▣ ${esc(rid)}</div>`;
@@ -331,7 +331,7 @@ function applyRackResponse(data){
   if(!selectedRelease || !RELEASES.includes(selectedRelease)) selectedRelease = currentRelease;
   // build working copy from server placements
   work = {
-    rack_type: Object.assign({}, RACK.rack_type),
+    rack_model: Object.assign({}, RACK.rack_model),
     role: RACK.role,
     placements: (RACK.placements||[]).map(p=>({
       device:p.device, name:p.name, category:p.category||'other',
@@ -405,7 +405,7 @@ function renderMain(){
   const mv=document.getElementById('mainview');
   if(!selectedRackId || !work){ mv.innerHTML='<div class="empty">좌측에서 랙을 선택하세요.</div>'; return; }
   const role=work.role||'other', color=ROLECOLOR[role]||CATCOLOR.other;
-  const slug=(work.rack_type&&work.rack_type.slug)||'—';
+  const slug=(work.rack_model&&work.rack_model.slug)||'—';
   const U=uslotPx(), RU=rackUHeight();
   mv.innerHTML='';
 
@@ -422,8 +422,17 @@ function renderMain(){
   const head=document.createElement('div'); head.className='rackhead';
   head.innerHTML=`<span class="rolebadge" style="background:${color}">${esc(role.toUpperCase())}</span>
     <b>${esc(selectedRackId)}</b>
-    <span class="rackmeta">· rack-type: ${esc(slug)} (${RU}U) · Front</span>`;
+    <span class="rackmeta">· Rack Model: ${esc(slug)} (${RU}U) · Front</span>
+    <button id="rackModelBtn" style="border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 9px;cursor:pointer;font-size:11px">Rack Model 변경</button>`;
   mv.appendChild(head);
+
+  // Rack Model picker (hidden by default)
+  const rmPanel=document.createElement('div'); rmPanel.id='rackModelPanel';
+  rmPanel.style.cssText='display:none;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;background:#f8fafc';
+  rmPanel.innerHTML=`<div class="rackmeta" style="margin-bottom:6px">Rack Model 고르기</div>
+    <input class="search" id="rmSearch" placeholder="랙 모델 검색 (제조사/모델)…" style="margin-bottom:6px">
+    <div id="rmResults"><div class="empty" style="padding:10px">검색어를 입력하세요.</div></div>`;
+  mv.appendChild(rmPanel);
 
   // rack
   const rack=document.createElement('div'); rack.className='rack';
@@ -484,6 +493,44 @@ function renderMain(){
   document.getElementById('zrange').addEventListener('input', e=>setZoom(+e.target.value));
   mv.querySelectorAll('[data-rm]').forEach(el=>el.addEventListener('click', e=>{ e.stopPropagation(); removeP(+el.dataset.rm); }));
   mv.querySelectorAll('[data-sel]').forEach(el=>el.addEventListener('click', e=>{ e.stopPropagation(); selectPlacement(+el.dataset.sel); }));
+  // Rack Model picker wiring
+  document.getElementById('rackModelBtn').addEventListener('click', ()=>{
+    const panel=document.getElementById('rackModelPanel');
+    const show = panel.style.display==='none';
+    panel.style.display = show?'block':'none';
+    if(show){ const s=document.getElementById('rmSearch'); s.focus(); }
+  });
+  document.getElementById('rmSearch').addEventListener('input', scheduleRackModelSearch);
+}
+let rmTimer=null;
+function scheduleRackModelSearch(){ clearTimeout(rmTimer); rmTimer=setTimeout(doRackModelSearch, 250); }
+async function doRackModelSearch(){
+  const inp=document.getElementById('rmSearch'); if(!inp) return;
+  const q=inp.value.trim();
+  const box=document.getElementById('rmResults');
+  if(!q){ box.innerHTML='<div class="empty" style="padding:10px">검색어를 입력하세요.</div>'; return; }
+  box.innerHTML='<div class="empty" style="padding:10px">검색 중…</div>';
+  try{
+    const res=await apiGet('/api/catalog/search?kind=rack&q='+encodeURIComponent(q));
+    if(!res.length){ box.innerHTML='<div class="empty" style="padding:10px">검색 결과 없음.</div>'; return; }
+    box.innerHTML=res.map((r,i)=>`<div class="model" data-rmpick="${i}" style="cursor:pointer">
+        <div class="top"><span class="name">${esc(r.model||r.slug)}</span></div>
+        <div class="mfr">${esc(r.manufacturer||'')}</div>
+        <div class="meta">${(r.u_height|0)}U · ${esc(r.slug)}</div></div>`).join('');
+    box.querySelectorAll('[data-rmpick]').forEach(el=>el.addEventListener('click', ()=>{
+      const r=res[+el.dataset.rmpick]; pickRackModel(r);
+    }));
+  }catch(e){
+    box.innerHTML='<div class="banner err">랙 모델 검색 실패: '+esc(e.message)+'</div>';
+  }
+}
+function pickRackModel(r){
+  if(!work) return;
+  work.rack_model = { slug:r.slug, u_height:r.u_height|0 };
+  document.getElementById('rackModelPanel').style.display='none';
+  setDirty(true);
+  renderAll();
+  toast('Rack Model 변경: '+(r.slug)+' ('+(r.u_height|0)+'U)');
 }
 function markHover(slot, u){
   // crude: highlight; bad if first cell occupied
@@ -686,7 +733,7 @@ async function save(){
   const message = prompt('커밋 메시지', def) ;
   if(message===null) return; // cancelled
   const body={
-    rack_type:{ slug:(work.rack_type&&work.rack_type.slug)||'' },
+    rack_model:{ slug:(work.rack_model&&work.rack_model.slug)||'' },
     role:work.role,
     placements:work.placements.map(p=>({
       device:p.device, position:p.position, release:p.release, qty:p.qty||1,
@@ -751,7 +798,7 @@ function renderReleaseSel(){
   if(selectedRackId){
     rc.style.display='';
     const role=(work&&work.role)||'other';
-    rc.innerHTML=`<span class="dot" style="background:${ROLECOLOR[role]||CATCOLOR.other}"></span>${esc(selectedRackId)} · ${esc((work&&work.rack_type&&work.rack_type.slug)||'')}`;
+    rc.innerHTML=`<span class="dot" style="background:${ROLECOLOR[role]||CATCOLOR.other}"></span>${esc(selectedRackId)} · ${esc((work&&work.rack_model&&work.rack_model.slug)||'')}`;
   }else rc.style.display='none';
 }
 
