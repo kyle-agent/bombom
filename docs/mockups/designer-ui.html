@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#0f172a; --panel:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
-    --accent:#2563eb; --accent2:#0ea5e9; --ok:#16a34a; --warn:#d97706;
+    --accent:#2563eb; --accent2:#0ea5e9; --ok:#16a34a; --warn:#d97706; --new:#f59e0b;
     --server:#2563eb; --network:#16a34a; --storage:#9333ea; --other:#64748b;
     --r-control:#f59e0b; --r-data:#2563eb; --r-storage:#9333ea; --r-network:#16a34a;
     --rackbg:#f1f5f9;
@@ -18,29 +18,28 @@
   header .logo{font-weight:700;letter-spacing:.5px;color:#fff}
   header .crumb{color:#94a3b8}
   header .crumb b{color:#e2e8f0}
+  header .relchip{background:#1e293b;border:1px solid #334155;color:#fde68a;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600}
   header .mockflag{margin-left:auto;background:var(--warn);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
   header button{background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}
   header button:hover{background:#334155}
-  .app{display:grid;grid-template-columns:220px 330px 1fr 360px;gap:10px;padding:10px;height:calc(100vh - 44px)}
+  .app{display:grid;grid-template-columns:220px 330px 1fr 380px;gap:10px;padding:10px;height:calc(100vh - 44px)}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0}
   .card h3{margin:0;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line)}
   .card .body{padding:10px 12px;overflow:auto;min-height:0}
-  /* tree */
   .tree{font-size:13px}
   .tree .node{padding:3px 6px;border-radius:6px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .tree .node:hover{background:#f1f5f9}
   .tree .node.sel{background:#dbeafe;color:#1e40af;font-weight:600}
   .tree .lvl1{padding-left:6px} .tree .lvl2{padding-left:18px} .tree .lvl3{padding-left:30px}
   .tree .lvl4{padding-left:42px} .tree .lvl5{padding-left:50px}
+  .tree .relcount{margin-left:auto;background:var(--new);color:#fff;border-radius:8px;font-size:10px;padding:0 6px}
   .rolebadge{font-size:10px;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px;letter-spacing:.3px}
   .ghostbtn{margin-top:8px;width:100%;border:1px dashed var(--line);background:#fff;color:var(--accent);border-radius:8px;padding:7px;cursor:pointer}
   .ghostbtn:hover{background:#f0f7ff}
-  /* steps */
   .steps{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line)}
   .steps .step{flex:1;text-align:center;font-size:12px;padding:7px;border-radius:8px;background:#f1f5f9;color:var(--muted);cursor:pointer;user-select:none}
   .steps .step.active{background:var(--accent);color:#fff;font-weight:600}
   .steps .step .n{display:inline-block;width:16px;height:16px;border-radius:50%;background:#fff;color:var(--accent);font-size:11px;line-height:16px;margin-right:5px}
-  .steps .step.active .n{background:#fff;color:var(--accent)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
   .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;background:#fff;display:flex;align-items:center;gap:6px}
   .chip .dot{width:8px;height:8px;border-radius:50%}
@@ -51,43 +50,53 @@
   .model.drag:hover{border-color:var(--accent2);box-shadow:0 1px 4px rgba(2,132,199,.12)}
   .model .top{display:flex;align-items:center;gap:7px}
   .model .cat{width:9px;height:9px;border-radius:2px;flex:none}
-  .model .mfr{color:var(--muted);font-size:11px}
   .model .name{font-weight:600}
+  .model .mfr{color:var(--muted);font-size:11px}
   .model .meta{color:var(--muted);font-size:11px;margin-top:3px}
   .model .add{margin-left:auto;border:none;background:#eff6ff;color:var(--accent);border-radius:6px;padding:3px 8px;cursor:pointer}
   .model .added{margin-left:auto;color:var(--ok);font-size:12px;font-weight:600}
-  .model .placed{position:absolute;right:8px;bottom:8px;font-size:11px;color:var(--muted)}
   .hint{color:var(--muted);font-size:11px;margin:2px 0 8px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
   .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:12px}
-  /* rack */
-  .rackhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .rackhead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
   .rackmeta{color:var(--muted);font-size:11px}
   .rackwrap{display:flex;gap:16px;align-items:flex-start}
   .rack{width:250px;background:var(--rackbg);border:2px solid #cbd5e1;border-radius:8px;padding:6px 6px 6px 28px;position:relative}
   .uslot{height:16px;border-bottom:1px dashed #e2e8f0;position:relative}
   .uslot .uno{position:absolute;left:-24px;width:20px;text-align:right;color:#94a3b8;font-size:9px}
   .uslot.drophover{background:#dbeafe;outline:1px solid var(--accent)}
-  .dev{position:absolute;left:28px;right:6px;border-radius:4px;color:#fff;font-size:11px;display:flex;align-items:center;padding:0 7px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);cursor:grab}
+  .dev{position:absolute;left:28px;right:6px;border-radius:4px;color:#fff;font-size:11px;display:flex;align-items:center;padding:0 7px;overflow:hidden;cursor:grab}
+  .dev.existing{box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+  .dev.new{box-shadow:inset 0 0 0 2px var(--new);outline:2px dashed var(--new);outline-offset:-2px}
+  .dev.fade{opacity:.2;filter:grayscale(1)}
   .dev small{opacity:.85;margin-left:6px}
+  .dev .newpill{background:#fff;color:var(--new);border-radius:3px;font-size:9px;font-weight:700;padding:0 4px;margin-left:6px}
   .dev .rm{margin-left:auto;cursor:pointer;opacity:.7;font-size:13px}
   .dev .rm:hover{opacity:1}
   .legend{font-size:11px;color:var(--muted);line-height:1.8}
   .legend .cat{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .legend .stbox{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:#94a3b8}
+  .legend .stbox.new{background:#fde68a;outline:2px dashed var(--new);outline-offset:-2px}
   .facetoggle{display:flex;gap:4px;margin:10px 0}
   .facetoggle button{flex:1;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px;cursor:pointer;font-size:12px}
   .facetoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  /* device list / bom */
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  .toolbar{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line)}
+  tr.newrow td{background:#fffbeb}
+  .stbadge{font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;color:#fff}
+  .stbadge.existing{background:#94a3b8}
+  .stbadge.new{background:var(--new)}
+  .toolbar{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .toolbar button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:12px}
   .toolbar button.primary{background:var(--ok);color:#fff;border-color:var(--ok)}
-  .toolbar button.report{color:var(--warn);border-color:#fcd9a8}
+  .toolbar label{font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer}
   .bom{margin-top:auto;border-top:1px solid var(--line);padding:12px;background:#f8fafc;border-radius:0 0 10px 10px}
   .bom .row{display:flex;justify-content:space-between;margin:3px 0}
-  .bom .total{font-size:18px;font-weight:700}
+  .bom .total{font-size:17px;font-weight:700}
+  .bom .release{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin:8px 0 4px}
+  .bom .release .lbl{color:var(--warn);font-weight:700}
+  .bom .release .amt{font-size:18px;font-weight:800;color:var(--warn)}
   .bom .sub{color:var(--muted);font-size:11px}
   .note{font-size:11px;color:var(--warn);margin-top:6px}
 </style>
@@ -96,19 +105,18 @@
 <header>
   <span class="logo">bombom</span>
   <span class="crumb">CloudA / <b>kr-east</b> / <b>az1</b> / row-3 / <b id="crumbrack">R02</b></span>
+  <span class="relchip">● Release R2025.07 (작업중)</span>
   <span class="mockflag">MOCKUP · 비기능 시안</span>
-  <button onclick="alert('Report: 추후 제공하실 BOM 양식에 맞춰 출력 (매핑 레이어). 지금은 자리만.')">⤓ Report (양식 출력)</button>
+  <button onclick="alert('Report: 추후 제공하실 BOM 양식에 맞춰 출력. 전체/이번 릴리즈 분리 출력 지원 예정.')">⤓ Report (양식 출력)</button>
 </header>
 
 <div class="app">
 
-  <!-- 1) Hierarchy + racks by type -->
   <div class="card">
     <h3>오퍼링 / 리전 / 존 · 랙</h3>
     <div class="body tree" id="tree"></div>
   </div>
 
-  <!-- 2) Step panel: ① select  ② place-from-shortlist -->
   <div class="card">
     <div class="steps">
       <div class="step active" id="tab1" onclick="setStep(1)"><span class="n">1</span>모델 선택</div>
@@ -117,48 +125,50 @@
     <div class="body" id="steppanel"></div>
   </div>
 
-  <!-- 3) Rack elevation -->
   <div class="card">
     <h3>랙 실장도 (NetBox 스타일)</h3>
     <div class="body">
       <div class="rackhead">
         <span class="rolebadge" id="rackrole">DATA</span>
         <b id="rackname">R02</b>
-        <span class="rackmeta">· rack-type: vertiv-vr3300 (42U) · 커뮤니티에서 선택</span>
+        <span class="rackmeta">· vertiv-vr3300 (42U)</span>
       </div>
       <div class="rackwrap">
         <div class="rack" id="rack"></div>
         <div>
           <div class="legend">
+            <b style="color:var(--ink)">카테고리</b>
             <div><span class="cat" style="background:var(--server)"></span>Server</div>
             <div><span class="cat" style="background:var(--network)"></span>Network</div>
             <div><span class="cat" style="background:var(--storage)"></span>Storage</div>
             <div><span class="cat" style="background:var(--other)"></span>Other</div>
+            <b style="color:var(--ink);display:block;margin-top:8px">배치 상태</b>
+            <div><span class="stbox"></span>배치됨(기존)</div>
+            <div><span class="stbox new"></span>이번 릴리즈 추가</div>
           </div>
           <div class="facetoggle">
             <button class="on" id="fF" onclick="setFace('front')">Front</button>
             <button id="fR" onclick="setFace('rear')">Rear</button>
           </div>
-          <div class="legend" style="max-width:150px">
-            • ②에서 담은 장비를 U로 <b>드래그</b>해 장착<br>
-            • 꽂힌 블록을 다른 U로 <b>드래그=이동</b><br>
-            • ✕ = 제거
+          <div class="legend" style="max-width:155px">
+            • ②에서 담은 장비를 U로 <b>드래그</b>=장착(이번 릴리즈)<br>
+            • 블록을 다른 U로 <b>드래그</b>=이동 · ✕=제거
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 4) Device list + BOM -->
   <div class="card">
-    <h3>장비 리스트 — <span id="dlrack">R02</span> (배치 집계)</h3>
+    <h3>장비 리스트 — <span id="dlrack">R02</span></h3>
     <div class="toolbar">
-      <button class="primary" onclick="exportXls()">⤓ Export to Excel (.xls)</button>
-      <button class="report" onclick="alert('Report: 추후 제공 양식에 맞춘 별도 출력 기능.')">양식 출력</button>
+      <label><input type="checkbox" id="relOnly" onchange="toggleRelease(this.checked)"> 이번 릴리즈 추가분만</label>
+      <button class="primary" onclick="exportXls()">⤓ Excel</button>
+      <button onclick="baseline()" title="이번 릴리즈를 확정하면 추가분이 기존(배치됨)으로 전환">릴리즈 확정→baseline</button>
     </div>
     <div class="body" style="flex:1">
       <table id="devtable">
-        <thead><tr><th>Cat</th><th>Model</th><th class="num">U</th><th class="num">Qty</th><th class="num">Unit($)</th><th class="num">Subtotal</th></tr></thead>
+        <thead><tr><th>Cat</th><th>Model</th><th>상태</th><th class="num">U</th><th class="num">Qty</th><th class="num">Unit($)</th><th class="num">Subtotal</th></tr></thead>
         <tbody id="devrows"></tbody>
       </table>
       <div id="devempty" class="empty">이 랙에 장비를 배치하면 집계됩니다.</div>
@@ -166,8 +176,12 @@
     <div class="bom">
       <div class="row sub"><span>장착 U / 42U</span><span id="uused">0U</span></div>
       <div class="row sub"><span>전력 합계 (max draw)</span><span id="watts">0 W</span></div>
-      <div class="row"><span class="total">CAPEX</span><span class="total" id="capex">$0</span></div>
-      <div class="note">※ CAPEX-우선 MVP. 전력은 용량까지(비용 환산 후속). 가격은 pricing/ 오버레이 join(시안 값).</div>
+      <div class="row"><span class="total">총 CAPEX</span><span class="total" id="capex">$0</span></div>
+      <div class="release">
+        <div class="row"><span class="lbl">이번 릴리즈(R2025.07) 추가분 CAPEX</span><span class="amt" id="capexrel">$0</span></div>
+        <div class="row sub"><span>추가 장비 / 추가 전력</span><span id="reldetail">0대 · 0 W</span></div>
+      </div>
+      <div class="note">※ 기존 배치는 제외하고 이번 릴리즈 추가분만의 투자비를 별도 산출. CAPEX-우선(전력 비용환산 후속).</div>
     </div>
   </div>
 
@@ -177,6 +191,7 @@
 const CATS={server:'Server',network:'Network',storage:'Storage',other:'Other'};
 const CATCOLOR={server:'var(--server)',network:'var(--network)',storage:'var(--storage)',other:'var(--other)'};
 const ROLECOLOR={control:'var(--r-control)',data:'var(--r-data)',storage:'var(--r-storage)',network:'var(--r-network)'};
+const STLABEL={existing:'배치됨',new:'NEW'};
 const MODELS=[
   {id:'dell-poweredge-r760',mfr:'Dell',name:'PowerEdge R760',cat:'server',u:2,watts:1100,price:14500},
   {id:'dell-poweredge-r660',mfr:'Dell',name:'PowerEdge R660',cat:'server',u:1,watts:800,price:11200},
@@ -188,7 +203,6 @@ const MODELS=[
   {id:'netapp-aff-a400',mfr:'NetApp',name:'AFF A400',cat:'storage',u:4,watts:1300,price:65000},
   {id:'apc-ap8853-pdu',mfr:'APC',name:'AP8853 Rack PDU',cat:'other',u:0,watts:0,price:700},
 ];
-// rack 유형 4종: control / data / storage / network
 const RACKS=[
   {id:'R01',role:'control',name:'R01'},
   {id:'R02',role:'data',name:'R02'},
@@ -198,48 +212,46 @@ const RACKS=[
 const RACK_U=42, USLOT=16;
 const byId=id=>MODELS.find(m=>m.id===id);
 
-let step=1, activeCat='all', face='front';
-let shortlist=[];                 // model ids 담은 대상
+let step=2, activeCat='all', face='front', releaseOnly=false;
+let shortlist=[];
 let selectedRack='R02';
-let placements={R01:[],R02:[],R03:[],R04:[]};   // rackId -> [{modelId,startU,u}]
+let placements={R01:[],R02:[],R03:[],R04:[]};  // {modelId,startU,u,status:'existing'|'new'}
 
-/* ---------- tree ---------- */
+function relCount(rid){return placements[rid].filter(p=>p.status==='new').length;}
+
+/* tree */
 function renderTree(){
-  const t=document.getElementById('tree');
   let h=`<div class="node lvl1">▾ 📦 CloudA</div>
          <div class="node lvl2">▾ 🌏 kr-east</div>
          <div class="node lvl3">▾ 🏢 az1</div>
          <div class="node lvl4">▾ 🗄 row-3</div>`;
   RACKS.forEach(r=>{
+    const rc=relCount(r.id);
     h+=`<div class="node lvl5 ${r.id===selectedRack?'sel':''}" onclick="selectRack('${r.id}')">
           ▣ ${r.name}
           <span class="rolebadge" style="background:${ROLECOLOR[r.role]}">${r.role.toUpperCase()}</span>
+          ${rc?`<span class="relcount" title="이번 릴리즈 추가">+${rc}</span>`:''}
         </div>`;
   });
   h+=`<div class="node lvl3">▸ 🏢 az2</div>
       <div class="node lvl2">▸ 🌏 kr-west</div>
       <button class="ghostbtn" onclick="alert('신규 리전 구축: 기존 리전/존 서브트리를 복사 → 식별자 치환 → 수정.\\n(git 디렉터리 clone + 커밋)')">＋ 신규 리전 (기존 복사)</button>`;
-  t.innerHTML=h;
+  document.getElementById('tree').innerHTML=h;
 }
 function selectRack(id){selectedRack=id;renderAll();}
 
-/* ---------- step panel ---------- */
+/* steps */
 function setStep(s){step=s;document.getElementById('tab1').classList.toggle('active',s===1);
   document.getElementById('tab2').classList.toggle('active',s===2);renderStep();}
-
-function modelCardHTML(m,opts){ // opts: {drag, action}
-  const placedCount=Object.values(placements).flat().filter(p=>p.modelId===m.id).length;
+function modelCardHTML(m,opts){
   let right='';
-  if(opts.action==='add') right = shortlist.includes(m.id)?`<span class="added">✓ 담음</span>`:`<button class="add" onclick="event.stopPropagation();addShort('${m.id}')">＋ 담기</button>`;
+  if(opts.action==='add') right=shortlist.includes(m.id)?`<span class="added">✓ 담음</span>`:`<button class="add" onclick="event.stopPropagation();addShort('${m.id}')">＋ 담기</button>`;
   return `<div class="model ${opts.drag?'drag':''}" ${opts.drag?`draggable="true" data-new="${m.id}"`:''}>
     <div class="top"><span class="cat" style="background:${CATCOLOR[m.cat]}"></span>
       <span class="name">${m.name}</span>${right}</div>
     <div class="mfr">${m.mfr} · ${CATS[m.cat]}</div>
-    <div class="meta">${m.u===0?'0U (PDU)':m.u+'U'} · ${m.watts} W · ~$${m.price.toLocaleString()}</div>
-    ${opts.drag&&placedCount?`<span class="placed">전체 배치 ${placedCount}</span>`:''}
-  </div>`;
+    <div class="meta">${m.u===0?'0U (PDU)':m.u+'U'} · ${m.watts} W · ~$${m.price.toLocaleString()}</div></div>`;
 }
-
 function renderStep(){
   const box=document.getElementById('steppanel');
   if(step===1){
@@ -247,36 +259,29 @@ function renderStep(){
       `<div class="chip ${activeCat===k?'active':''}" onclick="activeCat='${k}';renderStep()">
         ${k!=='all'?`<span class="dot" style="background:${CATCOLOR[k]}"></span>`:''}${l}</div>`).join('');
     const q=(document.getElementById('search')?.value||'').toLowerCase();
-    const list=MODELS.filter(m=>(activeCat==='all'||m.cat===activeCat))
+    const list=MODELS.filter(m=>(activeCat==='all'||m.cat===activeCat)&&(m.name.toLowerCase().includes(q)||m.mfr.toLowerCase().includes(q)))
       .map(m=>modelCardHTML(m,{action:'add'})).join('');
-    box.innerHTML=`<div class="hint">후보를 카테고리/검색으로 보고 <b>＋담기</b>. 배치는 ②에서 담은 것만.</div>
+    box.innerHTML=`<div class="hint">후보를 보고 <b>＋담기</b>. 배치는 ②에서 담은 것만.</div>
       <div class="chips">${chips}</div>
-      <input class="search" id="search" placeholder="모델 검색 (예: R760, 7050)…" oninput="renderStep()" value="${q}">
+      <input class="search" id="search" placeholder="모델 검색…" oninput="renderStep()" value="${q}">
       <div>${list}</div>`;
     const s=document.getElementById('search'); if(s){const v=s.value;s.focus();s.value='';s.value=v;}
   }else{
-    if(!shortlist.length){
-      box.innerHTML=`<div class="hint">②에서는 <b>담은 대상만</b> 보입니다.</div>
-        <div class="empty">아직 담은 장비가 없습니다.<br>① 모델 선택에서 ＋담기 하세요.</div>`;return;
-    }
-    const list=shortlist.map(id=>modelCardHTML(byId(id),{drag:true})).join('');
-    box.innerHTML=`<div class="hint"><b>담은 대상만</b> 표시 — 오른쪽 <b>${selectedRack}</b> 랙으로 드래그해 배치. 수량은 배치로 집계.</div>
-      <div>${list}</div>`;
-    box.querySelectorAll('.model.drag').forEach(el=>{
-      el.ondragstart=e=>e.dataTransfer.setData('text/plain','new:'+el.dataset.new);
-    });
+    if(!shortlist.length){box.innerHTML=`<div class="hint">②에서는 <b>담은 대상만</b> 보입니다.</div><div class="empty">①에서 ＋담기 하세요.</div>`;return;}
+    box.innerHTML=`<div class="hint"><b>담은 대상만</b> — <b>${selectedRack}</b> 랙으로 드래그=이번 릴리즈 추가.</div>`+
+      shortlist.map(id=>modelCardHTML(byId(id),{drag:true})).join('');
+    box.querySelectorAll('.model.drag').forEach(el=>{el.ondragstart=e=>e.dataTransfer.setData('text/plain','new:'+el.dataset.new);});
   }
 }
 function addShort(id){if(!shortlist.includes(id))shortlist.push(id);renderStep();}
 
-/* ---------- rack ---------- */
+/* rack */
 function occupied(list,exceptIdx){const s=new Set();list.forEach((p,i)=>{if(i===exceptIdx)return;for(let u=p.startU;u<p.startU+p.u;u++)s.add(u);});return s;}
 function renderRack(){
   const rack=document.getElementById('rack'); rack.innerHTML='';
   rack.style.height=(RACK_U*USLOT+12)+'px';
   const rk=RACKS.find(r=>r.id===selectedRack);
-  document.getElementById('rackrole').textContent=rk.role.toUpperCase();
-  document.getElementById('rackrole').style.background=ROLECOLOR[rk.role];
+  const rb=document.getElementById('rackrole'); rb.textContent=rk.role.toUpperCase(); rb.style.background=ROLECOLOR[rk.role];
   document.getElementById('rackname').textContent=rk.name;
   document.getElementById('crumbrack').textContent=rk.name;
   for(let u=RACK_U;u>=1;u--){
@@ -288,79 +293,95 @@ function renderRack(){
     rack.appendChild(slot);
   }
   placements[selectedRack].forEach((p,idx)=>{
-    const m=byId(p.modelId); if(m.u===0)return; // 0U PDU: list-only
-    const blk=document.createElement('div'); blk.className='dev'; blk.draggable=true;
+    const m=byId(p.modelId); if(m.u===0)return;
+    const isNew=p.status==='new';
+    const blk=document.createElement('div'); blk.draggable=true;
+    blk.className='dev '+(isNew?'new':'existing')+(releaseOnly&&!isNew?' fade':'');
     blk.style.background=CATCOLOR[m.cat];
     blk.style.bottom=((p.startU-1)*USLOT+6)+'px';
     blk.style.height=(p.u*USLOT-2)+'px';
-    blk.innerHTML=`${m.name}<small>U${p.startU}·${p.u}U</small><span class="rm" title="제거" onclick="event.stopPropagation();removeP(${idx})">✕</span>`;
+    blk.innerHTML=`${m.name}<small>U${p.startU}</small>${isNew?'<span class="newpill">NEW</span>':''}<span class="rm" title="제거" onclick="event.stopPropagation();removeP(${idx})">✕</span>`;
     blk.ondragstart=e=>e.dataTransfer.setData('text/plain','move:'+idx);
     rack.appendChild(blk);
   });
 }
 function onDrop(data,startU){
-  if(data.startsWith('move:')){relocate(+data.slice(5),startU);return;}
+  if(data.startsWith('move:'))return relocate(+data.slice(5),startU);
   if(data.startsWith('new:'))placeNew(data.slice(4),startU);
 }
 function placeNew(modelId,startU){
   const m=byId(modelId); if(!m)return;
-  if(m.u===0){placements[selectedRack].push({modelId,startU:0,u:0});renderAll();return;}
+  if(m.u===0){placements[selectedRack].push({modelId,startU:0,u:0,status:'new'});renderAll();return;}
   const occ=occupied(placements[selectedRack],-1);
-  for(let u=startU;u<startU+m.u;u++){if(u>RACK_U){alert('랙 상단을 벗어납니다.');return;}if(occ.has(u)){alert('U '+u+' 가 이미 점유됨.');return;}}
-  placements[selectedRack].push({modelId,startU,u:m.u});renderAll();
+  for(let u=startU;u<startU+m.u;u++){if(u>RACK_U){alert('랙 상단 초과');return;}if(occ.has(u)){alert('U '+u+' 점유됨');return;}}
+  placements[selectedRack].push({modelId,startU,u:m.u,status:'new'});renderAll();
 }
 function relocate(idx,startU){
   const list=placements[selectedRack],p=list[idx]; if(!p)return;
   const occ=occupied(list,idx);
-  for(let u=startU;u<startU+p.u;u++){if(u>RACK_U){alert('랙 상단을 벗어납니다.');return;}if(occ.has(u)){alert('U '+u+' 가 이미 점유됨.');return;}}
+  for(let u=startU;u<startU+p.u;u++){if(u>RACK_U){alert('랙 상단 초과');return;}if(occ.has(u)){alert('U '+u+' 점유됨');return;}}
   p.startU=startU;renderAll();
 }
 function removeP(i){placements[selectedRack].splice(i,1);renderAll();}
 function setFace(f){face=f;document.getElementById('fF').classList.toggle('on',f==='front');document.getElementById('fR').classList.toggle('on',f==='rear');}
+function toggleRelease(v){releaseOnly=v;renderRack();renderList();}
+function baseline(){if(!confirm('이번 릴리즈(R2025.07) 추가분을 모두 기존(배치됨)으로 확정할까요?'))return;
+  Object.values(placements).flat().forEach(p=>p.status='existing');renderAll();}
 
-/* ---------- device list + BOM (selected rack) ---------- */
+/* device list + BOM */
 function renderList(){
   document.getElementById('dlrack').textContent=selectedRack;
-  const agg={}; placements[selectedRack].forEach(p=>{agg[p.modelId]=(agg[p.modelId]||0)+1;});
+  const agg={}; // key modelId|status
+  placements[selectedRack].forEach(p=>{const k=p.modelId+'|'+p.status;agg[k]=(agg[k]||0)+1;});
   const rows=document.getElementById('devrows'); rows.innerHTML='';
-  let capex=0,watts=0,uused=0;
-  Object.entries(agg).forEach(([id,qty])=>{
-    const m=byId(id),sub=qty*m.price; capex+=sub;watts+=qty*m.watts;uused+=qty*m.u;
-    rows.insertAdjacentHTML('beforeend',`<tr>
+  let capex=0,watts=0,uused=0, relCapex=0,relWatts=0,relQty=0;
+  const entries=Object.entries(agg).sort((a,b)=>a[0].localeCompare(b[0]));
+  let shown=0;
+  entries.forEach(([k,qty])=>{
+    const [id,status]=k.split('|'); const m=byId(id),sub=qty*m.price;
+    capex+=sub;watts+=qty*m.watts;uused+=qty*m.u;
+    if(status==='new'){relCapex+=sub;relWatts+=qty*m.watts;relQty+=qty;}
+    if(releaseOnly&&status!=='new')return;
+    shown++;
+    rows.insertAdjacentHTML('beforeend',`<tr class="${status==='new'?'newrow':''}">
       <td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${CATCOLOR[m.cat]}"></span></td>
       <td>${m.name}<div class="mfr" style="color:var(--muted);font-size:11px">${m.mfr}</div></td>
+      <td><span class="stbadge ${status}">${STLABEL[status]}</span></td>
       <td class="num">${m.u||'-'}</td><td class="num">${qty}</td>
       <td class="num">${m.price.toLocaleString()}</td><td class="num">${sub.toLocaleString()}</td></tr>`);
   });
-  document.getElementById('devempty').style.display=Object.keys(agg).length?'none':'block';
+  document.getElementById('devempty').style.display=shown?'none':'block';
   document.getElementById('capex').textContent='$'+capex.toLocaleString();
   document.getElementById('watts').textContent=watts.toLocaleString()+' W';
   document.getElementById('uused').textContent=uused+'U';
+  document.getElementById('capexrel').textContent='$'+relCapex.toLocaleString();
+  document.getElementById('reldetail').textContent=`${relQty}대 · ${relWatts.toLocaleString()} W`;
 }
 function exportXls(){
-  const agg={}; placements[selectedRack].forEach(p=>{agg[p.modelId]=(agg[p.modelId]||0)+1;});
-  const rows=[['Rack','Role','Category','Manufacturer','Model','U','Qty','Unit(USD)','Subtotal(USD)']];
+  const agg={}; placements[selectedRack].forEach(p=>{const k=p.modelId+'|'+p.status;agg[k]=(agg[k]||0)+1;});
   const role=RACKS.find(r=>r.id===selectedRack).role;
-  Object.entries(agg).forEach(([id,qty])=>{const m=byId(id);rows.push([selectedRack,role,CATS[m.cat],m.mfr,m.name,m.u,qty,m.price,qty*m.price]);});
-  if(rows.length===1){alert('배치된 장비가 없습니다.');return;}
+  const rows=[['Rack','Role','Release','Status','Category','Manufacturer','Model','U','Qty','Unit(USD)','Subtotal(USD)']];
+  Object.entries(agg).forEach(([k,qty])=>{const [id,status]=k.split('|');
+    if(releaseOnly&&status!=='new')return;
+    const m=byId(id);rows.push([selectedRack,role,status==='new'?'R2025.07':'-',status==='new'?'NEW':'EXISTING',CATS[m.cat],m.mfr,m.name,m.u,qty,m.price,qty*m.price]);});
+  if(rows.length===1){alert('내보낼 항목이 없습니다.');return;}
   let html='<table border=1><tr>'+rows[0].map(h=>`<th>${h}</th>`).join('')+'</tr>';
   rows.slice(1).forEach(r=>html+='<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>');
   html+='</table>';
   const blob=new Blob(['﻿<html><head><meta charset="utf-8"></head><body>'+html+'</body></html>'],{type:'application/vnd.ms-excel'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bombom-'+selectedRack+'-devices.xls';a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bombom-'+selectedRack+(releaseOnly?'-R2025.07':'')+'.xls';a.click();
 }
-
 function renderAll(){renderTree();renderStep();renderRack();renderList();}
 
-/* ---------- seed so it looks real ---------- */
-shortlist=['dell-poweredge-r760','hpe-proliant-dl380-gen11','arista-dcs-7050sx3-48yc8','dell-powerstore-1200t'];
-placements.R01=[{modelId:'arista-dcs-7050sx3-48yc8',startU:42,u:1},{modelId:'dell-poweredge-r660',startU:1,u:1},{modelId:'dell-poweredge-r660',startU:2,u:1},{modelId:'apc-ap8853-pdu',startU:0,u:0}];
-placements.R02=[{modelId:'arista-dcs-7050sx3-48yc8',startU:42,u:1},{modelId:'arista-dcs-7050sx3-48yc8',startU:41,u:1},
-  {modelId:'dell-poweredge-r760',startU:1,u:2},{modelId:'dell-poweredge-r760',startU:3,u:2},{modelId:'dell-poweredge-r760',startU:5,u:2},
-  {modelId:'hpe-proliant-dl380-gen11',startU:7,u:2},{modelId:'hpe-proliant-dl380-gen11',startU:9,u:2}];
-placements.R03=[{modelId:'dell-powerstore-1200t',startU:1,u:2},{modelId:'dell-powerstore-1200t',startU:3,u:2},{modelId:'netapp-aff-a400',startU:5,u:4}];
-placements.R04=[{modelId:'arista-dcs-7280cr3-32p4',startU:42,u:1},{modelId:'arista-dcs-7280cr3-32p4',startU:41,u:1},{modelId:'cisco-nexus-93180yc-fx',startU:40,u:1}];
-setStep(2);
+/* seed: 기존 배치 + 이번 릴리즈 추가분(status:new) 혼합 */
+shortlist=['dell-poweredge-r760','hpe-proliant-dl380-gen11','arista-dcs-7050sx3-48yc8','dell-powerstore-1200t','dell-poweredge-r660'];
+placements.R01=[{modelId:'arista-dcs-7050sx3-48yc8',startU:42,u:1,status:'existing'},{modelId:'dell-poweredge-r660',startU:1,u:1,status:'existing'},{modelId:'dell-poweredge-r660',startU:2,u:1,status:'new'},{modelId:'apc-ap8853-pdu',startU:0,u:0,status:'existing'}];
+placements.R02=[{modelId:'arista-dcs-7050sx3-48yc8',startU:42,u:1,status:'existing'},{modelId:'arista-dcs-7050sx3-48yc8',startU:41,u:1,status:'existing'},
+  {modelId:'dell-poweredge-r760',startU:1,u:2,status:'existing'},{modelId:'dell-poweredge-r760',startU:3,u:2,status:'existing'},
+  {modelId:'dell-poweredge-r760',startU:5,u:2,status:'new'},{modelId:'dell-poweredge-r760',startU:7,u:2,status:'new'},
+  {modelId:'hpe-proliant-dl380-gen11',startU:9,u:2,status:'new'}];
+placements.R03=[{modelId:'dell-powerstore-1200t',startU:1,u:2,status:'existing'},{modelId:'netapp-aff-a400',startU:3,u:4,status:'new'}];
+placements.R04=[{modelId:'arista-dcs-7280cr3-32p4',startU:42,u:1,status:'existing'},{modelId:'cisco-nexus-93180yc-fx',startU:41,u:1,status:'new'}];
 renderAll();
 </script>
 </body>
