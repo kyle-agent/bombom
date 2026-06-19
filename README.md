@@ -34,7 +34,20 @@ session-start hook, and a memory layer.
 /retro               after a milestone — extract lessons
 ```
 
-## Next step
+## Running the app
 
-Run `/project-init` to decide the stack and fill in the `[TODO]` sections of `CLAUDE.md`,
-`.gitignore`, and `.env.example`.
+```
+pip install -e ".[dev]"
+bombom catalog sync && bombom catalog reindex   # once: init submodule + build index
+bombom serve            # http://127.0.0.1:8000/  (read-only view)  ·  /edit  (editor)
+bombom export out.html  # self-contained static viewer (no server)
+```
+
+Editing in `/edit` writes the rack YAML and **commits to git** (`PUT /api/rack`).
+
+## GitHub Pages (read-only viewer)
+
+`.github/workflows/pages.yml` builds the static viewer (`bombom export`) and publishes it
+to GitHub Pages on push. **One-time setup:** repo Settings → Pages → Source: *GitHub
+Actions*. Pages is **view-only** (editing stays in `bombom serve` / PRs). Note Pages is
+public — fine here since the data is public-OK; for sensitive cost data use private hosting.

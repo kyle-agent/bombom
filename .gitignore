@@ -24,6 +24,9 @@ tmp/
 # Rebuildable catalog index (git is the source of truth, not this cache)
 .index/
 
+# Generated static site (built by CI / `bombom export`)
+public/
+
 # Python
 __pycache__/
 *.pyc
