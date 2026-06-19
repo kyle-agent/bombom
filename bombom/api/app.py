@@ -10,8 +10,10 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from ..design import load_racks
+from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, validate_rack
+from ..design.writer import write_rack
 from ..export import build_data, inject
+from ..gitops import add_commit
 from ..render import rack_elevation_svg
 from ..workspace import Workspace
 
@@ -48,6 +50,13 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             logging.exception("index: build_data failed for path=%s", path)
             return HTMLResponse(_VIEWER.read_text())
 
+    @app.get("/edit", response_class=HTMLResponse)
+    def editor():
+        editor_html = _VIEWER.parent / "editor.html"
+        if not editor_html.exists():
+            return HTMLResponse("<h1>editor not built</h1>", status_code=500)
+        return HTMLResponse(editor_html.read_text())
+
     @app.get("/api/tree")
     def tree(path: str = "offerings"):
         return build_data(ws, _resolve(root, path))["tree"]
@@ -75,7 +84,48 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
                                  categories=ws.categories, highlight_release=release)
         return Response(svg, media_type="image/svg+xml")
 
+    @app.get("/api/rack")
+    def get_rack(path: str):
+        data = build_data(ws, _resolve(root, path))
+        if not data["racks"]:
+            raise HTTPException(404, "no rack at path")
+        return {
+            "rack": next(iter(data["racks"].values())),
+            "fields": data["fields"],
+            "releases": data["releases"],
+            "current_release": data["current_release"],
+        }
+
+    @app.put("/api/rack")
+    def put_rack(body: RackDesign, path: str, message: str = ""):
+        target = _resolve_rack_write(root, path)
+        loaded = LoadedRack(rack_id=target.stem, path=str(target),
+                            hierarchy=parse_hierarchy(target), design=body)
+        errors = [i for i in validate_rack(loaded, ws.catalog) if i.level == "error"]
+        if errors:
+            raise HTTPException(400, {"issues": [vars(i) for i in errors]})
+        write_rack(target, body)
+        sha = add_commit([target], message or f"edit {target.stem}", cwd=Path(root))
+        data = build_data(ws, target)
+        return {
+            "ok": True, "commit": sha,
+            "issues": data["bom"]["issues"],          # non-blocking (e.g. meta required missing)
+            "rack": next(iter(data["racks"].values()), None),
+        }
+
     return app
+
+
+def _resolve_rack_write(root: Path | str, path: str) -> Path:
+    base = Path(root).resolve()
+    cand = (base / path).resolve()
+    if cand != base and base not in cand.parents:
+        raise HTTPException(400, "path outside workspace")
+    if cand.suffix not in (".yaml", ".yml") or cand.parent.name != "racks":
+        raise HTTPException(400, "target must be a .../racks/<rack>.yaml")
+    if not cand.parent.exists():
+        raise HTTPException(404, "racks directory does not exist (scaffold the hierarchy first)")
+    return cand
 
 
 def _resolve(root: Path | str, path: str) -> Path:
