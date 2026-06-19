@@ -23,7 +23,7 @@
   header .state.saved{background:var(--ok)}
   header .state.dirty{background:var(--new)}
   header .state.none{background:#475569}
-  .app{display:grid;grid-template-columns:240px 1fr 400px;gap:10px;padding:10px;height:calc(100vh - 44px)}
+  .app{display:grid;grid-template-columns:230px 330px 1fr 360px;gap:10px;padding:10px;height:calc(100vh - 44px)}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0}
   .card h3{margin:0;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line)}
   .card .body{padding:10px 12px;overflow:auto;min-height:0}
@@ -35,6 +35,32 @@
   .tree .node.sel{background:#dbeafe;color:#1e40af;font-weight:600}
   .tree .lvl1{padding-left:6px}.tree .lvl2{padding-left:18px}.tree .lvl3{padding-left:30px}.tree .lvl4{padding-left:42px}.tree .lvl5{padding-left:56px}
   .rolebadge{font-size:10px;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px;letter-spacing:.3px}
+  /* ① model-select column (catalog + shortlist) */
+  .mselect{display:flex;flex-direction:column;min-height:0;height:100%}
+  .msec{display:flex;flex-direction:column;min-height:0}
+  .msec.cat{flex:1 1 55%}
+  .msec.short{flex:1 1 45%;border-top:1px solid var(--line)}
+  .msec .sechead{padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px}
+  .msec .sechead .cnt{margin-left:auto;background:#eff6ff;color:var(--accent);border-radius:10px;font-size:10px;padding:0 7px;font-weight:700}
+  .msec .secbody{padding:8px 12px;overflow:auto;min-height:0;flex:1}
+  .search{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;background:#fff;display:flex;align-items:center;gap:6px}
+  .chip .dot{width:8px;height:8px;border-radius:50%}
+  .chip.active{border-color:var(--accent);background:#eff6ff;color:#1e40af;font-weight:600}
+  .model{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:7px;background:#fff;position:relative}
+  .model.drag{cursor:grab}
+  .model.drag:hover{border-color:var(--accent2);box-shadow:0 1px 4px rgba(2,132,199,.12)}
+  .model .top{display:flex;align-items:center;gap:7px}
+  .model .cat{width:9px;height:9px;border-radius:2px;flex:none}
+  .model .name{font-weight:600}
+  .model .mfr{color:var(--muted);font-size:11px}
+  .model .meta{color:var(--muted);font-size:11px;margin-top:3px}
+  .model .add{margin-left:auto;border:none;background:#eff6ff;color:var(--accent);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px}
+  .model .added{margin-left:auto;color:var(--ok);font-size:12px;font-weight:600}
+  .model .rm{margin-left:auto;cursor:pointer;color:var(--muted);font-size:14px}
+  .model .rm:hover{color:var(--bad)}
+  .hint{color:var(--muted);font-size:11px;margin:0 0 8px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
   /* center / elevation (client-side) */
   .toolbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .toolbar label{font-size:12px;display:flex;align-items:center;gap:5px}
@@ -71,27 +97,7 @@
   .legend{font-size:11px;color:var(--muted);line-height:1.7;margin-top:12px}
   .legend .cat{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
   .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:12px}
-  /* right tabs */
-  .tabs{display:flex;border-bottom:1px solid var(--line)}
-  .tabs .tab{flex:1;text-align:center;padding:8px;font-size:12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent}
-  .tabs .tab.active{color:var(--accent);font-weight:600;border-bottom-color:var(--accent)}
-  .tabpane{display:none;flex:1;min-height:0;flex-direction:column}
-  .tabpane.active{display:flex}
-  .search{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;background:#fff;display:flex;align-items:center;gap:6px}
-  .chip .dot{width:8px;height:8px;border-radius:50%}
-  .chip.active{border-color:var(--accent);background:#eff6ff;color:#1e40af;font-weight:600}
-  .model{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:7px;background:#fff;cursor:grab}
-  .model:hover{border-color:var(--accent2);box-shadow:0 1px 4px rgba(2,132,199,.12)}
-  .model .top{display:flex;align-items:center;gap:7px}
-  .model .cat{width:9px;height:9px;border-radius:2px;flex:none}
-  .model .name{font-weight:600}
-  .model .mfr{color:var(--muted);font-size:11px}
-  .model .meta{color:var(--muted);font-size:11px;margin-top:3px}
-  .hint{color:var(--muted);font-size:11px;margin:0 0 8px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
-  /* meta form */
-  .metahead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  /* right: meta form + device list + BOM */
   .field{margin-bottom:10px}
   .field label{display:block;font-size:12px;font-weight:600;margin-bottom:3px}
   .field .req{color:var(--bad);font-weight:700;font-size:10px;margin-left:5px;background:#fee2e2;border-radius:4px;padding:0 5px}
@@ -103,14 +109,15 @@
   .field.missing .err{display:block}
   .field.bool label{display:flex;align-items:center;gap:6px;font-weight:600}
   .field.bool input{width:auto}
-  /* device list + BOM */
+  .metahead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .metabox{border-bottom:1px solid var(--line);padding:10px 12px;background:#fffdf5}
+  .catdot{display:inline-block;width:9px;height:9px;border-radius:2px}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;white-space:nowrap}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   tr.selrow td{background:#fffbeb}
   tr.devrow{cursor:pointer}tr.devrow:hover td{background:#f1f5f9}
-  .catdot{display:inline-block;width:9px;height:9px;border-radius:2px}
   .relpill2{font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;color:#fff;white-space:nowrap}
   .relpill2.sel{background:var(--new)}.relpill2.other{background:#94a3b8}
   .miss{color:var(--bad);font-weight:700}
@@ -151,6 +158,28 @@
     <div class="body tree" id="tree"><div class="empty">트리 로딩 중…</div></div>
   </div>
 
+  <!-- ① MODEL SELECT: catalog (담기) + shortlist (담은 것만 배치) -->
+  <div class="card">
+    <h3>① 모델 선택</h3>
+    <div class="mselect">
+      <div class="msec cat">
+        <div class="sechead">카탈로그 검색</div>
+        <div class="secbody">
+          <div class="hint">후보를 보고 <b>＋담기</b>. 배치는 아래 <b>담은 목록</b>에서만 드래그합니다.</div>
+          <div class="chips" id="catChips"></div>
+          <input class="search" id="catSearch" placeholder="제조사/모델 검색…">
+          <div id="catResults"><div class="empty">불러오는 중…</div></div>
+        </div>
+      </div>
+      <div class="msec short">
+        <div class="sechead">담은 목록 (이번 후보)<span class="cnt" id="shortCnt">0</span></div>
+        <div class="secbody" id="shortBody">
+          <div class="empty">위에서 ＋담기 하세요.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- CENTER: elevation editor -->
   <div class="card">
     <div class="toolbar">
@@ -160,46 +189,26 @@
       <button id="reloadBtn" title="서버에서 다시 불러오기">↺ 되돌리기</button>
     </div>
     <div id="issuesBox"></div>
+    <h3 style="border-top:1px solid var(--line)">랙 실장도</h3>
     <div class="body" id="mainview"><div class="empty">좌측에서 랙을 선택하세요.</div></div>
   </div>
 
-  <!-- RIGHT: tabs -->
+  <!-- RIGHT: meta form + device list + BOM -->
   <div class="card">
-    <div class="tabs">
-      <div class="tab active" data-tab="catalog">① 카탈로그</div>
-      <div class="tab" data-tab="meta">② 선택 장비</div>
-      <div class="tab" data-tab="bom">③ 장비/BOM</div>
+    <h3>장비 / BOM + 메타</h3>
+    <div id="metaBox"></div>
+    <div class="body" style="flex:1">
+      <table id="devtable"><thead><tr id="devhead"></tr></thead><tbody id="devrows"></tbody></table>
+      <div id="devempty" class="empty">배치된 장비가 없습니다.</div>
     </div>
-
-    <div class="tabpane active" data-pane="catalog">
-      <div class="body" style="flex:1">
-        <div class="hint">모델을 검색해 <b>가운데 랙의 U 슬롯으로 드래그</b>하면 현재 작업 릴리즈로 배치됩니다.</div>
-        <div class="chips" id="catChips"></div>
-        <input class="search" id="catSearch" placeholder="제조사/모델 검색…">
-        <div id="catResults"><div class="empty">검색어를 입력하세요.</div></div>
+    <div class="bom">
+      <div class="row sub"><span id="ulbl">장착 U</span><span id="uused">—</span></div>
+      <div class="row"><span class="total">총 CAPEX</span><span class="total" id="capex">—</span></div>
+      <div class="release">
+        <div class="row"><span class="lbl" id="rellbl">선택 릴리즈 추가분 CAPEX</span><span class="amt" id="capexrel">—</span></div>
+        <div class="row sub"><span>해당 릴리즈 항목</span><span id="reldetail">0건</span></div>
       </div>
-    </div>
-
-    <div class="tabpane" data-pane="meta">
-      <div class="body" style="flex:1" id="metaPane">
-        <div class="empty">랙에서 장비 블록을 선택하면 메타 항목을 편집할 수 있습니다.</div>
-      </div>
-    </div>
-
-    <div class="tabpane" data-pane="bom">
-      <div class="body" style="flex:1">
-        <table id="devtable"><thead><tr id="devhead"></tr></thead><tbody id="devrows"></tbody></table>
-        <div id="devempty" class="empty">배치된 장비가 없습니다.</div>
-      </div>
-      <div class="bom">
-        <div class="row sub"><span id="ulbl">장착 U</span><span id="uused">—</span></div>
-        <div class="row"><span class="total">총 CAPEX</span><span class="total" id="capex">—</span></div>
-        <div class="release">
-          <div class="row"><span class="lbl" id="rellbl">선택 릴리즈 추가분 CAPEX</span><span class="amt" id="capexrel">—</span></div>
-          <div class="row sub"><span>해당 릴리즈 항목</span><span id="reldetail">0건</span></div>
-        </div>
-        <div class="note">※ 가격은 pricing/ 오버레이(원화). 합계는 클라이언트에서 placements + custom_line_items 기준으로 계산.</div>
-      </div>
+      <div class="note">※ 가격은 pricing/ 오버레이(원화). 합계는 클라이언트에서 placements + custom_line_items 기준으로 계산.</div>
     </div>
   </div>
 </div>
@@ -232,8 +241,9 @@ let selIdx = -1;            // selected placement index in work.placements
 let dirty = false;
 let zoom = 1;
 let releaseOnly = false;
-let activeTab = 'catalog';
 let catCategory = '';
+// client-side shortlist of candidate models (the ONLY drag source to the rack)
+let shortlist = [];         // [{slug,name,category,u_height,manufacturer,unit_cost}]
 
 // ── helpers ────────────────────────────────────────────────────────────
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -418,7 +428,7 @@ function renderMain(){
     <button id="z100">100%</button>`;
   mv.appendChild(bar);
 
-  // header
+  // header (role badge + id + Rack Model slug + change button)
   const head=document.createElement('div'); head.className='rackhead';
   head.innerHTML=`<span class="rolebadge" style="background:${color}">${esc(role.toUpperCase())}</span>
     <b>${esc(selectedRackId)}</b>
@@ -482,7 +492,7 @@ function renderMain(){
       <span class="cat" style="background:#16a34a;margin-left:10px"></span>Network
       <span class="cat" style="background:#9333ea;margin-left:10px"></span>Storage
       <span class="cat" style="background:#64748b;margin-left:10px"></span>Other</div>
-    <div style="margin-top:6px">• 카탈로그 항목을 U로 드래그=배치 (릴리즈 <b>${esc(selectedRelease)}</b>)<br>
+    <div style="margin-top:6px">• <b>담은 목록</b> 항목을 U로 드래그=배치 (릴리즈 <b>${esc(selectedRelease)}</b>)<br>
       • 블록 드래그=이동 · 클릭=선택/메타편집 · ✕=제거 · 노란 테두리=선택 릴리즈</div>`;
   mv.appendChild(lg);
 
@@ -542,11 +552,17 @@ function setZoom(z){ zoom=Math.min(3, Math.max(0.6, Math.round(z*10)/10)); rende
 function onDrop(e, position){
   const data=e.dataTransfer.getData('text/plain')||'';
   if(data.startsWith('move:')){ relocate(+data.slice(5), position); return; }
-  if(data.startsWith('cat:')){ try{ const item=JSON.parse(data.slice(4)); placeNew(item, position); }catch(err){ toast('드롭 데이터 오류', true); } }
+  if(data.startsWith('short:')){
+    if(!work){ toast('먼저 랙을 선택하세요', true); return; }
+    const slug=data.slice(6);
+    const item=shortlist.find(s=>s.slug===slug);
+    if(!item){ toast('담은 목록에서 찾을 수 없음', true); return; }
+    placeNew(item, position);
+  }
 }
-function selectPlacement(idx){ selIdx=idx; activeTab='meta'; setTab('meta'); renderMain(); renderMeta(); }
+function selectPlacement(idx){ selIdx=idx; renderMain(); renderMeta(); }
 
-// ── catalog search ──────────────────────────────────────────────────────
+// ── catalog search (＋담기 only — NOT draggable) ─────────────────────────
 function renderCatChips(){
   const cats=['','server','network','storage','other'];
   document.getElementById('catChips').innerHTML = cats.map(c=>{
@@ -557,43 +573,73 @@ function renderCatChips(){
 }
 let catTimer=null;
 function scheduleCatSearch(){ clearTimeout(catTimer); catTimer=setTimeout(doCatSearch, 250); }
+let catCache=[];   // last catalog results (for ＋담기)
 async function doCatSearch(){
   const q=document.getElementById('catSearch').value.trim();
   const box=document.getElementById('catResults');
   box.innerHTML='<div class="empty">불러오는 중…</div>';
   try{
-    let url='/api/catalog/search?q='+encodeURIComponent(q)+'&limit=50';   // empty q → top 50 후보
+    let url='/api/catalog/search?kind=device&q='+encodeURIComponent(q)+'&limit=50';   // empty q → top 50 후보
     if(catCategory) url+='&category='+encodeURIComponent(catCategory);
     const res=await apiGet(url);
+    catCache=res||[];
     if(!res.length){ box.innerHTML='<div class="empty">결과 없음. 인덱스가 비었으면 <code>bombom catalog reindex</code> 실행.</div>'; return; }
-    box.innerHTML=res.map(r=>{
+    box.innerHTML=res.map((r,i)=>{
       const cat=r.category||'other';
-      const item={slug:r.slug, u_height:r.u_height||0, name:(r.model||r.slug), category:cat, manufacturer:r.manufacturer||''};
-      const data=esc('cat:'+JSON.stringify(item));
-      return `<div class="model" draggable="true" data-drag="${data}">
-        <div class="top"><span class="cat" style="background:${CATCOLOR[cat]||CATCOLOR.other}"></span><span class="name">${esc(r.model||r.slug)}</span></div>
+      const inShort=shortlist.some(s=>s.slug===r.slug);
+      const right=inShort?`<span class="added">✓ 담음</span>`:`<button class="add" data-add="${i}">＋ 담기</button>`;
+      return `<div class="model">
+        <div class="top"><span class="cat" style="background:${CATCOLOR[cat]||CATCOLOR.other}"></span><span class="name">${esc(r.model||r.slug)}</span>${right}</div>
         <div class="mfr">${esc(r.manufacturer||'')} · ${esc(CATLABEL[cat]||cat)}</div>
         <div class="meta">${(r.u_height|0)===0?'0U':(r.u_height+'U')} · ${esc(r.slug)}</div></div>`;
     }).join('');
-    box.querySelectorAll('.model').forEach(el=>el.addEventListener('dragstart', e=>{
-      e.dataTransfer.setData('text/plain', el.getAttribute('data-drag'));
+    box.querySelectorAll('[data-add]').forEach(el=>el.addEventListener('click', e=>{
+      e.stopPropagation(); addShort(catCache[+el.dataset.add]);
     }));
   }catch(e){
     box.innerHTML='<div class="banner err">카탈로그 검색 실패: '+esc(e.message)+'</div>';
   }
 }
 
-// ── meta form ───────────────────────────────────────────────────────────
+// ── shortlist (담은 목록 — the ONLY drag source) ─────────────────────────
+function addShort(r){
+  if(!r) return;
+  if(shortlist.some(s=>s.slug===r.slug)) return;
+  shortlist.push({ slug:r.slug, name:(r.model||r.slug), category:r.category||'other',
+    u_height:r.u_height||0, manufacturer:r.manufacturer||'', unit_cost:r.unit_cost||0 });
+  renderShortlist();
+  doCatSearch();   // refresh catalog rows so the "✓ 담음" state updates
+}
+function removeShort(slug){
+  shortlist=shortlist.filter(s=>s.slug!==slug);
+  renderShortlist();
+  doCatSearch();
+}
+function renderShortlist(){
+  document.getElementById('shortCnt').textContent=shortlist.length;
+  const box=document.getElementById('shortBody');
+  if(!shortlist.length){ box.innerHTML='<div class="empty">위에서 ＋담기 하세요.</div>'; return; }
+  box.innerHTML=`<div class="hint">담은 항목을 <b>가운데 랙의 U 슬롯으로 드래그</b>=배치 (릴리즈 ${esc(selectedRelease)}).</div>`
+    + shortlist.map(s=>`<div class="model drag" draggable="true" data-slug="${esc(s.slug)}">
+        <div class="top"><span class="cat" style="background:${CATCOLOR[s.category]||CATCOLOR.other}"></span><span class="name">${esc(s.name)}</span><span class="rm" data-rmshort="${esc(s.slug)}" title="제거">✕</span></div>
+        <div class="mfr">${esc(s.manufacturer||'')} · ${esc(CATLABEL[s.category]||s.category)}</div>
+        <div class="meta">${(s.u_height|0)===0?'0U':(s.u_height+'U')} · ${esc(s.slug)}</div></div>`).join('');
+  box.querySelectorAll('.model.drag').forEach(el=>el.addEventListener('dragstart', e=>{
+    e.dataTransfer.setData('text/plain','short:'+el.dataset.slug);
+  }));
+  box.querySelectorAll('[data-rmshort]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation(); removeShort(el.dataset.rmshort);
+  }));
+}
+
+// ── meta form (shown in right column when a placement is selected) ───────
 function renderMeta(){
-  const pane=document.getElementById('metaPane');
-  if(!work || selIdx<0 || !work.placements[selIdx]){
-    pane.innerHTML='<div class="empty">랙에서 장비 블록을 선택하면 메타 항목을 편집할 수 있습니다.</div>';
-    return;
-  }
+  const box=document.getElementById('metaBox');
+  if(!work || selIdx<0 || !work.placements[selIdx]){ box.innerHTML=''; return; }
   const p=work.placements[selIdx];
   const fields=scopedFields(p);
   const missing=missingRequired(p);
-  let h=`<div class="metahead">
+  let h=`<div class="metabox"><div class="metahead">
       <span class="catdot" style="background:${CATCOLOR[p.category]||CATCOLOR.other}"></span>
       <b>${esc(p.name)}</b>
       <span class="rackmeta">${p.u?('U'+p.position+' · '+p.u+'U'):'0U'} · ${esc(p.device)}</span>
@@ -630,10 +676,11 @@ function renderMeta(){
         <div class="err">필수 항목입니다. 저장 전에 입력하세요.</div>
       </div>`;
   });
-  pane.innerHTML=h;
+  h+=`</div>`;
+  box.innerHTML=h;
 
   document.getElementById('mfRel').addEventListener('change', e=>{ p.release=e.target.value; setDirty(true); renderMain(); renderBom(); });
-  pane.querySelectorAll('[data-key]').forEach(el=>{
+  box.querySelectorAll('[data-key]').forEach(el=>{
     const ev = (el.type==='checkbox') ? 'change' : 'input';
     el.addEventListener(ev, ()=>{
       const key=el.getAttribute('data-key');
@@ -661,7 +708,6 @@ function lineItems(){
   return out;
 }
 function renderBom(){
-  const sel=document.getElementById('relSel');
   document.getElementById('rellbl').textContent=`선택 릴리즈(${selectedRelease}) 추가분 CAPEX`;
   const fields=FIELDS.filter(f=>(f.applies_to||'placement')==='placement');
   let head=`<th>Cat</th><th>Model</th><th>릴리즈</th>`;
@@ -723,7 +769,7 @@ async function save(){
   const problems=validateBeforeSave();
   if(problems.length){
     // jump to first offending placement
-    selIdx=problems[0].idx; setTab('meta'); renderMain(); renderMeta();
+    selIdx=problems[0].idx; renderMain(); renderMeta();
     showIssues(problems.map(p=>({path:`placements[${p.idx}].meta.${p.key}`, level:'error', message:`${p.name}: 필수 메타 '${p.key}' 누락`})), '필수 메타 항목이 비어 저장할 수 없습니다');
     toast('필수 메타 항목을 입력하세요', true);
     return;
@@ -780,13 +826,6 @@ function showIssues(issues, title){
     + `</div>`;
 }
 
-// ── tabs ────────────────────────────────────────────────────────────────
-function setTab(name){
-  activeTab=name;
-  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
-  document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('active', p.dataset.pane===name));
-}
-
 // ── release selector ────────────────────────────────────────────────────
 function renderReleaseSel(){
   const sel=document.getElementById('relSel');
@@ -802,12 +841,10 @@ function renderReleaseSel(){
 }
 
 // ── render all ──────────────────────────────────────────────────────────
-function renderAll(){ renderReleaseSel(); renderMain(); renderMeta(); renderBom(); renderState(); }
+function renderAll(){ renderReleaseSel(); renderMain(); renderMeta(); renderBom(); renderShortlist(); renderState(); }
 
 // ── init / wiring ───────────────────────────────────────────────────────
 function init(){
-  // tabs
-  document.querySelectorAll('.tabs .tab').forEach(t=>t.addEventListener('click', ()=>setTab(t.dataset.tab)));
   // release dropdown (new placements + highlight)
   document.getElementById('relSel').addEventListener('change', e=>{ selectedRelease=e.target.value; renderAll(); });
   document.getElementById('relOnly').addEventListener('change', e=>{ releaseOnly=e.target.checked; renderMain(); renderBom(); });
@@ -819,7 +856,8 @@ function init(){
   });
   document.getElementById('catSearch').addEventListener('input', scheduleCatSearch);
   renderCatChips();
-  doCatSearch();   // load candidate devices immediately so the list is visible on open
+  renderShortlist();
+  doCatSearch();   // auto-load top 50 candidates on open (empty q)
   // allow ?path= override of tree root
   const qp=new URLSearchParams(location.search);
   if(qp.get('path')) TREE_PATH=qp.get('path');
