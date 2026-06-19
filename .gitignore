@@ -21,8 +21,16 @@ Thumbs.db
 tmp/
 .cache/
 
-# [TODO] add language-specific entries once the stack is chosen
-# Python:      __pycache__/  .venv/  *.pyc  .pytest_cache/
+# Rebuildable catalog index (git is the source of truth, not this cache)
+.index/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+.ruff_cache/
+
+# [TODO] add frontend entries when the JS app lands
 # Node/TS:     node_modules/  dist/  build/  .next/
-# Go:          /bin/  *.test
-# Rust:        /target/
