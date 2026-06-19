@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — Designer UI (MOCKUP)</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+    --accent:#2563eb; --accent2:#0ea5e9; --ok:#16a34a; --warn:#d97706;
+    --server:#2563eb; --network:#16a34a; --storage:#9333ea; --other:#64748b;
+    --rackbg:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
+  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px}
+  header .logo{font-weight:700;letter-spacing:.5px;color:#fff}
+  header .crumb{color:#94a3b8}
+  header .crumb b{color:#e2e8f0}
+  header .mockflag{margin-left:auto;background:var(--warn);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+  header button{background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}
+  header button:hover{background:#334155}
+  .app{display:grid;grid-template-columns:220px 320px 1fr 360px;gap:10px;padding:10px;height:calc(100vh - 44px)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0}
+  .card h3{margin:0;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line)}
+  .card .body{padding:10px 12px;overflow:auto;min-height:0}
+  /* tree */
+  .tree{font-size:13px}
+  .tree .node{padding:3px 6px;border-radius:6px;cursor:pointer;white-space:nowrap}
+  .tree .node:hover{background:#f1f5f9}
+  .tree .node.sel{background:#dbeafe;color:#1e40af;font-weight:600}
+  .tree .lvl1{padding-left:6px} .tree .lvl2{padding-left:20px} .tree .lvl3{padding-left:34px}
+  .tree .lvl4{padding-left:48px} .tree .lvl5{padding-left:62px;color:var(--muted)}
+  .tree .lvl5.sel{color:#1e40af}
+  .ghostbtn{margin-top:8px;width:100%;border:1px dashed var(--line);background:#fff;color:var(--accent);border-radius:8px;padding:7px;cursor:pointer}
+  .ghostbtn:hover{background:#f0f7ff}
+  /* steps */
+  .steps{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line)}
+  .steps .step{flex:1;text-align:center;font-size:12px;padding:6px;border-radius:8px;background:#f1f5f9;color:var(--muted)}
+  .steps .step.active{background:var(--accent);color:#fff;font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;background:#fff;display:flex;align-items:center;gap:6px}
+  .chip .dot{width:8px;height:8px;border-radius:50%}
+  .chip.active{border-color:var(--accent);background:#eff6ff;color:#1e40af;font-weight:600}
+  .search{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
+  .model{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:7px;cursor:grab;background:#fff}
+  .model:hover{border-color:var(--accent2);box-shadow:0 1px 4px rgba(2,132,199,.12)}
+  .model .top{display:flex;align-items:center;gap:7px}
+  .model .cat{width:9px;height:9px;border-radius:2px;flex:none}
+  .model .mfr{color:var(--muted);font-size:11px}
+  .model .name{font-weight:600}
+  .model .meta{color:var(--muted);font-size:11px;margin-top:3px}
+  .model .add{float:right;border:none;background:#eff6ff;color:var(--accent);border-radius:6px;padding:3px 8px;cursor:pointer}
+  .shortlist .model{cursor:grab;border-style:dashed}
+  .hint{color:var(--muted);font-size:11px;margin:4px 0 8px}
+  /* rack */
+  .rackwrap{display:flex;gap:16px;align-items:flex-start}
+  .rack{--u:16px;width:240px;background:var(--rackbg);border:2px solid #cbd5e1;border-radius:8px;padding:6px 6px 6px 28px;position:relative}
+  .rack .uno{position:absolute;left:4px;width:20px;text-align:right;color:#94a3b8;font-size:9px}
+  .uslot{height:16px;border-bottom:1px dashed #e2e8f0;position:relative}
+  .uslot.drophover{background:#dbeafe}
+  .dev{position:absolute;left:28px;right:6px;border-radius:4px;color:#fff;font-size:11px;display:flex;align-items:center;padding:0 7px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);cursor:default}
+  .dev small{opacity:.8;margin-left:6px}
+  .dev .rm{margin-left:auto;cursor:pointer;opacity:.7}
+  .dev .rm:hover{opacity:1}
+  .facetoggle{display:flex;gap:4px;margin-bottom:8px}
+  .facetoggle button{flex:1;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px;cursor:pointer;font-size:12px}
+  .facetoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .legend{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.8}
+  .legend .cat{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .rackmeta{color:var(--muted);font-size:11px;margin-bottom:8px}
+  /* device list / bom */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase}
+  td.qty,td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .toolbar{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line)}
+  .toolbar button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:12px}
+  .toolbar button.primary{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .toolbar button.report{background:#fff;color:var(--warn);border-color:#fcd9a8}
+  .bom{margin-top:auto;border-top:1px solid var(--line);padding:12px;background:#f8fafc;border-radius:0 0 10px 10px}
+  .bom .row{display:flex;justify-content:space-between;margin:3px 0}
+  .bom .total{font-size:18px;font-weight:700;color:#0f172a}
+  .bom .sub{color:var(--muted);font-size:11px}
+  .note{font-size:11px;color:var(--warn);margin-top:6px}
+  .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom</span>
+  <span class="crumb">CloudA &nbsp;/&nbsp; <b>kr-east</b> &nbsp;/&nbsp; <b>az1</b> &nbsp;/&nbsp; row-3 &nbsp;/&nbsp; <b>R07</b></span>
+  <span class="mockflag">MOCKUP · 비기능 시안</span>
+  <button onclick="alert('Report: 추후 제공하실 BOM 양식에 맞춰 출력 (매핑 레이어). 지금은 자리만.')">⤓ Report (양식 출력)</button>
+</header>
+
+<div class="app">
+
+  <!-- 1) Hierarchy -->
+  <div class="card">
+    <h3>오퍼링 / 리전 / 존</h3>
+    <div class="body tree" id="tree">
+      <div class="node lvl1">▾ 📦 CloudA</div>
+      <div class="node lvl2">▾ 🌏 kr-east</div>
+      <div class="node lvl3">▾ 🏢 az1</div>
+      <div class="node lvl4">▾ 🗄 row-3</div>
+      <div class="node lvl5 sel">▣ R07 (42U)</div>
+      <div class="node lvl5">▢ R08 (42U)</div>
+      <div class="node lvl3">▸ 🏢 az2</div>
+      <div class="node lvl2">▸ 🌏 kr-west</div>
+      <button class="ghostbtn" onclick="alert('신규 리전 구축: 기존 리전/존 서브트리를 복사 → 식별자 치환 → 수정.\\n(git 디렉터리 clone + 커밋)')">＋ 신규 리전 (기존 복사)</button>
+    </div>
+  </div>
+
+  <!-- 2) Select models -->
+  <div class="card">
+    <div class="steps">
+      <div class="step active">① 모델 선택</div>
+      <div class="step">② 랙 배치 →</div>
+    </div>
+    <div class="body">
+      <div class="chips" id="chips"></div>
+      <input class="search" id="search" placeholder="모델 검색 (예: R760, 7050)…">
+      <div class="hint">카드를 오른쪽 랙으로 <b>드래그</b>해서 배치. 수량은 배치 결과로 집계됩니다(1차엔 수량 없음).</div>
+      <div id="catalog"></div>
+      <h3 style="border:none;padding:12px 0 4px">설계 shortlist</h3>
+      <div class="shortlist" id="shortlist"><div class="empty">＋ 버튼으로 후보를 담으세요</div></div>
+    </div>
+  </div>
+
+  <!-- 3) Rack elevation -->
+  <div class="card">
+    <h3>랙 실장도 — R07 (NetBox 스타일)</h3>
+    <div class="body">
+      <div class="rackmeta">Rack-type: <b>vertiv-vr3300 (42U)</b> · 커뮤니티 rack-type에서 선택</div>
+      <div class="facetoggle">
+        <button class="on" id="fF" onclick="setFace('front')">Front</button>
+        <button id="fR" onclick="setFace('rear')">Rear</button>
+      </div>
+      <div class="rackwrap">
+        <div class="rack" id="rack"></div>
+        <div class="legend">
+          <div><span class="cat" style="background:var(--server)"></span>Server</div>
+          <div><span class="cat" style="background:var(--network)"></span>Network</div>
+          <div><span class="cat" style="background:var(--storage)"></span>Storage</div>
+          <div><span class="cat" style="background:var(--other)"></span>Other</div>
+          <div style="margin-top:8px">드롭하면 해당 U에 장착.<br>블록의 ✕로 제거.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4) Device list + BOM -->
+  <div class="card">
+    <h3>장비 리스트 (배치 집계)</h3>
+    <div class="toolbar">
+      <button class="primary" onclick="exportXls()">⤓ Export to Excel (.xls)</button>
+      <button class="report" onclick="alert('Report: 추후 제공 양식에 맞춘 별도 출력 기능.')">양식 출력</button>
+    </div>
+    <div class="body" style="flex:1">
+      <table id="devtable">
+        <thead><tr><th>Category</th><th>Model</th><th class="num">U</th><th class="num">Qty</th><th class="num">Unit ($)</th><th class="num">Subtotal</th></tr></thead>
+        <tbody id="devrows"></tbody>
+      </table>
+      <div id="devempty" class="empty">랙에 장비를 배치하면 여기에 집계됩니다.</div>
+    </div>
+    <div class="bom">
+      <div class="row sub"><span>장착 U / 42U</span><span id="uused">0U</span></div>
+      <div class="row sub"><span>전력 합계 (max draw)</span><span id="watts">0 W</span></div>
+      <div class="row"><span class="total">CAPEX</span><span class="total" id="capex">$0</span></div>
+      <div class="note">※ CAPEX-우선 MVP. 전력은 용량 표시까지(비용 환산은 후속). 가격은 pricing/ 오버레이 join(시안 값).</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CATS = {server:'Server', network:'Network', storage:'Storage', other:'Other'};
+const CATCOLOR = {server:'var(--server)',network:'var(--network)',storage:'var(--storage)',other:'var(--other)'};
+// 시안용 모델 (스펙은 devicetype-library 기준, 가격은 pricing 오버레이 예시값)
+const MODELS = [
+  {id:'dell-poweredge-r760', mfr:'Dell', name:'PowerEdge R760', cat:'server', u:2, watts:1100, price:14500},
+  {id:'dell-poweredge-r660', mfr:'Dell', name:'PowerEdge R660', cat:'server', u:1, watts:800, price:11200},
+  {id:'hpe-proliant-dl380-gen11', mfr:'HPE', name:'ProLiant DL380 Gen11', cat:'server', u:2, watts:1000, price:13800},
+  {id:'arista-dcs-7050sx3-48yc8', mfr:'Arista', name:'DCS-7050SX3-48YC8', cat:'network', u:1, watts:300, price:22000},
+  {id:'arista-dcs-7280cr3-32p4', mfr:'Arista', name:'DCS-7280CR3-32P4', cat:'network', u:1, watts:450, price:38000},
+  {id:'cisco-nexus-93180yc-fx', mfr:'Cisco', name:'Nexus 93180YC-FX', cat:'network', u:1, watts:350, price:27000},
+  {id:'dell-powerstore-1200t', mfr:'Dell', name:'PowerStore 1200T', cat:'storage', u:2, watts:900, price:42000},
+  {id:'netapp-aff-a400', mfr:'NetApp', name:'AFF A400', cat:'storage', u:4, watts:1300, price:65000},
+  {id:'apc-ap8853-pdu', mfr:'APC', name:'AP8853 Rack PDU', cat:'other', u:0, watts:0, price:700},
+];
+const RACK_U = 42;
+let activeCat = 'all', face = 'front';
+let shortlist = [];
+let placements = []; // {modelId, startU, u}
+const byId = id => MODELS.find(m=>m.id===id);
+
+// chips
+const chipsEl = document.getElementById('chips');
+[['all','전체'],...Object.entries(CATS)].forEach(([k,label])=>{
+  const c=document.createElement('div'); c.className='chip'+(k==='all'?' active':''); c.dataset.cat=k;
+  c.innerHTML = (k!=='all'?`<span class="dot" style="background:${CATCOLOR[k]}"></span>`:'')+label;
+  c.onclick=()=>{activeCat=k;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x.dataset.cat===k));renderCatalog();};
+  chipsEl.appendChild(c);
+});
+document.getElementById('search').oninput = renderCatalog;
+
+function modelCard(m, inShortlist){
+  const el=document.createElement('div'); el.className='model'; el.draggable=true; el.dataset.id=m.id;
+  el.ondragstart=e=>e.dataTransfer.setData('text/plain', m.id);
+  el.innerHTML = `<div class="top"><span class="cat" style="background:${CATCOLOR[m.cat]}"></span>
+    <span class="name">${m.name}</span>
+    ${inShortlist?'':`<button class="add" onclick="addShort('${m.id}')">＋ 담기</button>`}</div>
+    <div class="mfr">${m.mfr} · ${CATS[m.cat]}</div>
+    <div class="meta">${m.u===0?'0U (PDU)':m.u+'U'} · ${m.watts} W · ~$${m.price.toLocaleString()}</div>`;
+  return el;
+}
+function renderCatalog(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const box=document.getElementById('catalog'); box.innerHTML='';
+  MODELS.filter(m=>(activeCat==='all'||m.cat===activeCat) && (m.name.toLowerCase().includes(q)||m.mfr.toLowerCase().includes(q)))
+    .forEach(m=>box.appendChild(modelCard(m,false)));
+}
+function addShort(id){ if(!shortlist.includes(id))shortlist.push(id); renderShort(); }
+function renderShort(){
+  const box=document.getElementById('shortlist');
+  if(!shortlist.length){box.innerHTML='<div class="empty">＋ 버튼으로 후보를 담으세요</div>';return;}
+  box.innerHTML=''; shortlist.forEach(id=>box.appendChild(modelCard(byId(id),true)));
+}
+
+// rack
+function renderRack(){
+  const rack=document.getElementById('rack'); rack.innerHTML='';
+  rack.style.height=(RACK_U*16+12)+'px';
+  for(let u=RACK_U; u>=1; u--){
+    const slot=document.createElement('div'); slot.className='uslot'; slot.dataset.u=u;
+    slot.innerHTML=`<span class="uno">${u}</span>`;
+    slot.ondragover=e=>{e.preventDefault();slot.classList.add('drophover');};
+    slot.ondragleave=()=>slot.classList.remove('drophover');
+    slot.ondrop=e=>{e.preventDefault();slot.classList.remove('drophover');place(e.dataTransfer.getData('text/plain'), +slot.dataset.u);};
+    rack.appendChild(slot);
+  }
+  placements.forEach((p,idx)=>{
+    const m=byId(p.modelId); if(m.u===0) return; // PDU (0U) not shown on elevation
+    const blk=document.createElement('div'); blk.className='dev';
+    blk.style.background=CATCOLOR[m.cat];
+    blk.style.bottom=((p.startU-1)*16+6)+'px';
+    blk.style.height=(p.u*16-2)+'px';
+    blk.innerHTML=`${m.name}<small>${p.u}U</small><span class="rm" title="제거" onclick="removeP(${idx})">✕</span>`;
+    document.getElementById('rack').appendChild(blk);
+  });
+}
+function occupied(){const s=new Set();placements.forEach(p=>{for(let u=p.startU;u<p.startU+p.u;u++)s.add(u);});return s;}
+function place(modelId, startU){
+  const m=byId(modelId); if(!m)return;
+  if(m.u===0){ placements.push({modelId,startU:0,u:0}); refresh(); return; } // PDU
+  const occ=occupied();
+  for(let u=startU;u<startU+m.u;u++){ if(u>RACK_U){alert('랙 상단을 벗어납니다.');return;} if(occ.has(u)){alert('U '+u+' 가 이미 점유됨.');return;} }
+  placements.push({modelId,startU,u:m.u});
+  if(!shortlist.includes(modelId))shortlist.push(modelId);
+  refresh();
+}
+function removeP(i){placements.splice(i,1);refresh();}
+function setFace(f){face=f;document.getElementById('fF').classList.toggle('on',f==='front');document.getElementById('fR').classList.toggle('on',f==='rear');renderRack();}
+
+// device list + BOM (qty = placement count)
+function refresh(){
+  renderShort(); renderRack();
+  const agg={};
+  placements.forEach(p=>{agg[p.modelId]=(agg[p.modelId]||0)+1;});
+  const rows=document.getElementById('devrows'); rows.innerHTML='';
+  let capex=0, watts=0, uused=0;
+  Object.entries(agg).forEach(([id,qty])=>{
+    const m=byId(id); const sub=qty*m.price; capex+=sub; watts+=qty*m.watts; uused+=qty*m.u;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="cat" style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${CATCOLOR[m.cat]};margin-right:5px"></span>${CATS[m.cat]}</td>
+      <td>${m.name}<div class="mfr" style="color:var(--muted);font-size:11px">${m.mfr}</div></td>
+      <td class="num">${m.u||'-'}</td><td class="qty">${qty}</td>
+      <td class="num">${m.price.toLocaleString()}</td><td class="num">${sub.toLocaleString()}</td>`;
+    rows.appendChild(tr);
+  });
+  document.getElementById('devempty').style.display = Object.keys(agg).length?'none':'block';
+  document.getElementById('capex').textContent='$'+capex.toLocaleString();
+  document.getElementById('watts').textContent=watts.toLocaleString()+' W';
+  document.getElementById('uused').textContent=uused+'U';
+}
+function exportXls(){
+  const rows=[['Category','Manufacturer','Model','U','Qty','Unit (USD)','Subtotal (USD)']];
+  const agg={}; placements.forEach(p=>{agg[p.modelId]=(agg[p.modelId]||0)+1;});
+  Object.entries(agg).forEach(([id,qty])=>{const m=byId(id);rows.push([CATS[m.cat],m.mfr,m.name,m.u,qty,m.price,qty*m.price]);});
+  if(rows.length===1){alert('배치된 장비가 없습니다.');return;}
+  let html='<table border=1><tr>'+rows[0].map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  rows.slice(1).forEach(r=>html+='<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>');
+  html+='</table>';
+  const blob=new Blob(['﻿<html><head><meta charset="utf-8"></head><body>'+html+'</body></html>'],{type:'application/vnd.ms-excel'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bombom-R07-devices.xls';a.click();
+}
+
+// seed a few placements so the elevation looks real
+renderCatalog();
+[['arista-dcs-7050sx3-48yc8',42],['arista-dcs-7050sx3-48yc8',41],
+ ['dell-poweredge-r760',1],['dell-poweredge-r760',3],['dell-poweredge-r760',5],
+ ['hpe-proliant-dl380-gen11',7],['dell-powerstore-1200t',9]].forEach(([id,u])=>place(id,u));
+</script>
+</body>
+</html>

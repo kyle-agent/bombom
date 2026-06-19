@@ -16,9 +16,14 @@ placement), which the rack-elevation UI later renders.
 
 ## Open decisions
 
-- Which feature next: BOM engine vs rack model. (BOM validates cost early; rack model
-  unblocks the UI.)
+- Which feature next: BOM engine vs rack model vs org-hierarchy base data. (Rack model +
+  base data unblock the UI the designer wants; BOM validates cost early.)
 - Frontend framework: React vs Svelte (deferred until UI work).
+- UI workflow LOCKED (2026-06-19): 2-step select→place; quantity derived from placement
+  (ADR quantity-from-placement); device categorization = heuristic + manual override overlay
+  (ADR device-categorization); rack elevation (NetBox SVG) + device list + Excel export;
+  Report-to-external-template deferred until template supplied; region/zone clone for new
+  builds. A static HTML mock is at docs/mockups/designer-ui.html (awaiting user feedback).
 
 ## Blockers
 

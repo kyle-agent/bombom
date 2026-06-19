@@ -100,6 +100,33 @@ custom_line_items:
   git commit. Screen and git are two faces of the same data. Collaboration via branch/PR;
   branch = cost scenario, ref-to-ref diff = investment delta.
 
+## Designer workflow (UI)
+
+Two steps, with **quantity derived from placement** (ADR quantity-from-placement):
+
+1. **Select (1차):** from categorized model candidates (server / network / storage / …),
+   pick model types into a design shortlist. No quantity at this step — it is just a shortlist.
+2. **Place (2차):** drag shortlisted models onto rack U positions. Bulk placement is
+   supported (place N / fill contiguous U / repeat across racks). **Quantity = the count of
+   placed instances — the single source of truth.**
+
+After placement the screen shows the NetBox-style **rack elevation (SVG)** plus the placed
+**device list**, which **exports to Excel (.xlsx)**. A separate **Report** function renders
+the BOM to an externally-provided template via a field-mapping layer (deferred until the
+template is supplied — no code change needed when it arrives, only a mapping).
+
+**Preconditions / base data:**
+- Offering / Region / Zone base data must exist before rack design (small YAML in the tree).
+- Rack instances are created from a community **rack-type** (already in the catalog); the
+  rack layout (what's mounted) is bombom's design output.
+- **New region/zone bootstrap = clone an existing subtree** (copy the directory, rewrite
+  identifiers) and modify — natural on the git backend.
+
+**Device categorization:** the community catalog has no category/role field, so bombom
+classifies device-types itself — heuristic auto-classification (interface mix, u_height,
+module profiles, model-name cues) with **manual override**, stored in a category overlay
+kept separate from the community spec, same as pricing (ADR device-categorization).
+
 ## Community reflection
 
 devicetype-library as a **git submodule** pinned to a commit. A `sync` command does
