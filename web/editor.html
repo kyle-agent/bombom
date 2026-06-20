@@ -24,6 +24,9 @@
   header .rackchip .dot{width:8px;height:8px;border-radius:50%}
   header .confirmbtn{margin-left:auto;background:#1e293b;border:1px solid #334155;color:#86efac;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;cursor:pointer}
   header .confirmbtn:hover{background:#334155;color:#bbf7d0}
+  header .clonebtn{background:#1e293b;border:1px solid #334155;color:#bae6fd;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;cursor:pointer}
+  header .clonebtn:hover{background:#334155;color:#e0f2fe}
+  header .clonebtn:disabled{opacity:.45;cursor:not-allowed}
   header .state{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
   header .state.saved{background:var(--ok)}
   header .state.dirty{background:var(--new)}
@@ -210,6 +213,7 @@
   <span class="rackchip" id="rackchip" style="display:none"></span>
   <nav class="topnav"><a href="/">뷰어</a><a href="/manage">기준정보</a><a href="/candidates">후보</a><a href="/placed">목록</a><a href="/dashboard">현황</a></nav>
   <button class="confirmbtn" id="confirmBtn" title="확정 워크플로우">✅ 확정</button>
+  <button class="clonebtn" id="cloneBtn" title="이 랙을 같은 Rack-Type에 복제" disabled>⧉ 복제</button>
   <span class="state none" id="statechip">랙 미선택</span>
 </header>
 
@@ -393,7 +397,9 @@ function toast(msg, isErr){
 function setDirty(d){ dirty=d; renderState(); }
 function renderState(){
   const s=document.getElementById('statechip'), btn=document.getElementById('saveBtn');
-  if(!selectedRackId){ s.className='state none'; s.textContent='랙 미선택'; btn.disabled=true; return; }
+  const clone=document.getElementById('cloneBtn');
+  if(!selectedRackId){ s.className='state none'; s.textContent='랙 미선택'; btn.disabled=true; if(clone) clone.disabled=true; return; }
+  if(clone) clone.disabled=false;
   btn.disabled=!dirty;
   if(dirty){ s.className='state dirty'; s.textContent='● 변경됨 (미저장)'; }
   else { s.className='state saved'; s.textContent='저장됨'; }
@@ -482,6 +488,36 @@ function applyRackResponse(data){
     })),
     custom_line_items:(RACK.custom_line_items||[]).map(c=>Object.assign({}, c))
   };
+}
+
+// ── clone rack (POST /api/rack/clone — byte-for-byte copy in same Rack-Type) ──
+async function cloneRack(){
+  if(!selectedRackId || !selectedRackFile){ toast('먼저 랙을 선택하세요', true); return; }
+  const id=prompt('새 랙 ID (같은 Rack-Type에 복제됩니다)', '');
+  if(id===null) return;
+  const rackId=id.trim();
+  if(!rackId) return;
+  const btn=document.getElementById('cloneBtn'); if(btn) btn.disabled=true;
+  try{
+    const r=await fetch('/api/rack/clone', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({source_path:selectedRackFile, rack:rackId})});
+    const data=await r.json().catch(()=>null);
+    if(!r.ok){
+      let msg=(data&&data.detail)||('HTTP '+r.status);
+      if(r.status===409) msg='이미 있는 랙 ID 입니다';
+      else if(r.status===422) msg='ID 형식이 올바르지 않습니다';
+      toast(String(msg), true);
+      return;
+    }
+    toast('복제됨 → '+(data.rack||rackId));
+    // open the new rack the way the editor opens any rack (tree refresh → loadRack)
+    await loadTree();
+    loadRack(data.rack||rackId, data.path);
+  }catch(e){
+    toast('복제 실패: '+e.message, true);
+  }finally{
+    renderState();   // restore the clone button's enabled/disabled state
+  }
 }
 
 // ── meta field scoping ──────────────────────────────────────────────────
@@ -1247,6 +1283,7 @@ function init(){
   document.querySelectorAll('.mtab[data-tab]').forEach(t=>t.addEventListener('click', ()=>switchMTab(t.dataset.tab)));
   // ✅ 확정 workflow
   document.getElementById('confirmBtn').addEventListener('click', openConfirm);
+  document.getElementById('cloneBtn').addEventListener('click', cloneRack);
   document.getElementById('cClose').addEventListener('click', closeConfirm);
   document.getElementById('confirmModal').addEventListener('click', e=>{ if(e.target.id==='confirmModal') closeConfirm(); });
   document.querySelectorAll('.mtab[data-ctab]').forEach(t=>t.addEventListener('click', ()=>switchCTab(t.dataset.ctab)));

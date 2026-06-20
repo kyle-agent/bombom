@@ -51,6 +51,24 @@ def scaffold_rack(root: Path, offering: str, region: str, zone: str, rack_type: 
     return _write(base / f"{rack}.yaml", {"rack_model": {"slug": rack_model_slug}, "placements": []})
 
 
+def clone_rack(src: Path, dst_rack: str) -> Path:
+    """Copy one rack file to a new rack id in the same rack-type dir, placements and all.
+
+    A byte-for-byte copy: every Placement (device, position, release, qty, meta) and custom
+    line item is preserved, so "lay one rack out, then make N more like it" is one call each.
+    The new rack inherits its hierarchy from the destination path (same as the source)."""
+    src = Path(src)
+    if not src.is_file():
+        raise FileNotFoundError(f"clone source must be a rack file: {src}")
+    if not dst_rack or "/" in dst_rack or "\\" in dst_rack or ".." in dst_rack:
+        raise ValueError(f"unsafe rack id: {dst_rack!r}")   # self-defending; API also validates
+    dst = src.parent / f"{dst_rack}.yaml"
+    if dst.exists():
+        raise FileExistsError(f"already exists: {dst}")
+    shutil.copy2(src, dst)
+    return dst
+
+
 def clone_subtree(src: Path, dst_name: str) -> Path:
     """Copy a hierarchy subtree to a sibling with a new identifier (new region/zone bootstrap)."""
     src = Path(src)

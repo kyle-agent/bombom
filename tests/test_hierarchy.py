@@ -96,6 +96,63 @@ def test_traversal_id_rejected(gitws):
     assert _count(root) == before
 
 
+def test_clone_zone_subtree(gitws):
+    client, root = _client(gitws)
+    # build offering/region/zone with a rack-type underneath, then clone the whole zone
+    client.post("/api/hierarchy", json={"level": "region", "offering": "cloud-a", "region": "kr-east"})
+    client.post("/api/hierarchy", json={"level": "zone", "offering": "cloud-a",
+                                        "region": "kr-east", "zone": "az1"})
+    client.post("/api/hierarchy", json={"level": "rack_type", "offering": "cloud-a",
+                                        "region": "kr-east", "zone": "az1", "rack_type": "data"})
+    before = _count(root)
+    r = client.post("/api/hierarchy/clone", json={"level": "zone", "offering": "cloud-a",
+                                                  "region": "kr-east", "zone": "az1",
+                                                  "new_name": "az2"})
+    assert r.status_code == 200, r.text
+    assert _count(root) == before + 1
+    # the clone carries the rack-type subtree, and its own meta name is renamed
+    rt = root / "offerings/cloud-a/regions/kr-east/zones/az2/rack-types/data/rack-type.yaml"
+    assert rt.exists()
+    assert "az2" in (root / "offerings/cloud-a/regions/kr-east/zones/az2/zone.yaml").read_text()
+
+
+def test_clone_subtree_preserves_rack_placements(gitws):
+    client, root = _client(gitws)
+    client.post("/api/hierarchy", json={"level": "region", "offering": "cloud-a", "region": "kr-east"})
+    client.post("/api/hierarchy", json={"level": "zone", "offering": "cloud-a",
+                                        "region": "kr-east", "zone": "az1"})
+    client.post("/api/hierarchy", json={"level": "rack_type", "offering": "cloud-a",
+                                        "region": "kr-east", "zone": "az1", "rack_type": "data"})
+    # seed a real rack with a placement under the source zone, then clone the zone
+    rack = (root / "offerings/cloud-a/regions/kr-east/zones/az1/rack-types/data/racks/R01.yaml")
+    rack.parent.mkdir(parents=True, exist_ok=True)
+    rack.write_text("rack_model: { slug: acme-rack42 }\nplacements:\n"
+                    "  - { device: dell-poweredge-test1, position: 1, release: R26.07 }\n")
+    r = client.post("/api/hierarchy/clone", json={"level": "zone", "offering": "cloud-a",
+                                                  "region": "kr-east", "zone": "az1",
+                                                  "new_name": "az2"})
+    assert r.status_code == 200, r.text
+    cloned = root / "offerings/cloud-a/regions/kr-east/zones/az2/rack-types/data/racks/R01.yaml"
+    assert "dell-poweredge-test1" in cloned.read_text()    # placements carried through copytree
+
+
+def test_clone_subtree_conflict_409(gitws):
+    client, root = _client(gitws)
+    client.post("/api/hierarchy", json={"level": "region", "offering": "cloud-a", "region": "kr-east"})
+    before = _count(root)
+    r = client.post("/api/hierarchy/clone", json={"level": "region", "offering": "cloud-a",
+                                                  "region": "kr-east", "new_name": "kr-east"})
+    assert r.status_code == 409
+    assert _count(root) == before                                    # no commit on conflict
+
+
+def test_clone_subtree_unsafe_name_422(gitws):
+    client, _ = _client(gitws)
+    r = client.post("/api/hierarchy/clone", json={"level": "offering", "offering": "cloud-a",
+                                                  "new_name": "../evil"})
+    assert r.status_code == 422
+
+
 def test_delete_empty_node(gitws):
     client, root = _client(gitws)
     client.post("/api/hierarchy", json={"level": "region", "offering": "cloud-a",

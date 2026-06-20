@@ -42,6 +42,9 @@
   /* delete link (subtle) */
   .delbtn{border:none;background:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1}
   .delbtn:hover{color:var(--bad);background:#fef2f2}
+  /* clone link (subtle, teal accent) */
+  .clonebtn{border:none;background:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1}
+  .clonebtn:hover{color:#0d9488;background:#f0fdfa}
   /* node titles + ids */
   .nodename{font-weight:700}
   .nodeid{color:var(--muted);font-size:11px;margin-left:6px;font-variant-numeric:tabular-nums}
@@ -171,6 +174,7 @@ function rackTypeChip(rt, zCtx){
   return '<div class="rtchip">'
     + '<span class="rtname">' + esc(nm) + '</span>'
     + '<span class="rtmeta">' + esc(rt.rack_type) + ' · 랙 ' + cnt
+    +   ' ' + cloneControl('rack_type', rtCtx, nm)
     +   ' ' + delControl('rack_type', rtCtx, nm)
     + '</span>'
     + '</div>';
@@ -209,6 +213,17 @@ function delControl(level, ctx, name){
     + 'data-name="' + esc(name) + '" ' + attrs + '>✕ 삭제</button>';
 }
 
+// build a subtle clone link for a given node — copies the whole subtree.
+// ctx holds this node's own id (under its level key) + all ancestor ids;
+// name is the display name (plain text), carried for parity with delControl.
+function cloneControl(level, ctx, name){
+  const attrs = Object.keys(ctx).map(function(k){
+    return 'data-' + k + '="' + esc(ctx[k]) + '"';
+  }).join(' ');
+  return '<button type="button" class="clonebtn" data-clone="' + level + '" '
+    + 'data-name="' + esc(name) + '" ' + attrs + '>⧉ 복제</button>';
+}
+
 function renderTree(){
   const tree = document.getElementById('tree');
   if(!HIER.length){
@@ -220,6 +235,7 @@ function renderTree(){
     let html = '<div class="offering">';
     html += '<div class="head">' + nameAndId(off.name, off.offering)
           + addControl('region', '리전', oCtx)
+          + cloneControl('offering', oCtx, off.name || off.offering)
           + delControl('offering', oCtx, off.name || off.offering) + '</div>';
 
     const regions = off.regions || [];
@@ -231,6 +247,7 @@ function renderTree(){
       html += '<div class="region"><div class="level-head"><span class="tag">리전</span>'
             + nameAndId(reg.name, reg.region)
             + addControl('zone', '존', rCtx)
+            + cloneControl('region', rCtx, reg.name || reg.region)
             + delControl('region', rCtx, reg.name || reg.region) + '</div>';
 
       const zones = reg.zones || [];
@@ -242,6 +259,7 @@ function renderTree(){
         html += '<div class="zone"><div class="level-head"><span class="tag">존</span>'
               + nameAndId(z.name, z.zone)
               + addControl('rack_type', 'Rack-Type', zCtx)
+              + cloneControl('zone', zCtx, z.name || z.zone)
               + delControl('zone', zCtx, z.name || z.zone) + '</div>';
 
         const rts = z.rack_types || [];
@@ -338,6 +356,41 @@ async function submitDelete(delBtn){
   }
 }
 
+// ── clone submission ─────────────────────────────────────────────────
+// cloneBtn carries data-clone (level) plus this node's id + ancestor ids as data-*.
+// Copies the whole subtree under a new id supplied via prompt().
+async function submitClone(cloneBtn){
+  const level = cloneBtn.getAttribute('data-clone');
+  const name = window.prompt('복제본 이름 (하위 전체가 복사됩니다)', '');
+  if(name == null) return;
+  const newName = name.trim();
+  if(!newName) return;
+
+  // body carries the ancestor ids relevant to this level + the new id
+  const keys = ['offering','region','zone','rack_type'];
+  const body = { level: level, new_name: newName };
+  keys.forEach(function(k){
+    const v = cloneBtn.getAttribute('data-' + k);
+    if(v != null) body[k] = v;
+  });
+
+  try{
+    const data = await postJSON('/api/hierarchy/clone', body);
+    HIER = (data && data.hierarchy) ? data.hierarchy : HIER;
+    clearError();
+    renderTree();
+    toast('복제됨 → ' + newName, 'ok');
+  }catch(err){
+    if(err && err.status === 409){
+      toast('같은 이름이 이미 있습니다', 'bad');
+    } else if(err && err.status === 422){
+      toast('이름 형식이 올바르지 않습니다', 'bad');
+    } else {
+      toast((err && err.message) ? err.message : '복제에 실패했습니다', 'bad');
+    }
+  }
+}
+
 // ── event wiring (delegated; survives re-render) ─────────────────────
 document.addEventListener('click', function(ev){
   const t = ev.target;
@@ -352,6 +405,12 @@ document.addEventListener('click', function(ev){
   const delBtn = t.closest('.delbtn[data-del]');
   if(delBtn){
     submitDelete(delBtn);
+    return;
+  }
+  // clone a node's entire subtree
+  const cloneBtn = t.closest('.clonebtn[data-clone]');
+  if(cloneBtn){
+    submitClone(cloneBtn);
     return;
   }
   // toggle an in-tree add form (sibling of the button)

@@ -85,6 +85,33 @@ def test_put_rejects_overlap_no_write_no_commit(gitws):
     assert len(load_racks(root / RACKFILE).racks[0].design.placements) == 1  # file unchanged
 
 
+def test_clone_rack_copies_placements_and_commits(gitws):
+    client, root = _client(gitws)
+    before = _count(root)
+    r = client.post("/api/rack/clone", json={"source_path": RACKFILE, "rack": "R09"})
+    assert r.status_code == 200, r.text
+    assert _count(root) == before + 1
+    dst = RACKFILE.replace("R02.yaml", "R09.yaml")
+    src_pl = load_racks(root / RACKFILE).racks[0].design.placements
+    dst_pl = load_racks(root / dst).racks[0].design.placements
+    assert [p.device for p in dst_pl] == [p.device for p in src_pl]   # byte-for-byte copy
+    assert r.json()["path"].endswith("R09.yaml")
+
+
+def test_clone_rack_conflict_409(gitws):
+    client, root = _client(gitws)
+    before = _count(root)
+    r = client.post("/api/rack/clone", json={"source_path": RACKFILE, "rack": "R02"})  # exists
+    assert r.status_code == 409
+    assert _count(root) == before                                    # no commit
+
+
+def test_clone_rack_rejects_unsafe_id(gitws):
+    client, _ = _client(gitws)
+    r = client.post("/api/rack/clone", json={"source_path": RACKFILE, "rack": "../evil"})
+    assert r.status_code == 422
+
+
 def test_get_then_meta_persist_clears_missing(gitws):
     client, root = _client(gitws)
     got = client.get(f"/api/rack?path={RACKFILE}").json()

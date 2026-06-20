@@ -33,10 +33,12 @@ from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, valida
 from ..design.writer import write_rack
 from ..export import build_data, inject
 from ..gitops import add_commit
-from ..hierarchy import list_hierarchy, remove_node
+from ..hierarchy import list_hierarchy, node_dir, remove_node
 from ..render import rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
 from ..scaffold import (
+    clone_rack,
+    clone_subtree,
     scaffold_offering,
     scaffold_rack,
     scaffold_rack_type,
@@ -106,6 +108,39 @@ class HierarchyBody(BaseModel):
     zone: Optional[str] = None
     rack_type: Optional[str] = None
     name: Optional[str] = None
+
+
+class CloneRackBody(BaseModel):
+    """Clone an existing rack (placements and all) into a new rack id in the same rack-type."""
+
+    source_path: str          # offerings/.../racks/<rack>.yaml
+    rack: str                 # new rack id
+
+    @field_validator("rack")
+    @classmethod
+    def _check_rack(cls, v: str) -> str:
+        return _safe_id(v, "rack")
+
+
+class CloneSubtreeBody(BaseModel):
+    """Clone a hierarchy subtree (zone/rack-type/region/offering) to a sibling — 'new build'."""
+
+    level: Literal["offering", "region", "zone", "rack_type"]
+    offering: str
+    region: Optional[str] = None
+    zone: Optional[str] = None
+    rack_type: Optional[str] = None
+    new_name: str
+
+    @field_validator("offering", "region", "zone", "rack_type")
+    @classmethod
+    def _check_ids(cls, v, info):
+        return _safe_id(v, info.field_name) if v else v
+
+    @field_validator("new_name")
+    @classmethod
+    def _check_new_name(cls, v: str) -> str:
+        return _safe_id(v, "new_name")
 
 
 class CandidateAddBody(BaseModel):
@@ -244,6 +279,61 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         sha = add_commit([target], msg, cwd=base)
         rel = target.relative_to(base).as_posix()
         return {"ok": True, "commit": sha, "path": rel, "rack": body.rack}
+
+    @app.post("/api/rack/clone")
+    def clone_rack_ep(body: CloneRackBody, message: str = ""):
+        base = Path(root)
+        src = _resolve_rack_write(root, body.source_path)
+        if not src.is_file():
+            raise HTTPException(404, "source rack not found")
+        try:
+            dst = clone_rack(src, body.rack)
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        # The clone must validate exactly like a hand-written rack would.
+        loaded = next(iter(load_racks(dst).racks), None)
+        errors = [] if loaded is None else [
+            i for i in validate_rack(loaded, ws.catalog) if i.level == "error"]
+        if loaded is None or errors:
+            dst.unlink(missing_ok=True)
+            raise HTTPException(400, {"issues": [vars(i) for i in errors] or "clone failed to load"})
+        msg = (message or f"clone rack {src.stem} -> {body.rack}").replace("\n", " ").strip()[:500]
+        sha = add_commit([dst], msg, cwd=base)
+        rel = dst.resolve().relative_to(base.resolve()).as_posix()
+        return {"ok": True, "commit": sha, "path": rel, "rack": body.rack}
+
+    @app.post("/api/hierarchy/clone")
+    def clone_subtree_ep(body: CloneSubtreeBody, message: str = ""):
+        base = Path(root)
+        try:
+            ids = {
+                "offering": _safe_id(body.offering, "offering"),
+                "region": _safe_id(body.region, "region") if body.region else None,
+                "zone": _safe_id(body.zone, "zone") if body.zone else None,
+                "rack_type": _safe_id(body.rack_type, "rack_type") if body.rack_type else None,
+            }
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        need = {"region": ("region",), "zone": ("region", "zone"),
+                "rack_type": ("region", "zone", "rack_type")}
+        for k in need.get(body.level, ()):
+            if not ids[k]:
+                raise HTTPException(400, f"{k} is required for level {body.level}")
+        src = node_dir(base, body.level, ids["offering"], ids["region"], ids["zone"],
+                       ids["rack_type"])
+        if not src.is_dir():
+            raise HTTPException(404, "source node not found")
+        try:
+            dst = clone_subtree(src, body.new_name)
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except NotADirectoryError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        msg = (message or f"clone {body.level} {src.name} -> {body.new_name}").replace(
+            "\n", " ").strip()[:500]
+        sha = add_commit([dst], msg, cwd=base)
+        return {"ok": True, "commit": sha, "name": body.new_name,
+                "hierarchy": list_hierarchy(base)}
 
     # ── confirm workflow (release + build) ────────────────────────────────
     @app.post("/api/confirm/request")
