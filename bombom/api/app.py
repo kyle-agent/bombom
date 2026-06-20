@@ -37,6 +37,7 @@ from ..hierarchy import list_hierarchy, node_dir, remove_node
 from ..release.diff import WORKING, compare_releases
 from ..render import rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
+from ..search import search_workspace
 from ..scaffold import (
     clone_rack,
     clone_racks,
@@ -489,6 +490,20 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         page = _VIEWER.parent / "diff.html"
         if not page.exists():
             return HTMLResponse("<h1>diff not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
+
+    @app.get("/api/search")
+    def search_ep(q: str, path: str = "offerings", limit: int = 100):
+        _resolve(root, path)                       # validate path under the workspace
+        results = search_workspace(ws, Path(root), q, path=path,
+                                   limit=min(max(limit, 1), 500))
+        return {"q": q, "count": len(results), "results": results}
+
+    @app.get("/search", response_class=HTMLResponse)
+    def search_page():
+        page = _VIEWER.parent / "search.html"
+        if not page.exists():
+            return HTMLResponse("<h1>search not built</h1>", status_code=500)
         return HTMLResponse(page.read_text())
 
     # ── base-data hierarchy management (기준정보 / Rack-Type) ──────────────

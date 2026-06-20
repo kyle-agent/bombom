@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 검색</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#1e293b;--bg:#f8fafc}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+       "Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:#0f172a;color:#fff;display:flex;align-items:center;gap:10px;padding:10px 18px}
+  header .logo{font-weight:700}
+  header .topnav{display:flex;gap:6px;margin-left:14px}
+  header .topnav a{color:#cbd5e1;text-decoration:none;font-size:13px;padding:3px 8px;border-radius:6px}
+  header .topnav a:hover{background:rgba(255,255,255,.14);color:#fff}
+  main{max-width:880px;margin:0 auto;padding:24px}
+  .searchbar{display:flex;gap:10px}
+  #q{flex:1;border:1px solid var(--line);border-radius:9px;padding:11px 14px;font-size:15px}
+  #q:focus{outline:2px solid #94a3b8;border-color:#94a3b8}
+  .hint{color:var(--muted);font-size:12px;margin:8px 2px 0}
+  .count{color:var(--muted);font-size:13px;margin:18px 2px 8px}
+  .hit{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);
+       border-radius:10px;padding:10px 14px;margin-bottom:8px;text-decoration:none;color:inherit}
+  a.hit:hover{border-color:#94a3b8;background:#f1f5f9}
+  .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .b-device{background:#eef2ff;color:#3730a3}
+  .b-rack{background:#ecfeff;color:#155e75}
+  .b-offering,.b-region,.b-zone,.b-rack_type{background:#f1f5f9;color:#475569}
+  .label{font-weight:600}
+  .loc{color:var(--muted);font-size:12px;margin-top:1px}
+  .grow{flex:1;min-width:0}
+  .open{color:#2563eb;font-size:12px;white-space:nowrap}
+  .empty{color:var(--muted);padding:22px 2px}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom — 검색</span>
+  <nav class="topnav"><a href="/">뷰어</a><a href="/edit">에디터</a><a href="/manage">기준정보</a>
+    <a href="/candidates">후보</a><a href="/placed">목록</a><a href="/dashboard">현황</a>
+    <a href="/diff">변경비교</a></nav>
+</header>
+<main>
+  <div class="searchbar">
+    <input id="q" type="search" placeholder="장비·랙·노드 이름으로 검색 (예: arista, R02, kr-east)"
+           autocomplete="off" autofocus>
+  </div>
+  <div class="hint">노드(오퍼링/리전/존/Rack-Type)는 전체에서, 랙·장비는 현재 경로 기준으로 찾습니다.
+    장비/랙 결과를 클릭하면 뷰어로 엽니다.</div>
+  <div id="out"></div>
+</main>
+
+<script>
+"use strict";
+const KIND_LABEL = {device:'장비', rack:'랙', offering:'오퍼링', region:'리전', zone:'존', rack_type:'Rack-Type'};
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function hitHTML(h){
+  const badge = `<span class="badge b-${esc(h.kind)}">${esc(KIND_LABEL[h.kind]||h.kind)}</span>`;
+  const inner = `${badge}<span class="grow"><div class="label">${esc(h.label)}</div>` +
+                `<div class="loc">${esc(h.location||'')}</div></span>`;
+  if((h.kind === 'rack' || h.kind === 'device') && h.path){
+    const href = '/?path=' + encodeURIComponent(h.path);
+    return `<a class="hit" href="${href}">${inner}<span class="open">뷰어 열기 →</span></a>`;
+  }
+  return `<div class="hit">${inner}</div>`;
+}
+
+let timer = null, lastQ = null;
+async function run(){
+  const q = document.getElementById('q').value.trim();
+  const out = document.getElementById('out');
+  if(q === lastQ) return;
+  lastQ = q;
+  if(!q){ out.innerHTML = ''; return; }
+  try{
+    const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const d = await r.json();
+    if(q !== document.getElementById('q').value.trim()) return;   // stale response
+    if(!d.results.length){ out.innerHTML = '<div class="empty">결과 없음</div>'; return; }
+    out.innerHTML = `<div class="count">${d.count}건${d.count>=100?'+':''}</div>` +
+                    d.results.map(hitHTML).join('');
+  }catch(e){
+    out.innerHTML = '<div class="empty">검색 실패: ' + esc(e.message) + '</div>';
+  }
+}
+
+document.getElementById('q').addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(run, 180);   // debounce
+});
+// seed from ?q= if present
+const seed = new URLSearchParams(location.search).get('q');
+if(seed){ document.getElementById('q').value = seed; run(); }
+</script>
+</body>
+</html>
