@@ -3,39 +3,46 @@
 > Forward-looking only. This is "what to do next", not "what was done". Rewritten by
 > `/session-checkpoint` at the end of each session. Git history preserves old state.
 
-## Priority 1
+> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 95 tests pass, ruff clean.
 
-Build the **price overlay + BOM engine** (next feature; run `/brief` first). The catalog
-query API (`bombom.catalog.Catalog`) is the read side; add `pricing/<vendor>.yaml`
-(PriceEntry: key→unit_cost/currency/source/valid_from/valid_to), join by
-`manufacturer+slug` (device/rack) or `model`/`part_number` (module), and compute a CAPEX
-rollup. Keep price strictly separate from the catalog (ADR spec-cost-separation).
+## Where things are (2026-06-20)
 
-Alternative next feature: the **org hierarchy + rack model** (Offering→…→Rack YAML +
-placement), which the rack-elevation UI later renders.
+The end-to-end designer flow is built and pushed on the feature branch, all screen-driven
+(git never surfaced to users). Run `bombom serve` then:
 
-## Open decisions
+- `/manage` — 기준정보·Rack-Type 관리 (offering/region/zone/rack-type 추가·삭제[빈 노드만]).
+- `/candidates` — 장비 후보풀: 카탈로그에서 후보 선별 + 가격/부가정보 입력. (후보=별도 목록
+  `candidates/pool.yaml`, 가격은 `pricing/manual.yaml`로 분리. ADR candidate-pool.)
+- `/edit` — 배치: "① 모델 선택" 검색이 후보풀만(`?pool=1`) 본다. ✅확정 모달(게이트→봉인 태그).
+- `/placed` — 배치예정 장비 목록 + 합계 CAPEX + 릴리즈 필터 + CSV(전체/릴리즈별).
+- `/dashboard` — 누적 총 CAPEX 헤드라인 + 계층/카테고리 롤업 + 릴리즈 추이 + 상위 지출.
+- 확정 워크플로우: `bombom/confirm/` (release+build, manifest `confirmations/<id>.yaml`,
+  annotated 태그). ADR confirm-workflow.
 
-- Which feature next: BOM engine vs rack model vs org-hierarchy base data. (Rack model +
-  base data unblock the UI the designer wants; BOM validates cost early.)
-- Frontend framework: React vs Svelte (deferred until UI work).
-- UI workflow LOCKED (2026-06-19): 2-step select→place; quantity derived from placement
-  (ADR quantity-from-placement); device categorization = heuristic + manual override overlay
-  (ADR device-categorization); rack elevation (NetBox SVG) + device list + Excel export;
-  Report-to-external-template deferred until template supplied; region/zone clone for new
-  builds. A static HTML mock is at docs/mockups/designer-ui.html (awaiting user feedback).
+Key modules: `bombom/{confirm,candidates,hierarchy,dashboard}.py`, `bombom/report/`,
+endpoints in `bombom/api/app.py`, pages in `web/{manage,candidates,placed,dashboard}.html`.
+Live price refresh: writing a price reloads the shared `ws.pricebook` so all views update
+without a restart.
+
+## Priority — pick next
+
+1. **Decommission / 장비 교체·제거.** Everything is append-only today; placed devices and
+   confirmed tags are immutable. Removing/replacing a placed device needs a model decision
+   (supersede vs delete) and likely time-aware BOM. Revisit ADR candidate-pool override note.
+2. **Node rename/move** in /manage (deferred this session — a rename moves a subtree and can
+   collide with confirmed tags / placement paths; design it before building).
+3. **GitHub PR-based confirm (P5)** — local annotated tag is the seal today; PR flow + server
+   auth/role separation (designer≠approver enforced) was scoped OUT. Confirm logic is behind a
+   thin layer to allow injecting a PR path.
+4. **Structured 부가정보 on candidates** — currently a free-text note; could drive `meta/`
+   fields per candidate/type.
+5. **Static export of dashboard/placed** for Pages sharing (viewer export exists; these are
+   live-only).
 
 ## Blockers
+None. Branch is green; merge to main is a separate explicit step (Tier-0: needs confirmation).
 
-None.
-
-## Context notes
-
-Catalog sync is DONE and pushed (commit 71841e8). All BRIEF.md exit criteria verified
-against real data: `device=5802, module=1863, rack=65`, idempotent + reproducible.
-- Entry points: `from bombom.catalog import Catalog, reindex, sync`; CLI `bombom catalog …`.
-- Dev: `python -m venv .venv && pip install -e .`; tests `pytest -q` (15 pass);
-  lint `ruff check bombom tests`.
-- The devicetype-library is a submodule pinned at bb6a9b1 — run `bombom catalog sync` after
-  a fresh clone (`git submodule update --init`), then `bombom catalog reindex` (~47s full).
-- Index `.index/` is a gitignored rebuildable cache; git is the source of truth.
+## Dev
+`pip install -e .`; tests `pytest -q` (95 pass); lint `ruff check bombom tests`. Fresh clone:
+`git submodule update --init` then `bombom catalog sync && bombom catalog reindex` (~47s).
+Frontend pages are vanilla HTML+JS; syntax-check via `node --check` on the extracted <script>.
