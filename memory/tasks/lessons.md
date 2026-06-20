@@ -35,3 +35,13 @@ Source: catalog sync
 silently collapsed 24 entries. Before keying a dedup/PK on a field, scan the full corpus for
 collisions and add a regression test for the colliding case.
 Source: catalog sync
+
+### [2026-06-20] After an Edit that inserts before a sibling, re-read the seam
+> conf: 0.5 · seen: 2026-06-20 · obs: 1
+
+Inserting a new endpoint just above `@app.get("/api/confirm/{id}")` dropped that route's
+decorator line in the replacement, leaving a handler with no path — caught only because I
+re-added it by luck. When an Edit's old_string spans a boundary with the next definition,
+re-read the seam (or run a route/smoke test) right after; don't trust that the neighbour
+survived. A whole-app route smoke test (tests/test_smoke.py) now guards this class of bug.
+Source: feature build — clone/diff/report session
