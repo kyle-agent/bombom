@@ -3,7 +3,14 @@
 > Forward-looking only. This is "what to do next", not "what was done". Rewritten by
 > `/session-checkpoint` at the end of each session. Git history preserves old state.
 
-> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 120 tests pass, ruff clean.
+> ⏳ **PENDING — ACTION REQUIRED (user asked to be reminded):** `main` was created and pushed
+> at the same commit as the feature branch (all work is on `main` too), but the repo's DEFAULT
+> branch is still `claude/vibrant-tesla-okhpxz`. To finish the "merge", switch the default to
+> `main`: GitHub → Settings → Branches → Default branch → `main`, or
+> `gh repo edit kyle-agent/bombom --default-branch main`. (I can't change the default branch with
+> the available tools.) After switching, the feature branch can be deleted (identical to `main`).
+
+> Branch: work is on BOTH `main` and `claude/vibrant-tesla-okhpxz` (same commit). 135 tests pass, ruff clean.
 
 ## Where things are (2026-06-20)
 
