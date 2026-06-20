@@ -1,55 +1,51 @@
-# Brief: P2 투자대상 리스트/릴리즈 요약 + P3 현황 대시보드
+# Brief: 선정 → 배치 → 집계 흐름 (기준정보·Rack-Type 관리 / 장비 후보풀 / 배치 / 목록)
 
-> Locked 2026-06-20. Roadmap P2/P3. 결정은 ROADMAP(BOM 3종 뷰, 헤드라인=누적 총 CAPEX,
-> append-only)와 ADR들을 따른다.
+> Locked 2026-06-20. 사용자 흐름(2회 명시): 기준정보 관리(오퍼링·리전·AZ) → 메타정보
+> 관리(Rack-Type) → 랙/장비 추가 → 장비 **후보 선택 화면**(가격·부가정보 입력) → 후보만으로
+> 랙배치(현 에디터) → 배치예정 장비 **목록+가격+합산** 화면.
 
-## Goal
-(P2) 확정/설계된 내용에서 **릴리즈 투자대상 리스트(BOM 뷰 a)** 를 CSV로 내보내고, **릴리즈별
-증분/누적 요약**을 산출한다. (P3) 전체 현황을 **헤드라인=전체 누적 총 CAPEX(뷰 c)** 로 보는
-**읽기전용 대시보드**(계층 롤업·카테고리·릴리즈 추이·상위 지출 장비·미가격/메타누락 카운트)를
-추가한다.
+## 단계(phase) 매핑 — 의존 순서대로 구현·커밋
+- **Phase 1 (이번): 기준정보 + Rack-Type 관리 화면** ← 지금 구현
+- Phase 2: 장비 후보풀(선정) + 후보별 가격/부가정보 입력 화면 (키스톤)
+- Phase 3: 배치 검색을 **후보풀로 제한** (에디터)
+- Phase 4: 배치예정 장비 **목록+가격+합산** 화면
 
-## Scope IN
-- 엔진 확장(하위호환): `LineItem`에 `rack_path` 추가(계층 롤업용; 기본 "").
-- `bombom/report/`:
-  - `investment_rows(ws, root, release)` → 그 릴리즈 line item(경로·Rack-Type·장비·slug·카테고리·
-    수량·단가·소계·release) — `compute_bom(release=…)` 재사용.
-  - `investment_csv(rows)` → CSV 문자열(UTF-8 BOM, Excel 호환).
-  - `release_summary(ws, root)` → 릴리즈별 `{release, count, increment_capex, cumulative_capex}`.
-- `bombom/dashboard.py`: `build_dashboard(ws, path)` →
-  `{headline_capex, by_level{region,zone,rack_type}, by_category, release_summary,
-  top_devices, counts{devices,unpriced,meta_missing}}` (compute_bom + parse_hierarchy 재사용).
-- API: `GET /api/report/invest.csv?path&release`(text/csv 첨부), `GET /api/dashboard?path`,
-  `/dashboard`(읽기전용 HTML).
-- `web/dashboard.html`: 헤드라인 카드 + 계층 롤업 + 카테고리 + 릴리즈 추이(증분+누적) +
-  상위 지출 장비 + 경고 카운트. KRW 포맷, XSS escape.
-- CLI: `bombom report invest <release> [--path] [--out]`, `bombom report releases [--path]`,
-  `bombom dashboard [--path]`.
-- 테스트(report CSV·release_summary·dashboard 집계).
+## Phase 1 Scope IN (이번 구현)
+- `bombom/hierarchy.py`: `list_hierarchy(root)` — offerings/ 트리(offering→region→zone→
+  rack_type, 각 노드의 표시 name + rack 수)를 디렉터리/마커 YAML에서 읽어 반환.
+- API:
+  - `GET /api/hierarchy` → 전체 기준정보 트리(여러 오퍼링).
+  - `POST /api/hierarchy` `{level: offering|region|zone|rack_type, offering, region?, zone?,
+    rack_type?, name?}` → 기존 `scaffold_*` 재사용으로 마커 생성 + 커밋. 부모 없으면 404,
+    중복 409, 안전하지 않은 id 422.
+  - `GET /manage` → 관리 화면(`web/manage.html`).
+- `web/manage.html`: 트리 렌더 + 각 레벨 "+추가"(id + 표시 name) → POST → 새로고침. git 용어
+  비노출. 에디터/대시보드 링크.
+- CLI는 기존 `bombom scaffold …`로 충분(추가 안 함).
+- 테스트(throwaway git repo): 생성/중복/부모없음/traversal/관리화면 제공.
 
-## Scope OUT
-- 외부 템플릿 Excel(.xlsx) 양식 리포트 — 재무 양식 수령 후(P4). 지금은 일반 CSV.
-- 대시보드 정적 export(Pages 베이킹) — 후속(우선 로컬 serve로 확인).
-- 장비 제거/교체(decommission)·시점 의존 BOM — append-only(보류).
-- ref-to-ref git diff — append-only에서 릴리즈 증분 = release 태그 항목으로 충분.
-- 권한/인증 — P5.
+## Scope OUT (이번 단계)
+- 장비 후보풀·가격 입력 화면(Phase 2), 배치 후보 제한(Phase 3), 목록 화면(Phase 4).
+- 노드 **삭제/이름변경/이동** — append-only(보류). 지금은 추가만.
+- 전역 Rack-Type 어휘(고정 vocab) — rack_type은 자유 디렉터리라 별도 vocab 불필요.
+- 권한/인증(P5).
 
 ## Constraints
-- `vendor/`·카탈로그 read-only. 기존 `compute_bom` 의미·기존 API/뷰어/에디터/confirm 동작 보존.
-- `LineItem.rack_path`는 기본값 있는 추가 필드로만(기존 호출부 깨지지 않게).
-- 가격은 pricing/ 오버레이만, 도메인 언어로 표기(₩). 미가격은 ₩0 처리 금지(별도 카운트).
+- `vendor/`·카탈로그 read-only. 기존 API(/api/tree, /api/rack*, confirm, report, dashboard)
+  동작 보존. git 작업은 백엔드만(사용자 비노출).
+- id는 `_safe_id`(영숫자/.-_, traversal 차단). 마커 생성은 `scaffold_*` 재사용(재구현 금지).
 
-## Exit Criteria
-- [ ] `GET /api/report/invest.csv?release=R26.07&path=offerings/cloud-a` → 그 릴리즈 항목만,
-  헤더+행+소계, total 행 포함 CSV 반환(Content-Disposition attachment).
-- [ ] `bombom report releases` → 릴리즈별 증분/누적 CAPEX 표 출력.
-- [ ] `GET /api/dashboard?path=offerings/cloud-a` → headline_capex가 그 서브트리 누적 총
-  CAPEX와 일치, by_level/by_category/release_summary/top_devices/counts 포함.
-- [ ] `/dashboard`가 헤드라인 누적 CAPEX와 롤업/추이/상위장비/경고 카운트를 화면에 렌더.
-- [ ] 미가격 장비는 counts.unpriced로, 필수 메타 누락은 counts.meta_missing으로 집계(₩0 합산 안 함).
+## Exit Criteria (Phase 1)
+- [ ] `POST /api/hierarchy {level:"offering", offering:"cloud-b"}` → offerings/cloud-b/
+  offering.yaml 생성 + 커밋 1개; `GET /api/hierarchy`에 cloud-b 표시.
+- [ ] region/zone/rack_type 생성: 부모 있으면 200, 없으면 404, 중복 409.
+- [ ] `name` 지정 시 마커 yaml의 name에 반영.
+- [ ] traversal/잘못된 id → 422, 파일 미생성.
+- [ ] `/manage`가 트리 + 레벨별 추가 컨트롤을 렌더(에러는 메시지로).
 - [ ] `pytest` 전부 통과, ruff/secrets clean.
 
 ## Risk Flags
-- `by_rack`는 rack_id(stem) 키라 동명 랙 충돌 가능 → 계층 롤업은 `rack_path`+parse_hierarchy로.
-- compute_bom 재사용 시 release 필터/누적 합산의 정렬(릴리즈명 정렬) 일관성 주의.
-- 대시보드가 대형 트리에서 느릴 수 있음 → path 스코프로 한정, 인덱스 재사용.
+- 빈 디렉터리는 git이 추적 못함 → 각 레벨 마커 YAML(offering/region/zone/rack-type.yaml)로
+  커밋 가능하게(scaffold가 이미 생성).
+- `/api/tree`는 단일 오퍼링 가정 → 관리용은 별도 `list_hierarchy`로 여러 오퍼링 처리.
+- 후속 Phase에서 "후보=가격엔트리 보유 장비" 모델링 확정 예정(이번 범위 아님).

@@ -23,9 +23,16 @@ from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, valida
 from ..design.writer import write_rack
 from ..export import build_data, inject
 from ..gitops import add_commit
+from ..hierarchy import list_hierarchy
 from ..render import rack_elevation_svg
 from ..report import investment_csv, investment_rows
-from ..scaffold import scaffold_rack
+from ..scaffold import (
+    scaffold_offering,
+    scaffold_rack,
+    scaffold_rack_type,
+    scaffold_region,
+    scaffold_zone,
+)
 from ..workspace import Workspace
 
 _VIEWER = Path(__file__).resolve().parents[2] / "web" / "viewer.html"
@@ -78,6 +85,17 @@ class ConfirmRequestBody(BaseModel):
 
 class ConfirmApproveBody(BaseModel):
     approver: Optional[str] = None
+
+
+class HierarchyBody(BaseModel):
+    """Create one base-data node (기준정보) — offering / region / zone / rack_type."""
+
+    level: Literal["offering", "region", "zone", "rack_type"]
+    offering: str
+    region: Optional[str] = None
+    zone: Optional[str] = None
+    rack_type: Optional[str] = None
+    name: Optional[str] = None
 
 
 def _search_catalog(db_path: str, q: str, limit: int = 50, kind: str = "device") -> list[dict]:
@@ -259,7 +277,67 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             return HTMLResponse("<h1>dashboard not built</h1>", status_code=500)
         return HTMLResponse(page.read_text())
 
+    # ── base-data hierarchy management (기준정보 / Rack-Type) ──────────────
+    @app.get("/api/hierarchy")
+    def hierarchy_list():
+        return list_hierarchy(Path(root))
+
+    @app.post("/api/hierarchy")
+    def hierarchy_create(body: HierarchyBody):
+        base = Path(root)
+        try:
+            off = _safe_id(body.offering, "offering")
+            reg = _safe_id(body.region, "region") if body.region else None
+            zon = _safe_id(body.zone, "zone") if body.zone else None
+            rt = _safe_id(body.rack_type, "rack_type") if body.rack_type else None
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        name = ((body.name or "").strip()[:200]) or None
+
+        try:
+            if body.level == "offering":
+                target = scaffold_offering(base, off, name=name)
+            elif body.level == "region":
+                _require(reg, "region")
+                _require_dir(base / "offerings" / off, "offering")
+                target = scaffold_region(base, off, reg, name=name)
+            elif body.level == "zone":
+                _require(reg, "region")
+                _require(zon, "zone")
+                _require_dir(base / "offerings" / off / "regions" / reg, "region")
+                target = scaffold_zone(base, off, reg, zon, name=name)
+            else:  # rack_type
+                _require(reg, "region")
+                _require(zon, "zone")
+                _require(rt, "rack_type")
+                _require_dir(base / "offerings" / off / "regions" / reg / "zones" / zon, "zone")
+                target = scaffold_rack_type(base, off, reg, zon, rt, name=name)
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+        sha = add_commit([target], f"add {body.level} {target.parent.name}", cwd=base)
+        return {"ok": True, "commit": sha,
+                "path": target.relative_to(base).as_posix(),
+                "hierarchy": list_hierarchy(base)}
+
+    @app.get("/manage", response_class=HTMLResponse)
+    def manage_page():
+        page = _VIEWER.parent / "manage.html"
+        if not page.exists():
+            return HTMLResponse("<h1>manage page not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
+
     return app
+
+
+def _require(value, field: str) -> None:
+    if not value:
+        raise HTTPException(400, f"{field} is required for this level")
+
+
+def _require_dir(path: Path, label: str) -> None:
+    if not path.is_dir():
+        raise HTTPException(404, f"parent {label} does not exist: {path.name}")
 
 
 def _validate_scope(root: Path | str, kind: str, scope: ConfirmScope) -> None:

@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 기준정보 관리</title>
+<style>
+  :root{
+    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+    --accent:#2563eb;--accent2:#0ea5e9;--ok:#16a34a;--warn:#d97706;--new:#f59e0b;--bad:#dc2626;
+    --barbg:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
+  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header .logo{font-weight:700;color:#fff}
+  header .crumb{color:#94a3b8}
+  header .links{margin-left:auto;display:flex;gap:8px}
+  header .links a{color:#cbd5e1;text-decoration:none;border:1px solid #334155;border-radius:8px;padding:3px 10px;font-size:12px}
+  header .links a:hover{background:#1e293b;color:#fff}
+  .wrap{padding:14px;display:flex;flex-direction:column;gap:14px;max-width:1100px;margin:0 auto}
+  .intro{color:var(--muted);font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  /* error banner */
+  .banner{display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:13px}
+  .banner.show{display:block}
+  /* toolbar at top of page */
+  .pagebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .pagebar h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .pagebar .spacer{flex:1}
+  /* add controls */
+  .addbtn{border:1px dashed var(--accent);background:#eff6ff;color:var(--accent);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer}
+  .addbtn:hover{background:#dbeafe}
+  .addform{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:8px 10px;background:#f8fafc;border:1px solid var(--line);border-radius:8px}
+  .addform.show{display:flex}
+  .addform input{border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px}
+  .addform input.id{width:170px}
+  .addform input.nm{width:200px}
+  .addform button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer}
+  .addform button:hover{filter:brightness(1.06)}
+  .addform .err{color:var(--bad);font-size:12px}
+  /* node titles + ids */
+  .nodename{font-weight:700}
+  .nodeid{color:var(--muted);font-size:11px;margin-left:6px;font-variant-numeric:tabular-nums}
+  /* offering card */
+  .offering{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .offering > .head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .offering > .head .nodename{font-size:15px}
+  /* nested levels via border-left indent */
+  .region{margin:10px 0 0 4px;padding:8px 0 4px 14px;border-left:3px solid #bfdbfe}
+  .zone{margin:8px 0 0 4px;padding:6px 0 2px 14px;border-left:3px solid #bbf7d0}
+  .level-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:#f8fafc}
+  /* rack-type chips */
+  .rtlist{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px;padding-left:14px}
+  .rtchip{display:flex;flex-direction:column;gap:1px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:6px 12px;min-width:120px}
+  .rtchip .rtname{font-weight:600;font-size:12px}
+  .rtchip .rtmeta{font-size:11px;color:var(--muted)}
+  .rt-empty{color:#94a3b8;font-size:12px;padding-left:14px}
+  /* empty state */
+  .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:13px}
+  /* toast */
+  #toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
+  #toast .t{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.25);animation:tin .2s ease}
+  #toast .t.ok{border-color:#166534;color:#bbf7d0}
+  #toast .t.bad{border-color:#7f1d1d;color:#fecaca}
+  @keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media(max-width:720px){ .addform input.id,.addform input.nm{width:100%} }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom</span>
+  <span class="crumb">— 기준정보 관리</span>
+  <span class="links"><a href="/">뷰어</a><a href="/edit">에디터</a><a href="/dashboard">대시보드</a></span>
+</header>
+
+<div class="wrap">
+  <div class="banner" id="banner"></div>
+
+  <p class="intro">오퍼링 → 리전 → 존(AZ) → Rack-Type 순으로 기준정보를 추가합니다.</p>
+
+  <!-- top-level add offering -->
+  <div class="card">
+    <div class="pagebar">
+      <h3>오퍼링 목록</h3>
+      <span class="spacer"></span>
+      <button type="button" class="addbtn" data-toggle="add-offering">+ 오퍼링</button>
+    </div>
+    <div class="addform" id="add-offering">
+      <input type="text" class="id" placeholder="오퍼링 id (영문/숫자/.-_)" data-field="offering">
+      <input type="text" class="nm" placeholder="표시 이름 (선택)" data-field="name">
+      <button type="button">추가</button>
+      <span class="err"></span>
+    </div>
+  </div>
+
+  <!-- tree -->
+  <div id="tree"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+// ── helpers ──────────────────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// POST JSON, return parsed body, throw Error(detail) on non-2xx
+async function postJSON(url, body){
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  let data = null;
+  try { data = await res.json(); } catch(e){ data = null; }
+  if(!res.ok){
+    const detail = (data && data.detail) ? data.detail : ('HTTP ' + res.status);
+    const err = new Error(detail);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+function showError(msg){
+  const b = document.getElementById('banner');
+  b.textContent = '기준정보를 불러오지 못했습니다: ' + msg + '  ·  API 서버가 떠 있는지 확인하세요.';
+  b.classList.add('show');
+}
+function clearError(){
+  const b = document.getElementById('banner');
+  b.textContent = ''; b.classList.remove('show');
+}
+
+function toast(msg, kind){
+  const wrap = document.getElementById('toast');
+  const el = document.createElement('div');
+  el.className = 't' + (kind ? (' ' + kind) : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(function(){ el.remove(); }, 3000);
+}
+
+// map server status → friendly inline message
+function friendly(err){
+  switch(err && err.status){
+    case 409: return '이미 존재합니다';
+    case 404: return '상위 항목이 없습니다';
+    case 422: return 'id 형식이 올바르지 않습니다 (영문/숫자/.-_)';
+    case 400: return '필수 항목이 비어 있습니다';
+    default:  return (err && err.message) ? err.message : '추가에 실패했습니다';
+  }
+}
+
+// ── state ────────────────────────────────────────────────────────────
+let HIER = [];
+
+// ── tree render ──────────────────────────────────────────────────────
+function rackTypeChip(rt){
+  const cnt = (rt.racks || []).length;
+  const nm = (rt.name && rt.name !== rt.rack_type) ? rt.name : rt.rack_type;
+  return '<div class="rtchip">'
+    + '<span class="rtname">' + esc(nm) + '</span>'
+    + '<span class="rtmeta">' + esc(rt.rack_type) + ' · 랙 ' + cnt + '</span>'
+    + '</div>';
+}
+
+function nameAndId(name, id){
+  let h = '<span class="nodename">' + esc(name || id) + '</span>';
+  if(name && name !== id){ h += '<span class="nodeid">' + esc(id) + '</span>'; }
+  return h;
+}
+
+// build an inline add-form for a given level with prefilled parent context
+function addControl(level, label, ctx){
+  // ctx holds offering/region/zone parent ids; data-attrs let the handler read them
+  const attrs = Object.keys(ctx).map(function(k){
+    return 'data-' + k + '="' + esc(ctx[k]) + '"';
+  }).join(' ');
+  const idHint = level === 'rack_type' ? 'Rack-Type id (영문/숫자/.-_)' : (label + ' id (영문/숫자/.-_)');
+  return '<button type="button" class="addbtn" data-add="' + level + '" ' + attrs + '>+ ' + esc(label) + '</button>'
+    + '<div class="addform" data-form="' + level + '" ' + attrs + '>'
+    +   '<input type="text" class="id" placeholder="' + esc(idHint) + '" data-field="id">'
+    +   '<input type="text" class="nm" placeholder="표시 이름 (선택)" data-field="name">'
+    +   '<button type="button">추가</button>'
+    +   '<span class="err"></span>'
+    + '</div>';
+}
+
+function renderTree(){
+  const tree = document.getElementById('tree');
+  if(!HIER.length){
+    tree.innerHTML = '<div class="card empty">등록된 오퍼링이 없습니다. 위의 “+ 오퍼링”으로 첫 오퍼링을 추가하세요.</div>';
+    return;
+  }
+  tree.innerHTML = HIER.map(function(off){
+    const oCtx = { offering: off.offering };
+    let html = '<div class="offering">';
+    html += '<div class="head">' + nameAndId(off.name, off.offering)
+          + addControl('region', '리전', oCtx) + '</div>';
+
+    const regions = off.regions || [];
+    if(!regions.length){
+      html += '<div class="rt-empty" style="margin-top:8px">리전이 없습니다.</div>';
+    }
+    regions.forEach(function(reg){
+      const rCtx = { offering: off.offering, region: reg.region };
+      html += '<div class="region"><div class="level-head"><span class="tag">리전</span>'
+            + nameAndId(reg.name, reg.region)
+            + addControl('zone', '존', rCtx) + '</div>';
+
+      const zones = reg.zones || [];
+      if(!zones.length){
+        html += '<div class="rt-empty">존이 없습니다.</div>';
+      }
+      zones.forEach(function(z){
+        const zCtx = { offering: off.offering, region: reg.region, zone: z.zone };
+        html += '<div class="zone"><div class="level-head"><span class="tag">존</span>'
+              + nameAndId(z.name, z.zone)
+              + addControl('rack_type', 'Rack-Type', zCtx) + '</div>';
+
+        const rts = z.rack_types || [];
+        if(rts.length){
+          html += '<div class="rtlist">' + rts.map(rackTypeChip).join('') + '</div>';
+        } else {
+          html += '<div class="rt-empty">Rack-Type이 없습니다.</div>';
+        }
+        html += '</div>'; // .zone
+      });
+      html += '</div>'; // .region
+    });
+    html += '</div>'; // .offering
+    return html;
+  }).join('');
+}
+
+// ── add submission ───────────────────────────────────────────────────
+function bodyFor(form){
+  const level = form.getAttribute('data-form');
+  const idInput = form.querySelector('input[data-field="id"]');
+  const nmInput = form.querySelector('input[data-field="name"]');
+  const id = (idInput.value || '').trim();
+  const name = (nmInput.value || '').trim();
+
+  const body = { level: level };
+  if(form.getAttribute('data-offering') != null) body.offering = form.getAttribute('data-offering');
+  if(form.getAttribute('data-region')   != null) body.region   = form.getAttribute('data-region');
+  if(form.getAttribute('data-zone')     != null) body.zone     = form.getAttribute('data-zone');
+
+  // the new node's id goes into the field named after its level
+  body[level] = id;
+  if(name) body.name = name;
+  return { body: body, id: id, name: name };
+}
+
+async function submitForm(form){
+  const errEl = form.querySelector('.err');
+  errEl.textContent = '';
+  const built = bodyFor(form);
+  if(!built.id){
+    errEl.textContent = 'id를 입력하세요';
+    return;
+  }
+  const labelMap = { offering:'오퍼링', region:'리전', zone:'존', rack_type:'Rack-Type' };
+  const level = built.body.level;
+  try{
+    const data = await postJSON('/api/hierarchy', built.body);
+    HIER = (data && data.hierarchy) ? data.hierarchy : HIER;
+    clearError();
+    renderTree();
+    toast((labelMap[level] || '항목') + ' “' + (built.name || built.id) + '” 추가됨', 'ok');
+  }catch(err){
+    errEl.textContent = friendly(err);
+    toast(friendly(err), 'bad');
+  }
+}
+
+// ── event wiring (delegated; survives re-render) ─────────────────────
+document.addEventListener('click', function(ev){
+  const t = ev.target;
+  if(!(t instanceof Element)) return;
+
+  // toggle the top-level offering form
+  if(t.matches('[data-toggle="add-offering"]')){
+    document.getElementById('add-offering').classList.toggle('show');
+    return;
+  }
+  // toggle an in-tree add form (sibling of the button)
+  const addBtn = t.closest('.addbtn[data-add]');
+  if(addBtn){
+    const level = addBtn.getAttribute('data-add');
+    // the form is the immediately following element with matching data-form
+    let form = addBtn.nextElementSibling;
+    while(form && form.getAttribute && form.getAttribute('data-form') !== level){
+      form = form.nextElementSibling;
+    }
+    if(form) form.classList.toggle('show');
+    return;
+  }
+  // submit button inside any addform
+  const submitBtn = t.closest('.addform button');
+  if(submitBtn){
+    const form = submitBtn.closest('.addform');
+    if(form.id === 'add-offering'){
+      submitOfferingForm(form);
+    } else {
+      submitForm(form);
+    }
+    return;
+  }
+});
+
+// Enter key submits the form the input belongs to
+document.addEventListener('keydown', function(ev){
+  if(ev.key !== 'Enter') return;
+  const inp = ev.target;
+  if(!(inp instanceof Element) || inp.tagName !== 'INPUT') return;
+  const form = inp.closest('.addform');
+  if(!form) return;
+  ev.preventDefault();
+  if(form.id === 'add-offering'){ submitOfferingForm(form); }
+  else { submitForm(form); }
+});
+
+// the top-level offering form is structured slightly differently (fixed in markup)
+async function submitOfferingForm(form){
+  const errEl = form.querySelector('.err');
+  errEl.textContent = '';
+  const offInput = form.querySelector('input[data-field="offering"]');
+  const nmInput = form.querySelector('input[data-field="name"]');
+  const id = (offInput.value || '').trim();
+  const name = (nmInput.value || '').trim();
+  if(!id){ errEl.textContent = 'id를 입력하세요'; return; }
+  const body = { level:'offering', offering:id };
+  if(name) body.name = name;
+  try{
+    const data = await postJSON('/api/hierarchy', body);
+    HIER = (data && data.hierarchy) ? data.hierarchy : HIER;
+    offInput.value = ''; nmInput.value = '';
+    form.classList.remove('show');
+    clearError();
+    renderTree();
+    toast('오퍼링 “' + (name || id) + '” 추가됨', 'ok');
+  }catch(err){
+    errEl.textContent = friendly(err);
+    toast(friendly(err), 'bad');
+  }
+}
+
+// ── load ─────────────────────────────────────────────────────────────
+(function load(){
+  fetch('/api/hierarchy')
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data){
+      HIER = Array.isArray(data) ? data : [];
+      clearError();
+      renderTree();
+    })
+    .catch(function(err){
+      HIER = [];
+      renderTree();
+      showError(err && err.message ? err.message : String(err));
+    });
+})();
+</script>
+</body>
+</html>
