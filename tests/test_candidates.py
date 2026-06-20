@@ -105,6 +105,18 @@ def test_unsafe_slug_422(gitws):
     assert r.status_code == 422
 
 
+def test_pool_search_restricts_to_candidates(gitws):
+    client, root = _client(gitws)
+    # empty pool → pool search returns nothing even though the catalog has devices
+    assert client.get("/api/catalog/search?kind=device&pool=1").json() == []
+    full = client.get("/api/catalog/search?kind=device&q=test").json()
+    assert len(full) >= 2                                   # catalog has >1 matching device
+    client.post("/api/candidates", json={"slug": "dell-poweredge-test1"})
+    pool = client.get("/api/catalog/search?kind=device&pool=1").json()
+    assert [r["slug"] for r in pool] == ["dell-poweredge-test1"]
+    assert pool[0]["priced"] is False and "u_height" in pool[0]
+
+
 def test_candidates_page_served(gitws):
     client, root = _client(gitws)
     r = client.get("/candidates")

@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 배치예정 장비 목록</title>
+<style>
+  :root{
+    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+    --accent:#2563eb;--accent2:#0ea5e9;--ok:#16a34a;--warn:#d97706;--new:#f59e0b;--bad:#dc2626;
+    --server:#2563eb;--network:#16a34a;--storage:#9333ea;--other:#64748b;
+    --barbg:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
+  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header .logo{font-weight:700;color:#fff}
+  header .crumb{color:#94a3b8}
+  header .relchip{background:#1e293b;border:1px solid #334155;color:#fde68a;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600}
+  header .links{margin-left:auto;display:flex;gap:8px}
+  header .links a{color:#cbd5e1;text-decoration:none;border:1px solid #334155;border-radius:8px;padding:3px 10px;font-size:12px}
+  header .links a:hover{background:#1e293b;color:#fff}
+  .wrap{padding:14px;display:flex;flex-direction:column;gap:14px;max-width:1400px;margin:0 auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card h3{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  /* error banner */
+  .banner{display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:13px}
+  .banner.show{display:block}
+  /* controls */
+  .controls{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .ctl{display:flex;flex-direction:column;gap:5px}
+  .ctl label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .ctl select{border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;min-width:160px;background:#fff}
+  .controls button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer}
+  .controls button:hover:not(:disabled){filter:brightness(1.06)}
+  .controls button:disabled{border-color:var(--line);background:#e2e8f0;color:#94a3b8;cursor:not-allowed}
+  .controls .pathnote{margin-left:auto;align-self:center;font-size:12px;color:var(--muted)}
+  .note{font-size:11px;color:var(--muted)}
+  /* headline */
+  .headline{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .headline .big{display:flex;flex-direction:column;gap:2px}
+  .headline .big .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .headline .big .amt{font-size:34px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px 14px;display:flex;flex-direction:column;gap:1px;min-width:84px}
+  .chip .k{font-size:11px;color:var(--muted)}
+  .chip .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  .chip.amber{background:#fffbeb;border-color:#fde68a}
+  .chip.amber .v{color:var(--warn)}
+  /* category chip */
+  .cat{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .cat .dot{width:9px;height:9px;border-radius:3px;display:inline-block;flex:none}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;white-space:nowrap}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:nth-child(even){background:#fafcff}
+  tbody tr:hover{background:#eff6ff}
+  td.muted{color:#94a3b8}
+  .amber-txt{color:var(--warn);font-weight:600}
+  .empty{color:#94a3b8;text-align:center;padding:20px 8px;font-size:12px}
+  @media(max-width:860px){ .controls .pathnote{margin-left:0;width:100%} }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom</span>
+  <span class="crumb">— 배치예정 장비 목록</span>
+  <span class="relchip" id="pathchip">● 경로 —</span>
+  <span class="links">
+    <a href="/">뷰어</a>
+    <a href="/manage">기준정보</a>
+    <a href="/candidates">후보</a>
+    <a href="/edit">에디터</a>
+    <a href="/dashboard">대시보드</a>
+  </span>
+</header>
+
+<div class="wrap">
+  <div class="banner" id="banner"></div>
+
+  <!-- controls -->
+  <div class="card">
+    <div class="controls">
+      <div class="ctl">
+        <label for="relSel">릴리즈 필터</label>
+        <select id="relSel"></select>
+      </div>
+      <div class="ctl">
+        <button id="csvBtn" type="button">CSV 다운로드</button>
+        <div class="note" id="csvNote"></div>
+      </div>
+      <span class="pathnote" id="pathnote">경로 —</span>
+    </div>
+  </div>
+
+  <!-- summary -->
+  <div class="card">
+    <div class="headline">
+      <div class="big">
+        <span class="lbl">합계 CAPEX</span>
+        <span class="amt" id="totalCapex">—</span>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <!-- table -->
+  <div class="card">
+    <h3>배치예정 장비</h3>
+    <table id="tbl"><thead><tr>
+      <th>리전</th><th>존</th><th>랙타입</th><th>랙</th><th>장비</th>
+      <th>카테고리</th><th>릴리즈</th>
+      <th class="num">수량</th><th class="num">단가</th><th class="num">소계</th>
+    </tr></thead><tbody id="rows"></tbody></table>
+    <div id="empty" class="empty" style="display:none">배치된 장비가 없습니다. 에디터에서 장비를 배치하세요.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ── helpers ──────────────────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function won(n){ return '₩' + (Number(n)||0).toLocaleString('ko-KR'); }
+const CATCOLOR = {server:'#2563eb', network:'#16a34a', storage:'#9333ea', other:'#64748b'};
+
+function getPath(){
+  const p = new URLSearchParams(location.search).get('path');
+  return (p && p.trim()) ? p.trim() : 'offerings';
+}
+
+function showError(msg){
+  const b = document.getElementById('banner');
+  b.textContent = '목록을 불러오지 못했습니다: ' + msg + '  ·  API 서버가 떠 있는지 확인하세요.';
+  b.classList.add('show');
+}
+function clearError(){
+  const b = document.getElementById('banner');
+  b.textContent = ''; b.classList.remove('show');
+}
+
+const PATH = getPath();
+// "전체" sentinel for no release filter
+let selectedRelease = '';   // '' === 전체 (all releases)
+let releasesInited = false;
+
+// ── category chip ────────────────────────────────────────────────────
+function catChip(category){
+  const key = String(category||'').toLowerCase();
+  const color = CATCOLOR[key] || CATCOLOR.other;
+  return `<span class="cat"><span class="dot" style="background:${color}"></span>${esc(category||'other')}</span>`;
+}
+
+// ── release filter ───────────────────────────────────────────────────
+function initReleaseSelect(releases){
+  // Populate once (releases set is stable across release-filtered fetches;
+  // building it on the unfiltered/first load keeps every release available).
+  if(releasesInited) return;
+  const sel = document.getElementById('relSel');
+  const opts = ['<option value="">전체</option>']
+    .concat((releases||[]).map(r=>`<option value="${esc(r)}">${esc(r)}</option>`));
+  sel.innerHTML = opts.join('');
+  releasesInited = true;
+}
+
+function syncReleaseSelect(){
+  const sel = document.getElementById('relSel');
+  // keep dropdown in sync with state after a re-render
+  if(sel.value !== selectedRelease) sel.value = selectedRelease;
+}
+
+// ── csv control ──────────────────────────────────────────────────────
+function wireCsv(){
+  document.getElementById('csvBtn').addEventListener('click', function(){
+    if(!selectedRelease) return; // disabled when 전체
+    const url = '/api/report/invest.csv?release=' + encodeURIComponent(selectedRelease) +
+                '&path=' + encodeURIComponent(PATH);
+    window.location = url;
+  });
+}
+
+function updateCsvState(){
+  const btn = document.getElementById('csvBtn');
+  const note = document.getElementById('csvNote');
+  if(selectedRelease){
+    btn.disabled = false;
+    btn.removeAttribute('title');
+    note.textContent = '릴리즈 ' + selectedRelease + ' 의 투자대상 항목을 CSV로 내려받습니다.';
+  } else {
+    btn.disabled = true;
+    btn.title = '릴리즈를 선택하면 CSV를 받을 수 있습니다';
+    note.textContent = '릴리즈를 선택하면 CSV를 받을 수 있습니다';
+  }
+}
+
+// ── summary ──────────────────────────────────────────────────────────
+function renderSummary(d){
+  document.getElementById('totalCapex').textContent = won(d.total_capex);
+  const rowCount = (d.rows || []).length;
+  const unpriced = d.unpriced || 0;
+  const chips = [
+    {k:'장비', v:d.qty||0, cls:''},
+    {k:'행', v:rowCount, cls:''},
+    {k:'미가격', v:unpriced, cls:(unpriced>0?'amber':'')}
+  ];
+  document.getElementById('chips').innerHTML = chips.map(ch=>
+    `<div class="chip ${ch.cls}"><span class="k">${esc(ch.k)}</span><span class="v">${(Number(ch.v)||0).toLocaleString('ko-KR')}</span></div>`
+  ).join('');
+}
+
+// ── table ────────────────────────────────────────────────────────────
+function renderTable(d){
+  const rows = d.rows || [];
+  const tbody = document.getElementById('rows');
+  const empty = document.getElementById('empty');
+  const table = document.getElementById('tbl');
+  if(!rows.length){
+    tbody.innerHTML = '';
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  table.style.display = '';
+  empty.style.display = 'none';
+  tbody.innerHTML = rows.map(r=>{
+    const noPrice = (r.unit_cost == null);
+    const unitCell = noPrice
+      ? '<td class="num amber-txt">미정</td>'
+      : `<td class="num">${won(r.unit_cost)}</td>`;
+    const subCls = noPrice ? 'num muted' : 'num';
+    return `<tr>
+      <td>${esc(r.region)}</td>
+      <td>${esc(r.zone)}</td>
+      <td>${esc(r.rack_type)}</td>
+      <td>${esc(r.rack)}</td>
+      <td>${esc(r.name)}</td>
+      <td>${catChip(r.category)}</td>
+      <td>${esc(r.release)}</td>
+      <td class="num">${(Number(r.qty)||0).toLocaleString('ko-KR')}</td>
+      ${unitCell}
+      <td class="${subCls}">${won(r.subtotal)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── render + load ────────────────────────────────────────────────────
+function render(d){
+  initReleaseSelect(d.releases);
+  syncReleaseSelect();
+  updateCsvState();
+  renderSummary(d);
+  renderTable(d);
+}
+
+function load(){
+  document.getElementById('pathchip').textContent = '● 경로 ' + PATH;
+  document.getElementById('pathnote').textContent = '경로 ' + PATH;
+  let url = '/api/placed?path=' + encodeURIComponent(PATH);
+  if(selectedRelease) url += '&release=' + encodeURIComponent(selectedRelease);
+  fetch(url)
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(d){ clearError(); render(d); })
+    .catch(function(err){ showError(err && err.message ? err.message : String(err)); });
+}
+
+(function init(){
+  wireCsv();
+  document.getElementById('relSel').addEventListener('change', function(){
+    selectedRelease = this.value || '';
+    updateCsvState();
+    load();
+  });
+  load();
+})();
+</script>
+</body>
+</html>

@@ -24,8 +24,9 @@ def _hier(rack_path: str) -> dict[str, str]:
     return parse_hierarchy(Path(rack_path)) if rack_path else {}
 
 
-def investment_rows(ws, root, release: str, *, valuation_date: Optional[date] = None) -> list[dict]:
-    """The investment-target list for one release: every line item tagged with that release."""
+def placed_rows(ws, root, *, release: Optional[str] = None,
+                valuation_date: Optional[date] = None) -> list[dict]:
+    """Every placed line item in scope (optionally just one release), tagged with location."""
     result = compute_bom(
         Path(root), catalog=ws.catalog, pricebook=ws.pricebook, release=release,
         valuation_date=valuation_date, categories=ws.categories, fields=ws.fields,
@@ -33,7 +34,7 @@ def investment_rows(ws, root, release: str, *, valuation_date: Optional[date] = 
     )
     rows = []
     for li in result.line_items:
-        if li.release != release:
+        if release is not None and li.release != release:
             continue
         h = _hier(li.rack_path)
         rows.append({
@@ -52,6 +53,11 @@ def investment_rows(ws, root, release: str, *, valuation_date: Optional[date] = 
         })
     rows.sort(key=lambda r: (r["region"], r["zone"], r["rack_type"], r["rack"], r["name"]))
     return rows
+
+
+def investment_rows(ws, root, release: str, *, valuation_date: Optional[date] = None) -> list[dict]:
+    """The investment-target list for one release (= placed_rows filtered to that release)."""
+    return placed_rows(ws, root, release=release, valuation_date=valuation_date)
 
 
 _CSV_HEADERS = [

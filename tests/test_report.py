@@ -115,3 +115,28 @@ def test_dashboard_page_served(ws_root):
     client = _client(ws_root)
     r = client.get("/dashboard")
     assert r.status_code == 200 and "현황 대시보드" in r.text
+
+
+def test_api_placed_lists_all_with_total(ws_root):
+    client = _client(ws_root)
+    r = client.get("/api/placed?path=offerings/cloud-a")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    # R01: dell(priced)+arista(unpriced) @R26.07, R02: dell(priced) @R26.08 → 3 rows
+    assert len(body["rows"]) == 3
+    assert body["total_capex"] == 2_000_000          # two priced dells
+    assert body["unpriced"] == 1                      # arista
+    assert set(body["releases"]) == {"R26.07", "R26.08"}
+
+
+def test_api_placed_release_filter(ws_root):
+    client = _client(ws_root)
+    body = client.get("/api/placed?path=offerings/cloud-a&release=R26.08").json()
+    assert {r["release"] for r in body["rows"]} == {"R26.08"}
+    assert body["total_capex"] == 1_000_000
+
+
+def test_placed_page_served(ws_root):
+    client = _client(ws_root)
+    r = client.get("/placed")
+    assert r.status_code == 200 and "배치" in r.text

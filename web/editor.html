@@ -706,18 +706,19 @@ async function doCatSearch(){
   const box=document.getElementById('catResults');
   box.innerHTML='<div class="empty">불러오는 중…</div>';
   try{
-    let url='/api/catalog/search?kind=device&q='+encodeURIComponent(q)+'&limit=50';   // empty q → top 50 후보
+    let url='/api/catalog/search?kind=device&pool=1&q='+encodeURIComponent(q)+'&limit=50';   // 후보풀에서만
     if(catCategory) url+='&category='+encodeURIComponent(catCategory);
     const res=await apiGet(url);
     catCache=res||[];
-    if(!res.length){ box.innerHTML='<div class="empty">결과 없음. 인덱스가 비었으면 <code>bombom catalog reindex</code> 실행.</div>'; return; }
+    if(!res.length){ box.innerHTML='<div class="empty">후보풀이 비었습니다 — <a href="/candidates">장비 후보 선택</a> 화면에서 후보를 먼저 추가하세요.</div>'; return; }
     box.innerHTML=res.map((r,i)=>{
       const cat=r.category||'other';
       const inShort=shortlist.some(s=>s.slug===r.slug);
       const right=inShort?`<span class="added">✓ 담음</span>`:`<button class="add" data-add="${i}">＋ 담기</button>`;
+      const price=r.priced?('₩'+(r.unit_cost||0).toLocaleString('ko-KR')):'<span style="color:var(--warn)">가격 미정</span>';
       return `<div class="model">
         <div class="top"><span class="cat" style="background:${CATCOLOR[cat]||CATCOLOR.other}"></span><span class="name">${esc(r.model||r.slug)}</span>${right}</div>
-        <div class="mfr">${esc(r.manufacturer||'')} · ${esc(CATLABEL[cat]||cat)}</div>
+        <div class="mfr">${esc(r.manufacturer||'')} · ${esc(CATLABEL[cat]||cat)} · ${price}</div>
         <div class="meta">${(r.u_height|0)===0?'0U':(r.u_height+'U')} · ${esc(r.slug)}</div></div>`;
     }).join('');
     box.querySelectorAll('[data-add]').forEach(el=>el.addEventListener('click', e=>{

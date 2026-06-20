@@ -35,7 +35,7 @@ from ..export import build_data, inject
 from ..gitops import add_commit
 from ..hierarchy import list_hierarchy
 from ..render import rack_elevation_svg
-from ..report import investment_csv, investment_rows
+from ..report import investment_csv, investment_rows, placed_rows
 from ..scaffold import (
     scaffold_offering,
     scaffold_rack,
@@ -166,7 +166,10 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
 
     @app.get("/api/catalog/search")
     def catalog_search(q: str = "", category: Optional[str] = None, limit: int = 50,
-                       kind: str = "device"):
+                       kind: str = "device", pool: bool = False):
+        if pool and kind == "device":
+            # placement source = the curated candidate pool only (Phase 3), with entered prices
+            return _pool_search(q, category, min(max(limit, 1), 500))
         rows = _search_catalog(ws.catalog.db_path, q, min(max(limit, 1), 500), kind=kind)
         if kind == "device":
             for r in rows:
@@ -293,6 +296,24 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
     def dashboard_ep(path: str = "offerings"):
         return build_dashboard(ws, _resolve(root, path))
 
+    @app.get("/api/placed")
+    def placed_ep(path: str = "offerings", release: Optional[str] = None):
+        rows = placed_rows(ws, _resolve(root, path), release=release)
+        return {
+            "rows": rows,
+            "total_capex": sum(r["subtotal"] for r in rows),
+            "qty": sum(r["qty"] for r in rows),
+            "unpriced": sum(1 for r in rows if not r["priced"]),
+            "releases": sorted({r["release"] for r in rows if r["release"]}),
+        }
+
+    @app.get("/placed", response_class=HTMLResponse)
+    def placed_page():
+        page = _VIEWER.parent / "placed.html"
+        if not page.exists():
+            return HTMLResponse("<h1>placed page not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
+
     @app.get("/dashboard", response_class=HTMLResponse)
     def dashboard_page():
         page = _VIEWER.parent / "dashboard.html"
@@ -372,6 +393,26 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             "unit_cost": price.unit_cost if price else None,
             "priced": price is not None,
         }
+
+    def _pool_search(q: str, category: Optional[str], limit: int) -> list[dict]:
+        ql = (q or "").strip().lower()
+        out = []
+        for c in load_pool(Path(root)):
+            dev = ws.catalog.get_device_type(c.slug)
+            if dev is None:
+                continue
+            cat = ws.categories.get(c.slug, model=dev.model, manufacturer=dev.manufacturer)
+            if category and cat != category:
+                continue
+            hay = f"{dev.model} {c.slug} {dev.manufacturer or ''}".lower()
+            if ql and ql not in hay:
+                continue
+            price = ws.pricebook.lookup(date.today(), slug=c.slug, part_number=dev.part_number)
+            out.append({"slug": c.slug, "model": dev.model, "manufacturer": dev.manufacturer,
+                        "u_height": dev.u_height, "category": cat,
+                        "unit_cost": price.unit_cost if price else None,
+                        "priced": price is not None})
+        return out[:limit]
 
     @app.get("/api/candidates")
     def candidates_list():
