@@ -38,7 +38,7 @@ from ..health import build_health
 from ..hierarchy import list_hierarchy, node_dir, remove_node
 from ..overlay import required_missing
 from ..release.diff import WORKING, compare_releases
-from ..render import rack_elevation_svg
+from ..render import rack_elevation_drawio, rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
 from ..search import search_workspace
 from ..scaffold import (
@@ -250,6 +250,21 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         svg = rack_elevation_svg(loaded.racks[0].design, ws.catalog,
                                  categories=ws.categories, highlight_release=release)
         return Response(svg, media_type="image/svg+xml")
+
+    @app.get("/api/rack/elevation.drawio")
+    def rack_drawio(path: str = "offerings", release: Optional[str] = None, download: int = 0):
+        # path may point at a single rack OR any subtree (zone / rack-type): every rack
+        # beneath it lands on one editable canvas, left→right.
+        loaded = load_racks(_resolve(root, path))
+        if not loaded.racks:
+            raise HTTPException(404, "no rack found at path")
+        racks = sorted(loaded.racks, key=lambda r: r.path)
+        name = Path(path).name or "racks"
+        xml = rack_elevation_drawio(racks, ws.catalog, categories=ws.categories,
+                                    highlight_release=release, title=name)
+        headers = ({"Content-Disposition": f'attachment; filename="{name}.drawio"'}
+                   if download else {})
+        return Response(xml, media_type="application/xml", headers=headers)
 
     @app.get("/api/rack")
     def get_rack(path: str):

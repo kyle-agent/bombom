@@ -46,6 +46,7 @@ API_ROUTES = [
     "/api/confirm",
     "/api/search?q=dell",
     "/api/health?path=offerings/cloud-a",
+    "/api/rack/elevation.drawio?path=offerings/cloud-a",
     "/api/dashboard?path=offerings/cloud-a",
     "/api/placed?path=offerings/cloud-a",
 ]

@@ -176,8 +176,24 @@ function rackTypeChip(rt, zCtx){
     + '<span class="rtmeta">' + esc(rt.rack_type) + ' · 랙 ' + cnt
     +   ' ' + cloneControl('rack_type', rtCtx, nm)
     +   ' ' + delControl('rack_type', rtCtx, nm)
+    +   (cnt ? ' ' + drawioLink(rtCtx) : '')
     + '</span>'
     + '</div>';
+}
+
+// hierarchy ctx → workspace path (matches the directory markers the loader reads)
+function nodePath(ctx){
+  let p = 'offerings/' + ctx.offering;
+  if(ctx.region) p += '/regions/' + ctx.region;
+  if(ctx.zone) p += '/zones/' + ctx.zone;
+  if(ctx.rack_type) p += '/rack-types/' + ctx.rack_type;
+  return p;
+}
+
+// download-this-scope-as-draw.io link: every rack beneath ctx on one editable canvas
+function drawioLink(ctx){
+  const url = '/api/rack/elevation.drawio?path=' + encodeURIComponent(nodePath(ctx)) + '&download=1';
+  return '<a class="clonebtn" href="' + url + '" title="이 범위의 랙 실장도를 draw.io(.drawio)로 내려받기">⬇ draw.io</a>';
 }
 
 function nameAndId(name, id){
@@ -260,7 +276,8 @@ function renderTree(){
               + nameAndId(z.name, z.zone)
               + addControl('rack_type', 'Rack-Type', zCtx)
               + cloneControl('zone', zCtx, z.name || z.zone)
-              + delControl('zone', zCtx, z.name || z.zone) + '</div>';
+              + delControl('zone', zCtx, z.name || z.zone)
+              + ((z.rack_types || []).length ? ' ' + drawioLink(zCtx) : '') + '</div>';
 
         const rts = z.rack_types || [];
         if(rts.length){
