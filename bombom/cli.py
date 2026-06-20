@@ -229,6 +229,52 @@ def _cmd_confirm(args) -> int:
         return 2
 
 
+def _cmd_report(args) -> int:
+    from . import report as report_mod
+
+    ws = Workspace.open(".")
+    if args.report_cmd == "invest":
+        rows = report_mod.investment_rows(ws, args.path, args.release)
+        csv_text = report_mod.investment_csv(rows, release=args.release)
+        if args.out:
+            Path(args.out).write_text(csv_text, encoding="utf-8")
+            total = sum(r["subtotal"] for r in rows)
+            print(f"wrote: {args.out}  ({len(rows)}행, 합계 {_won(total)})")
+        else:
+            print(csv_text, end="")
+        return 0
+    # releases
+    summary = report_mod.release_summary(ws, args.path)
+    if not summary:
+        print("(no releases)")
+        return 0
+    print(f"{'릴리즈':<10} {'수량':>6} {'증분 CAPEX':>18} {'누적 CAPEX':>18}")
+    for s in summary:
+        print(f"{s['release']:<10} {s['qty']:>6} {_won(s['increment_capex']):>18} "
+              f"{_won(s['cumulative_capex']):>18}")
+    return 0
+
+
+def _cmd_dashboard(args) -> int:
+    from .dashboard import build_dashboard
+
+    d = build_dashboard(Workspace.open("."), args.path)
+    c = d["counts"]
+    print(f"현황 — {d['path']}  (as of {d['valuation_date']})")
+    print(f"  헤드라인 누적 CAPEX : {_won(d['headline_capex'])}")
+    print(f"  랙 {c['racks']} · 장비 {c['devices']} · 미가격 {c['unpriced']} · 메타누락 {c['meta_missing']}")
+    if d["by_level"]["rack_type"]:
+        print("  랙타입별 : " + ", ".join(f"{r['label']}={_won(r['capex'])}"
+                                       for r in d["by_level"]["rack_type"]))
+    if d["release_summary"]:
+        print("  릴리즈   : " + ", ".join(f"{s['release']}(+{_won(s['increment_capex'])})"
+                                        for s in d["release_summary"]))
+    if d["top_devices"]:
+        print("  상위장비 : " + ", ".join(f"{t['name']}×{t['qty']}={_won(t['capex'])}"
+                                        for t in d["top_devices"][:5]))
+    return 0
+
+
 def _cmd_export(args) -> int:
     ws = Workspace.open(".")
     payload = build_data(ws, args.path, release=args.release, is_mock=False)
@@ -337,6 +383,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_conf_app.add_argument("id")
     p_conf_app.add_argument("--approver")
     p_conf_app.set_defaults(func=_cmd_confirm)
+
+    p_rep = sub.add_parser("report", help="investment-target list / release summary"
+                           ).add_subparsers(dest="report_cmd", required=True)
+    p_rep_inv = p_rep.add_parser("invest", help="investment-target list for a release (CSV)")
+    p_rep_inv.add_argument("release")
+    p_rep_inv.add_argument("--path", default="offerings", help="hierarchy subtree")
+    p_rep_inv.add_argument("--out", help="write CSV to this file (default: stdout)")
+    p_rep_inv.set_defaults(func=_cmd_report)
+    p_rep_rel = p_rep.add_parser("releases", help="per-release incremental + cumulative CAPEX")
+    p_rep_rel.add_argument("--path", default="offerings")
+    p_rep_rel.set_defaults(func=_cmd_report)
+
+    p_dash = sub.add_parser("dashboard", help="status rollup (cumulative CAPEX headline)")
+    p_dash.add_argument("--path", default="offerings")
+    p_dash.set_defaults(func=_cmd_dashboard)
 
     p_exp = sub.add_parser("export", help="bake a static viewer HTML with real data")
     p_exp.add_argument("out", help="output .html path")

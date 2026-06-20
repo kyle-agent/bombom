@@ -94,7 +94,11 @@ CAPEX BOM 집계·리포트, 현황 조회.
 
 ---
 
-## P2 — 릴리즈 단위 증분 설계 + 투자대상 리스트
+## P2 — 릴리즈 단위 증분 설계 + 투자대상 리스트  ⟵ 구현됨
+
+> 구현: `bombom/report/` (`investment_rows`/`investment_csv`/`release_summary`),
+> `GET /api/report/invest.csv`, `bombom report invest|releases`. 투자대상 = release 태그 항목
+> CSV(Excel 호환, formula-injection 방지). 외부 .xlsx 템플릿은 Scope OUT(양식 수령 후).
 
 **목표:** 베이스라인은 한 번 설계, 매 릴리즈는 추가 장비만 선택·배치·집계.
 
@@ -111,7 +115,11 @@ CAPEX BOM 집계·리포트, 현황 조회.
 
 ---
 
-## P3 — 현황 대시보드 (조회)
+## P3 — 현황 대시보드 (조회)  ⟵ 구현됨
+
+> 구현: `bombom/dashboard.py` (`build_dashboard`), `GET /api/dashboard`, `/dashboard`
+> (`web/dashboard.html`), `bombom dashboard`. 헤드라인=누적 총 CAPEX, 계층/카테고리 롤업,
+> 릴리즈 추이(증분+누적), 상위 지출 장비, 미가격/메타누락 카운트. 정적 Pages 베이킹은 후속.
 
 **목표:** 확정된 설계의 현재 상태를 한눈에. **헤드라인 = 전체 누적 총 CAPEX(뷰 c).**
 

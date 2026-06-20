@@ -18,11 +18,13 @@ from ..confirm import detail as confirm_detail
 from ..confirm import gate_to_dict
 from ..confirm import list_confirmations
 from ..confirm import request as confirm_request
+from ..dashboard import build_dashboard
 from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, validate_rack
 from ..design.writer import write_rack
 from ..export import build_data, inject
 from ..gitops import add_commit
 from ..render import rack_elevation_svg
+from ..report import investment_csv, investment_rows
 from ..scaffold import scaffold_rack
 from ..workspace import Workspace
 
@@ -235,6 +237,27 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             raise HTTPException(404, "confirmation not found")
         conf, gate = got
         return {"confirmation": conf.model_dump(), "gate": gate_to_dict(gate)}
+
+    # ── reports + dashboard (P2/P3) ───────────────────────────────────────
+    @app.get("/api/report/invest.csv")
+    def report_invest_csv(release: str, path: str = "offerings"):
+        if not _SAFE_ID.match(release or ""):   # also keeps `release` safe in the filename header
+            raise HTTPException(400, "invalid release")
+        rows = investment_rows(ws, _resolve(root, path), release)
+        csv_text = investment_csv(rows, release=release)
+        return Response(csv_text, media_type="text/csv; charset=utf-8", headers={
+            "Content-Disposition": f'attachment; filename="invest-{release}.csv"'})
+
+    @app.get("/api/dashboard")
+    def dashboard_ep(path: str = "offerings"):
+        return build_dashboard(ws, _resolve(root, path))
+
+    @app.get("/dashboard", response_class=HTMLResponse)
+    def dashboard_page():
+        page = _VIEWER.parent / "dashboard.html"
+        if not page.exists():
+            return HTMLResponse("<h1>dashboard not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
 
     return app
 

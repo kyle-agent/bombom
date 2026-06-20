@@ -27,6 +27,7 @@ class LineItem:
     qty: int
     unit_cost: Optional[int]      # KRW; None = unpriced
     watts: int
+    rack_path: str = ""           # full rack file path (for hierarchy rollups; rack_id can collide)
 
     @property
     def subtotal(self) -> int:
@@ -110,6 +111,7 @@ def compute_bom(
                 qty=pl.qty,
                 unit_cost=price.unit_cost if price else None,
                 watts=_max_draw(device),
+                rack_path=lr.path,
             )
             _accumulate(result, li)
 
@@ -122,6 +124,7 @@ def compute_bom(
                 qty=ci.qty,
                 unit_cost=ci.unit_cost,
                 watts=0,
+                rack_path=lr.path,
             )
             _accumulate(result, li)
 

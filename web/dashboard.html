@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 현황 대시보드</title>
+<style>
+  :root{
+    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+    --accent:#2563eb;--accent2:#0ea5e9;--ok:#16a34a;--warn:#d97706;--new:#f59e0b;--bad:#dc2626;
+    --server:#2563eb;--network:#16a34a;--storage:#9333ea;--other:#64748b;
+    --barbg:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
+  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header .logo{font-weight:700;color:#fff}
+  header .crumb{color:#94a3b8}
+  header .relchip{background:#1e293b;border:1px solid #334155;color:#fde68a;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600}
+  header .links{margin-left:auto;display:flex;gap:8px}
+  header .links a{color:#cbd5e1;text-decoration:none;border:1px solid #334155;border-radius:8px;padding:3px 10px;font-size:12px}
+  header .links a:hover{background:#1e293b;color:#fff}
+  .wrap{padding:14px;display:flex;flex-direction:column;gap:14px;max-width:1400px;margin:0 auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card h3{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  /* error banner */
+  .banner{display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:13px}
+  .banner.show{display:block}
+  /* headline */
+  .headline{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .headline .big{display:flex;flex-direction:column;gap:2px}
+  .headline .big .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .headline .big .amt{font-size:34px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+  .headline .big .sub{font-size:12px;color:var(--muted)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px 14px;display:flex;flex-direction:column;gap:1px;min-width:84px}
+  .chip .k{font-size:11px;color:var(--muted)}
+  .chip .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  .chip.amber{background:#fffbeb;border-color:#fde68a}
+  .chip.amber .v{color:var(--warn)}
+  .chip.red{background:#fef2f2;border-color:#fecaca}
+  .chip.red .v{color:var(--bad)}
+  /* generic bar list */
+  .barlist{display:flex;flex-direction:column;gap:8px}
+  .barrow{display:flex;flex-direction:column;gap:3px}
+  .barrow .meta{display:flex;justify-content:space-between;gap:10px;font-size:12px}
+  .barrow .meta .lbl{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .meta .amt{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .track{height:8px;background:var(--barbg);border-radius:5px;overflow:hidden}
+  .fill{height:100%;background:var(--accent);border-radius:5px;min-width:2px}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;white-space:nowrap}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .empty{color:#94a3b8;text-align:center;padding:20px 8px;font-size:12px}
+  /* layout helpers */
+  .cols2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+  .panels3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .panel{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .panel h4{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  /* csv control */
+  .csvbox{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;align-self:start}
+  .csvbox h4{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .csvbox select{border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;width:100%}
+  .csvbox button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .csvbox button:hover{filter:brightness(1.06)}
+  .note{font-size:11px;color:var(--muted)}
+  @media(max-width:860px){ .cols2{grid-template-columns:1fr} .panels3{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom</span>
+  <span class="crumb">— 현황 대시보드</span>
+  <span class="relchip" id="pathchip">● 경로 —</span>
+  <span class="crumb" id="valdate">기준일 —</span>
+  <span class="links"><a href="/">뷰어</a><a href="/edit">에디터</a></span>
+</header>
+
+<div class="wrap">
+  <div class="banner" id="banner"></div>
+
+  <!-- 2. headline -->
+  <div class="card">
+    <div class="headline">
+      <div class="big">
+        <span class="lbl">누적 총 CAPEX</span>
+        <span class="amt" id="headcapex">—</span>
+        <span class="sub" id="headsub"></span>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <!-- 3. release trend + csv -->
+  <div class="card">
+    <h3>릴리즈 추이</h3>
+    <div class="cols2">
+      <div>
+        <table id="reltable"><thead><tr>
+          <th>릴리즈</th><th class="num">수량</th><th class="num">증분 CAPEX</th><th class="num">누적 CAPEX</th>
+        </tr></thead><tbody id="relrows"></tbody></table>
+        <div id="relbars" class="barlist" style="margin-top:12px"></div>
+        <div id="relempty" class="empty" style="display:none">데이터 없음</div>
+      </div>
+      <div class="csvbox">
+        <h4>투자대상 리스트 (CSV)</h4>
+        <select id="csvSel"></select>
+        <button id="csvBtn" type="button">CSV 다운로드</button>
+        <div class="note">선택한 릴리즈의 투자대상 항목을 CSV로 내려받습니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. hierarchy rollups -->
+  <div class="card">
+    <h3>계층별 롤업</h3>
+    <div class="panels3">
+      <div class="panel"><h4>랙타입별</h4><div class="barlist" id="lvlRackType"></div></div>
+      <div class="panel"><h4>존별</h4><div class="barlist" id="lvlZone"></div></div>
+      <div class="panel"><h4>리전별</h4><div class="barlist" id="lvlRegion"></div></div>
+    </div>
+  </div>
+
+  <!-- 5. by category -->
+  <div class="card">
+    <h3>카테고리별</h3>
+    <div class="barlist" id="catList"></div>
+  </div>
+
+  <!-- 6. top devices -->
+  <div class="card">
+    <h3>상위 지출 장비</h3>
+    <table id="devtable"><thead><tr>
+      <th>장비</th><th class="num">수량</th><th class="num">CAPEX</th>
+    </tr></thead><tbody id="devrows"></tbody></table>
+    <div id="devempty" class="empty" style="display:none">데이터 없음</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ── helpers ──────────────────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function won(n){ return '₩' + Math.round(n||0).toLocaleString('ko-KR'); }
+function wonShort(n){
+  n = n||0;
+  if(n >= 1e8) return '₩' + (n/1e8).toLocaleString('ko-KR',{maximumFractionDigits:1}) + '억';
+  if(n >= 1e4) return '₩' + Math.round(n/1e4).toLocaleString('ko-KR') + '만';
+  return won(n);
+}
+const CATCOLOR = {server:'#2563eb', network:'#16a34a', storage:'#9333ea', other:'#64748b'};
+
+function getPath(){
+  const p = new URLSearchParams(location.search).get('path');
+  return (p && p.trim()) ? p.trim() : 'offerings';
+}
+
+function showError(msg){
+  const b = document.getElementById('banner');
+  b.textContent = '대시보드를 불러오지 못했습니다: ' + msg + '  ·  API 서버가 떠 있는지 확인하세요.';
+  b.classList.add('show');
+}
+
+// ── bar-list renderer ────────────────────────────────────────────────
+// items: [{label, capex}], el: container, color: fn(item)->css color
+function renderBars(el, items, color){
+  items = items || [];
+  if(!items.length){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
+  const max = items.reduce((m,it)=>Math.max(m, it.capex||0), 0) || 1;
+  el.innerHTML = items.map(it=>{
+    const pct = Math.max(2, Math.round((it.capex||0)/max*100));
+    const c = typeof color === 'function' ? color(it) : (color || 'var(--accent)');
+    return `<div class="barrow">
+      <div class="meta"><span class="lbl">${esc(it.label)}</span><span class="amt">${won(it.capex)}</span></div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${c}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── section renderers ────────────────────────────────────────────────
+function renderHeader(d){
+  document.getElementById('pathchip').textContent = '● 경로 ' + (d.path || getPath());
+  document.getElementById('valdate').textContent = '기준일 ' + (d.valuation_date || '—');
+  // header strings come from server → text content (auto-escaped by DOM)
+}
+
+function renderHeadline(d){
+  const cx = d.headline_capex || 0;
+  document.getElementById('headcapex').textContent = won(cx);
+  document.getElementById('headsub').textContent =
+    (cx >= 1e6 ? wonShort(cx) + ' · ' : '') + '전력 ' + (d.power_w||0).toLocaleString('ko-KR') + ' W';
+
+  const c = d.counts || {};
+  const chips = [
+    {k:'랙', v:c.racks||0, cls:''},
+    {k:'장비', v:c.devices||0, cls:''},
+    {k:'미가격', v:c.unpriced||0, cls:(c.unpriced>0?'amber':'')},
+    {k:'메타누락', v:c.meta_missing||0, cls:(c.meta_missing>0?'red':'')}
+  ];
+  document.getElementById('chips').innerHTML = chips.map(ch=>
+    `<div class="chip ${ch.cls}"><span class="k">${esc(ch.k)}</span><span class="v">${(ch.v||0).toLocaleString('ko-KR')}</span></div>`
+  ).join('');
+}
+
+function renderReleases(d){
+  const rs = (d.release_summary || []).slice();
+  const tbody = document.getElementById('relrows');
+  const bars = document.getElementById('relbars');
+  const empty = document.getElementById('relempty');
+  const table = document.getElementById('reltable');
+
+  if(!rs.length){
+    tbody.innerHTML = ''; bars.innerHTML = '';
+    table.style.display = 'none'; empty.style.display = 'block';
+  } else {
+    table.style.display = ''; empty.style.display = 'none';
+    tbody.innerHTML = rs.map(r=>`<tr>
+      <td>${esc(r.release)}</td>
+      <td class="num">${(r.qty||0).toLocaleString('ko-KR')}</td>
+      <td class="num">${won(r.increment_capex)}</td>
+      <td class="num">${won(r.cumulative_capex)}</td>
+    </tr>`).join('');
+    const maxCum = rs.reduce((m,r)=>Math.max(m, r.cumulative_capex||0), 0) || 1;
+    bars.innerHTML = rs.map(r=>{
+      const pct = Math.max(2, Math.round((r.cumulative_capex||0)/maxCum*100));
+      return `<div class="barrow">
+        <div class="meta"><span class="lbl">${esc(r.release)}</span><span class="amt">${won(r.cumulative_capex)}</span></div>
+        <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  // CSV release select
+  const sel = document.getElementById('csvSel');
+  if(!rs.length){
+    sel.innerHTML = '<option value="">릴리즈 없음</option>';
+    sel.disabled = true;
+    document.getElementById('csvBtn').disabled = true;
+  } else {
+    sel.disabled = false;
+    document.getElementById('csvBtn').disabled = false;
+    sel.innerHTML = rs.map(r=>`<option value="${esc(r.release)}">${esc(r.release)}</option>`).join('');
+  }
+}
+
+function renderRollups(d){
+  const lv = d.by_level || {};
+  renderBars(document.getElementById('lvlRackType'), lv.rack_type, 'var(--accent)');
+  renderBars(document.getElementById('lvlZone'), lv.zone, 'var(--accent)');
+  renderBars(document.getElementById('lvlRegion'), lv.region, 'var(--accent)');
+}
+
+function renderCategories(d){
+  renderBars(document.getElementById('catList'), d.by_category,
+    it=> CATCOLOR[String(it.label||'').toLowerCase()] || CATCOLOR.other);
+}
+
+function renderTopDevices(d){
+  const td = d.top_devices || [];
+  const tbody = document.getElementById('devrows');
+  const empty = document.getElementById('devempty');
+  const table = document.getElementById('devtable');
+  if(!td.length){
+    tbody.innerHTML = ''; table.style.display = 'none'; empty.style.display = 'block';
+    return;
+  }
+  table.style.display = ''; empty.style.display = 'none';
+  tbody.innerHTML = td.map(dev=>`<tr>
+    <td>${esc(dev.name)}</td>
+    <td class="num">${(dev.qty||0).toLocaleString('ko-KR')}</td>
+    <td class="num">${won(dev.capex)}</td>
+  </tr>`).join('');
+}
+
+// ── csv download wiring ──────────────────────────────────────────────
+function wireCsv(path){
+  document.getElementById('csvBtn').addEventListener('click', function(){
+    const sel = document.getElementById('csvSel');
+    const rel = sel.value;
+    if(!rel) return;
+    const url = '/api/report/invest.csv?release=' + encodeURIComponent(rel) +
+                '&path=' + encodeURIComponent(path);
+    window.location = url;
+  });
+}
+
+// ── load ─────────────────────────────────────────────────────────────
+function render(d){
+  renderHeader(d);
+  renderHeadline(d);
+  renderReleases(d);
+  renderRollups(d);
+  renderCategories(d);
+  renderTopDevices(d);
+}
+
+(function load(){
+  const path = getPath();
+  document.getElementById('pathchip').textContent = '● 경로 ' + path;
+  wireCsv(path);
+  fetch('/api/dashboard?path=' + encodeURIComponent(path))
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(render)
+    .catch(function(err){ showError(err && err.message ? err.message : String(err)); });
+})();
+</script>
+</body>
+</html>
