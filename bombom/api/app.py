@@ -34,6 +34,7 @@ from ..design.writer import write_rack
 from ..export import build_data, build_report_data, inject
 from ..gitops import add_commit
 from ..hierarchy import list_hierarchy, node_dir, remove_node
+from ..release.diff import WORKING, compare_releases
 from ..render import rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
 from ..scaffold import (
@@ -373,6 +374,19 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         conf, gate = got
         return {"confirmation": conf.model_dump(), "gate": gate_to_dict(gate)}
 
+    @app.get("/api/release/diff")
+    def release_diff_ep(base: str, head: str, path: str = "offerings"):
+        # base/head are git refs (confirmation ids / release tags) or the literal WORKING.
+        for ref in (base, head):
+            if ref != WORKING and (not _SAFE_ID.match(ref) or ".." in ref):
+                raise HTTPException(400, f"invalid ref: {ref}")
+        target = _resolve(root, path)
+        subpath = target.resolve().relative_to(Path(root).resolve()).as_posix()
+        try:
+            return compare_releases(ws, Path(root), base, head, subpath=subpath)
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
     # ── reports + dashboard (P2/P3) ───────────────────────────────────────
     @app.get("/api/report/invest.csv")
     def report_invest_csv(release: str, path: str = "offerings"):
@@ -432,6 +446,13 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         page = _VIEWER.parent / "dashboard.html"
         if not page.exists():
             return HTMLResponse("<h1>dashboard not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
+
+    @app.get("/diff", response_class=HTMLResponse)
+    def diff_page():
+        page = _VIEWER.parent / "diff.html"
+        if not page.exists():
+            return HTMLResponse("<h1>diff not built</h1>", status_code=500)
         return HTMLResponse(page.read_text())
 
     # ── base-data hierarchy management (기준정보 / Rack-Type) ──────────────

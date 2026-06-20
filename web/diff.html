@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 릴리즈 변경 비교</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#1e293b;--bg:#f8fafc;
+        --add:#15803d;--rem:#b91c1c;--chg:#b45309}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+       "Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:#0f172a;color:#fff;display:flex;align-items:center;gap:10px;
+         padding:10px 18px}
+  header .logo{font-weight:700}
+  header .topnav{display:flex;gap:6px;margin-left:14px}
+  header .topnav a{color:#cbd5e1;text-decoration:none;font-size:13px;padding:3px 8px;border-radius:6px}
+  header .topnav a:hover{background:rgba(255,255,255,.14);color:#fff}
+  main{max-width:1080px;margin:0 auto;padding:22px 24px 64px}
+  .controls{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:#fff;
+            border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .ctl{display:flex;flex-direction:column;gap:4px}
+  .ctl label{font-size:12px;color:var(--muted)}
+  select,input{border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:13px;background:#fff}
+  .arrow{align-self:center;font-size:18px;color:var(--muted);padding-bottom:4px}
+  .hint{color:var(--muted);font-size:12px;margin:10px 2px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+  .kpi{border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:#fff}
+  .kpi .k{font-size:12px;color:var(--muted)}
+  .kpi .v{font-size:22px;font-weight:800;margin-top:3px}
+  .kpi.add .v{color:var(--add)} .kpi.rem .v{color:var(--rem)} .kpi.chg .v{color:var(--chg)}
+  .kpi.delta{background:#0f172a;color:#fff;border-color:#0f172a}
+  .kpi.delta .k{color:#cbd5e1}
+  section{margin:22px 0}
+  h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .dot.add{background:var(--add)} .dot.rem{background:var(--rem)} .dot.chg{background:var(--chg)}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;
+        border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:600;font-size:12px;background:#f8fafc}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  .pill{display:inline-block;padding:1px 7px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  .swap{color:var(--chg);font-weight:700}
+  .up{color:var(--rem)} .down{color:var(--add)}
+  .empty{color:var(--muted);padding:14px 2px}
+  .loc{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom — 변경 비교</span>
+  <nav class="topnav"><a href="/">뷰어</a><a href="/edit">에디터</a><a href="/manage">기준정보</a>
+    <a href="/candidates">후보</a><a href="/placed">목록</a><a href="/dashboard">현황</a></nav>
+</header>
+<main>
+  <div class="controls">
+    <div class="ctl"><label for="baseSel">기준 (base)</label><select id="baseSel"></select></div>
+    <span class="arrow">→</span>
+    <div class="ctl"><label for="headSel">대상 (head)</label><select id="headSel"></select></div>
+    <div class="ctl"><label for="pathIn">경로</label><input id="pathIn" value="offerings" size="28"></div>
+    <div class="ctl"><label>&nbsp;</label><button id="runBtn" type="button"
+         style="border:1px solid #1e293b;background:#1e293b;color:#fff;border-radius:7px;
+         padding:8px 16px;cursor:pointer">비교</button></div>
+  </div>
+  <div class="hint" id="hint">확정(릴리즈) 두 개 또는 작업본(WORKING)을 골라 비교합니다.
+    슬롯(랙·U) 기준으로 추가 / 제거 / 교체를 보여줍니다. 가격은 현재 가격표 기준(설계 변화만 격리).</div>
+  <div id="out"></div>
+</main>
+
+<script>
+"use strict";
+const WORKING = "WORKING";
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function won(n){ return '₩' + Math.round(n||0).toLocaleString('ko-KR'); }
+function signed(n){ n=n||0; return (n>0?'+':'') + won(n); }
+function num(n){ return (n||0).toLocaleString('ko-KR'); }
+function loc(r){ return esc([r.region,r.zone,r.rack_type,r.rack].filter(Boolean).join(' / '))
+  + ' · <span class="mono">U' + num(r.position) + '</span>'; }
+
+async function getJSON(url){
+  const r = await fetch(url);
+  if(!r.ok){ let d; try{ d = (await r.json()).detail; }catch(e){} throw new Error(d || ('HTTP '+r.status)); }
+  return r.json();
+}
+
+async function loadRefs(){
+  let confs = [];
+  try{ confs = await getJSON('/api/confirm'); }catch(e){ confs = []; }
+  const sealed = confs.filter(c => c.status === 'confirmed' && c.tag);
+  const opts = sealed.map(c => ({v:c.tag, label:c.tag + ' (' + c.kind + ')'}));
+  const baseSel = document.getElementById('baseSel'), headSel = document.getElementById('headSel');
+  const mk = (sel, extra) => {
+    sel.innerHTML = '';
+    [...opts, extra].forEach(o => {
+      if(!o) return;
+      const op = document.createElement('option'); op.value = o.v; op.textContent = o.label;
+      sel.appendChild(op);
+    });
+  };
+  mk(baseSel, opts.length ? null : {v:WORKING, label:'작업본 (WORKING)'});
+  mk(headSel, {v:WORKING, label:'작업본 (WORKING)'});
+  // sensible default: latest sealed as base, WORKING as head
+  if(opts.length){ baseSel.value = opts[0].v; headSel.value = WORKING; }
+  if(opts.length === 0){
+    document.getElementById('hint').textContent =
+      '확정된 릴리즈(태그)가 아직 없습니다. 작업본(WORKING)끼리는 비교 의미가 없으니, 먼저 ✅확정을 진행하세요.';
+  }
+}
+
+function rowsTable(kind, rows){
+  if(!rows.length) return '<div class="empty">없음</div>';
+  if(kind === 'changed'){
+    const body = rows.map(r => `<tr>
+      <td>${loc(r)}</td>
+      <td><span class="mono">${esc(r.from_device)}</span>${r.from_qty>1?' ×'+num(r.from_qty):''}
+          <span class="swap">→</span> <span class="mono">${esc(r.to_device)}</span>${r.to_qty>1?' ×'+num(r.to_qty):''}</td>
+      <td class="num">${won(r.from_capex)} → ${won(r.to_capex)}</td>
+      <td class="num ${r.delta>0?'up':(r.delta<0?'down':'')}">${signed(r.delta)}</td>
+    </tr>`).join('');
+    return `<table><thead><tr><th>위치</th><th>교체</th><th class="num">CAPEX</th>
+      <th class="num">델타</th></tr></thead><tbody>${body}</tbody></table>`;
+  }
+  const body = rows.map(r => `<tr>
+    <td>${loc(r)}</td>
+    <td><span class="mono">${esc(r.device)}</span>${r.qty>1?' ×'+num(r.qty):''}</td>
+    <td><span class="pill">${esc(r.release||'—')}</span></td>
+    <td class="num">${won(r.capex)}</td>
+  </tr>`).join('');
+  return `<table><thead><tr><th>위치</th><th>장비</th><th>릴리즈</th>
+    <th class="num">CAPEX</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function render(d){
+  const c = d.counts;
+  let html = `<div class="kpis">
+    <div class="kpi add"><div class="k">추가</div><div class="v">${num(c.added)}</div></div>
+    <div class="kpi rem"><div class="k">제거</div><div class="v">${num(c.removed)}</div></div>
+    <div class="kpi chg"><div class="k">교체</div><div class="v">${num(c.changed)}</div></div>
+    <div class="kpi delta"><div class="k">CAPEX 델타 (${esc(d.base)} → ${esc(d.head)})</div>
+      <div class="v">${signed(d.capex_delta)}</div></div>
+  </div>`;
+  html += `<section><h2><span class="dot add"></span>추가된 장비 (${num(c.added)})</h2>
+    ${rowsTable('added', d.added)}</section>`;
+  html += `<section><h2><span class="dot chg"></span>교체된 장비 (${num(c.changed)})</h2>
+    ${rowsTable('changed', d.changed)}</section>`;
+  html += `<section><h2><span class="dot rem"></span>제거된 장비 (${num(c.removed)})</h2>
+    ${rowsTable('removed', d.removed)}</section>`;
+  document.getElementById('out').innerHTML = html;
+}
+
+async function run(){
+  const base = document.getElementById('baseSel').value;
+  const head = document.getElementById('headSel').value;
+  const path = document.getElementById('pathIn').value.trim() || 'offerings';
+  if(!base || !head){ return; }
+  document.getElementById('out').innerHTML = '<div class="empty">비교 중…</div>';
+  try{
+    const d = await getJSON('/api/release/diff?base=' + encodeURIComponent(base) +
+      '&head=' + encodeURIComponent(head) + '&path=' + encodeURIComponent(path));
+    render(d);
+  }catch(e){
+    document.getElementById('out').innerHTML = '<div class="empty">비교 실패: ' + esc(e.message) + '</div>';
+  }
+}
+
+document.getElementById('runBtn').addEventListener('click', run);
+(async () => { await loadRefs(); run(); })();
+</script>
+</body>
+</html>

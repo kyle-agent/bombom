@@ -3,7 +3,7 @@
 > Forward-looking only. This is "what to do next", not "what was done". Rewritten by
 > `/session-checkpoint` at the end of each session. Git history preserves old state.
 
-> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 104 tests pass, ruff clean.
+> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 110 tests pass, ruff clean.
 
 ## Where things are (2026-06-20)
 
@@ -22,6 +22,9 @@ The end-to-end designer flow is built and pushed on the feature branch, all scre
   (존/타입/리전 서브트리 통째). `POST /api/rack/clone`·`/api/hierarchy/clone`. ADR clone.
 - **보고서 export**: `/placed`·`/dashboard`의 `📄 보고서` → `GET /api/report.html`(데이터 구운
   standalone HTML, 인쇄/PDF). `export.build_report_data` = dashboard 롤업 + placed 행.
+- **변경 비교(/diff)**: 확정 태그(=릴리즈) 또는 작업본(WORKING) 두 개를 슬롯 단위로 비교 →
+  추가/제거/교체 + CAPEX 델타. `bombom/release/diff.py` `compare_releases`, `GET /api/release/
+  diff?base&head&path`. release="설계 모음 확정" 정의를 구현. ADR release-diff.
 
 Key modules: `bombom/{confirm,candidates,hierarchy,dashboard}.py`, `bombom/report/`,
 endpoints in `bombom/api/app.py`, pages in `web/{manage,candidates,placed,dashboard}.html`.
@@ -30,13 +33,14 @@ without a restart.
 
 ## Priority — pick next
 
-These all need a USER decision or are heavier — not safe to build fully autonomously:
+release = "설계들의 모음을 확정한 스냅샷"(user, 2026-06-20) = annotated git tag (name = conf id).
+That clarification unblocked the release-diff feature (DONE this session). Remaining:
 
-1. **Decommission / 장비 교체·제거 + release 의미론.** Editor already removes placements from
-   the working tree; what's missing is *lifecycle*: is a release a cumulative build state or a
-   per-placement tag? That decision drives a "release diff (added/removed/replaced + CAPEX
-   delta)" view and time-aware BOM. Needs a model decision before building. (clone ADR's
-   override note also waits on this — auto-bump release on clone.)
+1. **Time-aware / per-ref valuation.** The /diff CAPEX delta prices both sides with the CURRENT
+   pricebook to isolate *design* change. A complementary "as-of valuation per ref" (read pricing
+   at each tag) + custom_line_items in the diff unit would show price drift too. Buildable
+   autonomously; lower urgency. Decommission *visibility* itself is now done (/diff shows
+   removed/replaced); actual removal is editor working-tree edit.
 2. **Node rename/move** in /manage (a rename moves a subtree and can collide with confirmed
    tags / placement paths; design it before building).
 3. **GitHub PR-based confirm** — local annotated tag is the seal today; PR flow + server
@@ -47,8 +51,8 @@ These all need a USER decision or are heavier — not safe to build fully autono
 5. **Bulk rack clone** (N copies / naming pattern in one action) — extends the clone primitive;
    scoped OUT of clone v1. Low-risk, buildable autonomously.
 
-DONE this session: clone (rack + subtree), standalone report export, node delete (empty-only),
-full placed CSV, cross-page nav.
+DONE this session: clone (rack + subtree), standalone report export, release diff (/diff),
+node delete (empty-only), full placed CSV, cross-page nav.
 
 ## Blockers
 None. Branch is green; merge to main is a separate explicit step (Tier-0: needs confirmation).
