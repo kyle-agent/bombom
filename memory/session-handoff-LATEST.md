@@ -3,7 +3,7 @@
 > Forward-looking only. This is "what to do next", not "what was done". Rewritten by
 > `/session-checkpoint` at the end of each session. Git history preserves old state.
 
-> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 113 tests pass, ruff clean.
+> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 120 tests pass, ruff clean.
 
 ## Where things are (2026-06-20)
 
@@ -12,7 +12,11 @@ The end-to-end designer flow is built and pushed on the feature branch, all scre
 
 - `/manage` — 기준정보·Rack-Type 관리 (offering/region/zone/rack-type 추가·삭제[빈 노드만]).
 - `/candidates` — 장비 후보풀: 카탈로그에서 후보 선별 + 가격/부가정보 입력. (후보=별도 목록
-  `candidates/pool.yaml`, 가격은 `pricing/manual.yaml`로 분리. ADR candidate-pool.)
+  `candidates/pool.yaml`, 가격은 `pricing/manual.yaml`로 분리. ADR candidate-pool.) 조직이
+  `meta/fields.yaml`에 `applies_to: candidate` 필드를 정의하면 후보별 **구조화 부가정보**(리드타임
+  등) 입력칸이 뜨고 `candidate.meta`에 저장된다. `GET /api/candidate-fields`.
+- `/search` — 전역 검색: 노드/랙/배치 장비를 이름으로 찾기(`GET /api/search`). 랙·장비 결과는
+  뷰어로 딥링크.
 - `/edit` — 배치: "① 모델 선택" 검색이 후보풀만(`?pool=1`) 본다. ✅확정 모달(게이트→봉인 태그).
 - `/placed` — 배치예정 장비 목록 + 합계 CAPEX + 릴리즈 필터 + CSV(전체/릴리즈별).
 - `/dashboard` — 누적 총 CAPEX 헤드라인 + 계층/카테고리 롤업 + 릴리즈 추이 + 상위 지출.
@@ -34,26 +38,20 @@ without a restart.
 
 ## Priority — pick next
 
-release = "설계들의 모음을 확정한 스냅샷"(user, 2026-06-20) = annotated git tag (name = conf id).
-That clarification unblocked the release-diff feature (DONE this session). Remaining:
+Most autonomous-buildable items are now DONE (per-ref valuation, search, candidate meta).
+Remaining needs a USER decision or is heavier:
 
-1. **Time-aware / per-ref valuation.** The /diff CAPEX delta prices both sides with the CURRENT
-   pricebook to isolate *design* change. A complementary "as-of valuation per ref" (read pricing
-   at each tag) + custom_line_items in the diff unit would show price drift too. Buildable
-   autonomously; lower urgency. Decommission *visibility* itself is now done (/diff shows
-   removed/replaced); actual removal is editor working-tree edit.
 2. **Node rename/move** in /manage (a rename moves a subtree and can collide with confirmed
    tags / placement paths; design it before building).
 3. **GitHub PR-based confirm** — local annotated tag is the seal today; PR flow + server
    auth/role separation (designer≠approver enforced) is scoped OUT. Confirm logic is behind a
    thin layer to allow injecting a PR path.
-4. **Structured 부가정보 on candidates** — currently a free-text note; could drive `meta/`
-   fields per candidate/type. (Low-ambiguity; buildable autonomously if prioritised.)
-5. **Bulk rack clone** (N copies / naming pattern in one action) — extends the clone primitive;
-   scoped OUT of clone v1. Low-risk, buildable autonomously.
+4. **Custom line items in the release diff** — the /diff unit is (rack, position) device slots;
+   custom_line_items aren't diffed yet. Buildable autonomously if wanted.
 
 DONE this session: clone (rack + subtree + bulk N), standalone report export, release diff
-(/diff), node delete (empty-only), full placed CSV, cross-page nav.
+(/diff) + per-ref valuation, workspace search (/search), structured candidate fields
+(meta applies_to: candidate), node delete (empty-only), full placed CSV, cross-page nav.
 
 ## Blockers
 None. Branch is green; merge to main is a separate explicit step (Tier-0: needs confirmation).

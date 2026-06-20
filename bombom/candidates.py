@@ -12,10 +12,10 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 CANDIDATES_DIR = "candidates"
 POOL_FILE = "pool.yaml"
@@ -27,6 +27,7 @@ class Candidate(BaseModel):
     slug: str
     note: Optional[str] = None
     added_at: Optional[str] = None
+    meta: dict[str, Any] = Field(default_factory=dict)   # org-defined candidate fields (meta/fields.yaml)
 
 
 def pool_path(root: Path) -> Path:
@@ -53,7 +54,12 @@ def load_pool(root: Path) -> list[Candidate]:
 def _write_pool(root: Path, items: list[Candidate]) -> Path:
     p = pool_path(root)
     p.parent.mkdir(parents=True, exist_ok=True)
-    body = [c.model_dump(exclude_none=True) for c in items]
+    body = []
+    for c in items:
+        d = c.model_dump(exclude_none=True)
+        if not d.get("meta"):           # never persist an empty meta dict
+            d.pop("meta", None)
+        body.append(d)
     p.write_text(yaml.safe_dump({"candidates": body}, allow_unicode=True, sort_keys=False))
     return p
 
@@ -81,6 +87,17 @@ def set_note(root: Path, slug: str, note: Optional[str]) -> Path:
     if hit is None:
         raise KeyError(slug)
     hit.note = (note or None)
+    return _write_pool(root, items)
+
+
+def set_meta(root: Path, slug: str, meta: dict[str, Any]) -> Path:
+    """Replace a candidate's org-defined fields. Empty values are dropped, so clearing a field
+    removes it (mirrors how placement meta is cleared in the editor)."""
+    items = load_pool(root)
+    hit = next((c for c in items if c.slug == slug), None)
+    if hit is None:
+        raise KeyError(slug)
+    hit.meta = {k: v for k, v in (meta or {}).items() if v not in (None, "", False)}
     return _write_pool(root, items)
 
 

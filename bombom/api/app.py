@@ -24,6 +24,7 @@ from ..candidates import (
     add_candidate,
     load_pool,
     remove_candidate,
+    set_meta,
     set_note,
     set_price,
 )
@@ -34,6 +35,7 @@ from ..design.writer import write_rack
 from ..export import build_data, build_report_data, inject
 from ..gitops import add_commit
 from ..hierarchy import list_hierarchy, node_dir, remove_node
+from ..overlay import required_missing
 from ..release.diff import WORKING, compare_releases
 from ..render import rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
@@ -173,6 +175,7 @@ class CandidateUpdateBody(BaseModel):
     note: Optional[str] = Field(default=None, max_length=500)
     unit_cost: Optional[int] = Field(default=None, ge=0)
     source: Optional[str] = Field(default=None, max_length=200)
+    meta: Optional[dict] = Field(default=None)        # org-defined candidate fields
 
 
 def _search_catalog(db_path: str, q: str, limit: int = 50, kind: str = "device") -> list[dict]:
@@ -596,17 +599,21 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         dev = ws.catalog.get_device_type(cand.slug)
         price = ws.pricebook.lookup(date.today(), slug=cand.slug,
                                     part_number=dev.part_number if dev else None) if dev else None
+        category = (ws.categories.get(cand.slug, model=dev.model, manufacturer=dev.manufacturer)
+                    if dev else "other")
         return {
             "slug": cand.slug,
             "model": dev.model if dev else None,
             "manufacturer": dev.manufacturer if dev else None,
             "in_catalog": dev is not None,
-            "category": ws.categories.get(cand.slug, model=dev.model, manufacturer=dev.manufacturer)
-            if dev else "other",
+            "category": category,
             "note": cand.note,
             "added_at": cand.added_at,
             "unit_cost": price.unit_cost if price else None,
             "priced": price is not None,
+            "meta": getattr(cand, "meta", {}) or {},
+            "meta_missing": required_missing(ws.fields, getattr(cand, "meta", {}) or {},
+                                             applies_to="candidate", category=category),
         }
 
     def _pool_search(q: str, category: Optional[str], limit: int) -> list[dict]:
@@ -633,6 +640,11 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
     def candidates_list():
         return [_candidate_row(c) for c in load_pool(Path(root))]
 
+    @app.get("/api/candidate-fields")
+    def candidate_fields():
+        # org-defined fields scoped to candidates (meta/fields.yaml, applies_to: candidate)
+        return [f.model_dump() for f in ws.fields if f.applies_to == "candidate"]
+
     @app.post("/api/candidates")
     def candidates_add(body: CandidateAddBody):
         slug = _safe_slug(body.slug)
@@ -656,10 +668,12 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
                 paths.append(set_note(Path(root), slug, body.note))
             if body.unit_cost is not None:
                 paths.append(set_price(Path(root), slug, body.unit_cost, source=body.source))
+            if body.meta is not None:
+                paths.append(set_meta(Path(root), slug, body.meta))
         except KeyError as exc:
             raise HTTPException(404, f"not a candidate: {slug}") from exc
         if not paths:
-            raise HTTPException(400, "nothing to update (note or unit_cost required)")
+            raise HTTPException(400, "nothing to update (note, unit_cost, or meta required)")
         add_commit(paths, f"candidate update {slug}", cwd=Path(root))
         if body.unit_cost is not None:
             _refresh_prices()

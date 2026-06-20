@@ -33,6 +33,38 @@ def _client(gitws):
     return TestClient(create_app(root, db_path=db), raise_server_exceptions=False), root
 
 
+def test_candidate_structured_meta(library, tmp_path):
+    db = tmp_path / "idx" / "catalog.db"
+    reindex(db_path=db, paths=library)
+    root = tmp_path / "ws"
+    root.mkdir()
+    (root / "meta").mkdir()
+    (root / "meta/fields.yaml").write_text(
+        "fields:\n  - { key: lead_time, label: 리드타임, type: string, required: true,"
+        " applies_to: candidate, scope: all }\n")
+    _git("init", cwd=root)
+    _git("config", "user.email", "t@example.com", cwd=root)
+    _git("config", "user.name", "tester", cwd=root)
+    _git("add", "-A", cwd=root)
+    _git("commit", "-m", "init", cwd=root)
+    client = TestClient(create_app(root, db_path=db), raise_server_exceptions=False)
+    # candidate-scoped field is exposed for the UI to render
+    fields = client.get("/api/candidate-fields").json()
+    assert any(f["key"] == "lead_time" for f in fields)
+    # a new candidate has the required field missing
+    client.post("/api/candidates", json={"slug": "dell-poweredge-test1"})
+    row = client.get("/api/candidates").json()[0]
+    assert "lead_time" in row["meta_missing"]
+    # setting meta persists and clears the missing flag
+    up = client.put("/api/candidates/dell-poweredge-test1", json={"meta": {"lead_time": "8주"}})
+    assert up.status_code == 200, up.text
+    assert up.json()["candidate"]["meta"] == {"lead_time": "8주"}
+    assert up.json()["candidate"]["meta_missing"] == []
+    # clearing a field removes it from the pool
+    cleared = client.put("/api/candidates/dell-poweredge-test1", json={"meta": {"lead_time": ""}})
+    assert cleared.json()["candidate"]["meta"] == {}
+
+
 def test_add_lists_unpriced_then_price_makes_it_priced(gitws):
     client, root = _client(gitws)
     # add a real catalog device as a candidate — starts unpriced
