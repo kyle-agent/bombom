@@ -96,6 +96,33 @@ def test_traversal_id_rejected(gitws):
     assert _count(root) == before
 
 
+def test_delete_empty_node(gitws):
+    client, root = _client(gitws)
+    client.post("/api/hierarchy", json={"level": "region", "offering": "cloud-a",
+                                        "region": "kr-east"})
+    before = _count(root)
+    r = client.delete("/api/hierarchy?level=region&offering=cloud-a&region=kr-east")
+    assert r.status_code == 200, r.text
+    assert not (root / "offerings/cloud-a/regions/kr-east").exists()
+    assert _count(root) == before + 1
+
+
+def test_delete_non_empty_blocked_409(gitws):
+    client, root = _client(gitws)
+    # cloud-a with a region inside → deleting the offering must be refused
+    client.post("/api/hierarchy", json={"level": "region", "offering": "cloud-a",
+                                        "region": "kr-east"})
+    r = client.delete("/api/hierarchy?level=offering&offering=cloud-a")
+    assert r.status_code == 409
+    assert (root / "offerings/cloud-a").exists()
+
+
+def test_delete_missing_404(gitws):
+    client, root = _client(gitws)
+    r = client.delete("/api/hierarchy?level=offering&offering=ghost")
+    assert r.status_code == 404
+
+
 def test_manage_page_served(gitws):
     client, root = _client(gitws)
     r = client.get("/manage")

@@ -33,7 +33,7 @@ from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, valida
 from ..design.writer import write_rack
 from ..export import build_data, inject
 from ..gitops import add_commit
-from ..hierarchy import list_hierarchy
+from ..hierarchy import list_hierarchy, remove_node
 from ..render import rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
 from ..scaffold import (
@@ -307,6 +307,16 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             "releases": sorted({r["release"] for r in rows if r["release"]}),
         }
 
+    @app.get("/api/placed.csv")
+    def placed_csv_ep(path: str = "offerings", release: Optional[str] = None):
+        if release is not None and not _SAFE_ID.match(release):
+            raise HTTPException(400, "invalid release")
+        rows = placed_rows(ws, _resolve(root, path), release=release)
+        csv_text = investment_csv(rows, release=release or "")
+        fname = f"placed-{release}.csv" if release else "placed-all.csv"
+        return Response(csv_text, media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
     @app.get("/placed", response_class=HTMLResponse)
     def placed_page():
         page = _VIEWER.parent / "placed.html"
@@ -363,6 +373,35 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         return {"ok": True, "commit": sha,
                 "path": target.relative_to(base).as_posix(),
                 "hierarchy": list_hierarchy(base)}
+
+    @app.delete("/api/hierarchy")
+    def hierarchy_delete(level: Literal["offering", "region", "zone", "rack_type"],
+                         offering: str, region: Optional[str] = None,
+                         zone: Optional[str] = None, rack_type: Optional[str] = None):
+        base = Path(root)
+        try:
+            ids = {
+                "offering": _safe_id(offering, "offering"),
+                "region": _safe_id(region, "region") if region else None,
+                "zone": _safe_id(zone, "zone") if zone else None,
+                "rack_type": _safe_id(rack_type, "rack_type") if rack_type else None,
+            }
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        need = {"region": ("region",), "zone": ("region", "zone"),
+                "rack_type": ("region", "zone", "rack_type")}
+        for k in need.get(level, ()):
+            if not ids[k]:
+                raise HTTPException(400, f"{k} is required for level {level}")
+        try:
+            removed = remove_node(base, level, ids["offering"], ids["region"], ids["zone"],
+                                  ids["rack_type"])
+        except KeyError as exc:
+            raise HTTPException(404, f"not found: {exc}") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        add_commit([removed], f"remove {level} {removed.name}", cwd=base)
+        return {"ok": True, "hierarchy": list_hierarchy(base)}
 
     @app.get("/manage", response_class=HTMLResponse)
     def manage_page():

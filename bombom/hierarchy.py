@@ -8,11 +8,14 @@ the API) so there is one place that lays down a node.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
+from typing import Optional
 
 import yaml
 
 LEVELS = ("offering", "region", "zone", "rack_type")
+_CHILD_GROUP = {"offering": "regions", "region": "zones", "zone": "rack-types", "rack_type": "racks"}
 _MARKER = {
     "offering": "offering.yaml", "region": "region.yaml",
     "zone": "zone.yaml", "rack_type": "rack-type.yaml",
@@ -56,3 +59,39 @@ def list_hierarchy(root: Path) -> list[dict]:
             regions.append({"region": reg.name, "name": _name(reg, "region"), "zones": zones})
         out.append({"offering": off.name, "name": _name(off, "offering"), "regions": regions})
     return out
+
+
+def node_dir(root: Path, level: str, offering: str, region: Optional[str] = None,
+             zone: Optional[str] = None, rack_type: Optional[str] = None) -> Path:
+    base = Path(root) / "offerings" / offering
+    if level == "offering":
+        return base
+    base = base / "regions" / region
+    if level == "region":
+        return base
+    base = base / "zones" / zone
+    if level == "zone":
+        return base
+    return base / "rack-types" / rack_type
+
+
+def is_empty_node(nd: Path, level: str) -> bool:
+    """A node is removable only when it has no children — no sub-nodes, and (for rack-types)
+    no rack files. This keeps deletion to typo-fixes and never drops placed/confirmed data."""
+    group = nd / _CHILD_GROUP[level]
+    if not group.is_dir():
+        return True
+    if level == "rack_type":
+        return not any(group.glob("*.y*ml"))
+    return not any(p.is_dir() for p in group.iterdir())
+
+
+def remove_node(root: Path, level: str, offering: str, region: Optional[str] = None,
+                zone: Optional[str] = None, rack_type: Optional[str] = None) -> Path:
+    nd = node_dir(root, level, offering, region, zone, rack_type)
+    if not nd.is_dir():
+        raise KeyError(nd.name)
+    if not is_empty_node(nd, level):
+        raise ValueError(f"하위 항목이 있어 삭제할 수 없습니다: {nd.name}")
+    shutil.rmtree(nd)
+    return nd

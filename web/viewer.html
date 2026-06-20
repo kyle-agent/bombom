@@ -15,6 +15,9 @@
   body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
   header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px}
   header .logo{font-weight:700;color:#fff}
+  header .topnav{display:flex;gap:6px;margin-left:14px}
+  header .topnav a{color:#cbd5e1;text-decoration:none;font-size:13px;padding:3px 8px;border-radius:6px}
+  header .topnav a:hover{background:rgba(255,255,255,.14);color:#fff}
   header .crumb{color:#94a3b8}
   header .relchip{background:#1e293b;border:1px solid #334155;color:#fde68a;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600}
   header .flag{margin-left:auto;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff}
@@ -79,6 +82,7 @@
   <span class="crumb">— 뷰어 (읽기전용)</span>
   <span class="relchip" id="relchip">● 현재 릴리즈 —</span>
   <span class="crumb" id="crumb"></span>
+  <nav class="topnav"><a href="/edit">에디터</a><a href="/manage">기준정보</a><a href="/candidates">후보</a><a href="/placed">목록</a><a href="/dashboard">현황</a></nav>
   <span class="flag" id="dataflag">—</span>
 </header>
 

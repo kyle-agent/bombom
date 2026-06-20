@@ -136,6 +136,19 @@ def test_api_placed_release_filter(ws_root):
     assert body["total_capex"] == 1_000_000
 
 
+def test_placed_csv_all_and_per_release(ws_root):
+    client = _client(ws_root)
+    full = client.get("/api/placed.csv?path=offerings/cloud-a")
+    assert full.status_code == 200
+    assert "attachment" in full.headers["content-disposition"]
+    assert "placed-all.csv" in full.headers["content-disposition"]
+    assert "합계" in full.text
+    one = client.get("/api/placed.csv?path=offerings/cloud-a&release=R26.08")
+    assert "placed-R26.08.csv" in one.headers["content-disposition"]
+    bad = client.get('/api/placed.csv?release=x"%0d%0aevil')
+    assert bad.status_code == 400          # release header-injection guard
+
+
 def test_placed_page_served(ws_root):
     client = _client(ws_root)
     r = client.get("/placed")
