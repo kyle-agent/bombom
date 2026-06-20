@@ -14,12 +14,14 @@ drift (use the report/dashboard for absolute, as-of valuation).
 from __future__ import annotations
 
 import subprocess
+import tempfile
 from datetime import date
 from pathlib import Path
 from typing import Optional
 
 import yaml
 
+from ..bom import PriceBook
 from ..design import RackDesign, load_racks, parse_hierarchy
 
 WORKING = "WORKING"     # pseudo-ref: the current working tree (uncommitted draft)
@@ -75,16 +77,37 @@ def _loc(u: dict) -> dict:
     return {k: u[k] for k in ("region", "zone", "rack_type", "rack", "position")}
 
 
+def _pricebook_at_ref(ws, root: Path, ref: str) -> "PriceBook":
+    """The pricebook as it stood at a ref. WORKING uses the live pricebook; a tag reads its
+    pricing/*.yaml out of git into a temp dir and loads it. Empty pricebook if pricing is absent."""
+    if ref == WORKING:
+        return ws.pricebook
+    res = _git("ls-tree", "-r", "--name-only", ref, "--", "pricing", cwd=root)
+    if res.returncode != 0:
+        return PriceBook()
+    files = [ln.strip() for ln in res.stdout.splitlines() if ln.strip().endswith((".yaml", ".yml"))]
+    with tempfile.TemporaryDirectory() as td:
+        pdir = Path(td) / "pricing"
+        pdir.mkdir()
+        for f in files:
+            blob = _git("show", f"{ref}:{f}", cwd=root)
+            if blob.returncode == 0:
+                (pdir / Path(f).name).write_text(blob.stdout)
+        return PriceBook.load(pdir)
+
+
 def compare_releases(ws, root: Path, base: str, head: str, *, subpath: str = "offerings",
-                     valuation_date: Optional[date] = None) -> dict:
+                     valuation_date: Optional[date] = None, priced_at_ref: bool = False) -> dict:
+    """Slot-level diff of two refs. By default both sides are priced with the CURRENT pricebook
+    (isolates the design change). With ``priced_at_ref`` each side is valued at its own ref's
+    pricing, so the CAPEX delta also reflects price drift."""
     as_of = valuation_date or date.today()
+    base_book = _pricebook_at_ref(ws, root, base) if priced_at_ref else ws.pricebook
+    head_book = _pricebook_at_ref(ws, root, head) if priced_at_ref else ws.pricebook
 
-    def price(slug: str) -> Optional[int]:
-        e = ws.pricebook.lookup(as_of, slug=slug)
-        return e.unit_cost if e else None
-
-    def line_capex(u: dict) -> int:
-        return (price(u["device"]) or 0) * u["qty"]
+    def capex(book, u: dict) -> int:
+        e = book.lookup(as_of, slug=u["device"])
+        return (e.unit_cost if e else 0) * u["qty"]
 
     base_map = _load_ref(root, base, subpath)
     head_map = _load_ref(root, head, subpath)
@@ -94,27 +117,28 @@ def compare_releases(ws, root: Path, base: str, head: str, *, subpath: str = "of
         b = base_map.get(key)
         if b is None:
             added.append({**_loc(h), "device": h["device"], "qty": h["qty"],
-                          "release": h["release"], "capex": line_capex(h)})
+                          "release": h["release"], "capex": capex(head_book, h)})
         elif b["device"] != h["device"] or b["qty"] != h["qty"]:
             changed.append({**_loc(h),
                             "from_device": b["device"], "from_qty": b["qty"],
                             "to_device": h["device"], "to_qty": h["qty"],
-                            "from_capex": line_capex(b), "to_capex": line_capex(h),
-                            "delta": line_capex(h) - line_capex(b)})
+                            "from_capex": capex(base_book, b), "to_capex": capex(head_book, h),
+                            "delta": capex(head_book, h) - capex(base_book, b)})
     for key, b in base_map.items():
         if key not in head_map:
             removed.append({**_loc(b), "device": b["device"], "qty": b["qty"],
-                            "release": b["release"], "capex": line_capex(b)})
+                            "release": b["release"], "capex": capex(base_book, b)})
 
     def _sortkey(r):
         return (r.get("region", ""), r.get("zone", ""), r.get("rack", ""), r.get("position", 0))
     for rows in (added, removed, changed):
         rows.sort(key=_sortkey)
 
-    base_capex = sum(line_capex(u) for u in base_map.values())
-    head_capex = sum(line_capex(u) for u in head_map.values())
+    base_capex = sum(capex(base_book, u) for u in base_map.values())
+    head_capex = sum(capex(head_book, u) for u in head_map.values())
     return {
         "base": base, "head": head, "subpath": subpath, "valuation_date": as_of.isoformat(),
+        "priced_at_ref": priced_at_ref,
         "added": added, "removed": removed, "changed": changed,
         "base_capex": base_capex, "head_capex": head_capex, "capex_delta": head_capex - base_capex,
         "counts": {"added": len(added), "removed": len(removed), "changed": len(changed)},

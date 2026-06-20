@@ -39,7 +39,13 @@ scope **for now**"라고 명시해 둔 다음 단계였다.
 - 테스트: 추가+제거+교체 한 diff, WORKING 비교(빈 결과로 키 정합 검증), 동일 ref 빈 결과, unsafe
   ref 400, 페이지 served. 109 pass, ruff clean.
 
+## Update (2026-06-20) — 시점별 평가 옵션 추가
+`compare_releases(..., priced_at_ref=True)` + API `?priced_at_ref=1` + /diff "각 시점 가격"
+체크박스를 추가했다. 켜면 각 ref의 `pricing/*.yaml`을 git에서 읽어(`_pricebook_at_ref`, 태그는
+temp 디렉터리로 풀어 `PriceBook.load`, WORKING은 라이브 pricebook) **양쪽을 각자 시점 가격으로**
+평가 → CAPEX 델타가 설계 변화 + 가격 변동을 모두 반영한다. 기본값(꺼짐)은 여전히 현재 가격표로
+양쪽 평가(설계 변화만 격리). 가격 읽기도 동일한 ref-검증 subprocess 경로라 안전성 동일.
+
 ## Override conditions
-시점별 평가(각 ref의 pricing 반영)나 태그 간 BOM 전체(custom line item 포함) diff가 필요해지면
-`compare_releases`에 valuation 시점을 ref별로 분리하고 custom_line_items까지 단위에 포함한다.
-팬아웃이 문제되면 `git cat-file --batch` 일괄 읽기로 교체한다.
+태그 간 BOM 전체(custom line item 포함) diff가 필요해지면 단위에 custom_line_items까지 포함한다.
+팬아웃이 문제되면 rack·pricing 읽기를 `git cat-file --batch` 일괄 읽기로 교체한다.

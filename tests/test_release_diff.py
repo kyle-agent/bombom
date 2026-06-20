@@ -109,6 +109,25 @@ def test_diff_same_ref_is_empty(gitws):
     assert d["capex_delta"] == 0
 
 
+def test_diff_priced_at_ref_reflects_price_drift(gitws):
+    client, root = _client(gitws)
+    # New sealed state REL3: same racks as REL2 but dell repriced 1,000,000 → 3,000,000.
+    (root / "pricing/test.yaml").write_text(
+        "entries:\n  - { slug: dell-poweredge-test1, unit_cost: 3000000 }\n"
+        "  - { slug: arista-test-sw, unit_cost: 2000000 }\n")
+    _git("add", "-A", cwd=root)
+    _git("commit", "-m", "reprice", cwd=root)
+    _git("tag", "REL3", cwd=root)
+    d = client.get("/api/release/diff?base=REL1&head=REL3&path=offerings&priced_at_ref=1").json()
+    assert d["priced_at_ref"] is True
+    # base REL1 @ REL1 prices: dell(1M)+arista(2M)=3M; head REL3 @ REL3 prices: arista(2M)+dell(3M)=5M
+    assert d["base_capex"] == 3_000_000 and d["head_capex"] == 5_000_000
+    assert d["capex_delta"] == 2_000_000
+    decomposed = (sum(r["capex"] for r in d["added"]) - sum(r["capex"] for r in d["removed"])
+                  + sum(r["delta"] for r in d["changed"]))
+    assert d["capex_delta"] == decomposed
+
+
 def test_diff_page_served(gitws):
     client, _ = _client(gitws)
     r = client.get("/diff")

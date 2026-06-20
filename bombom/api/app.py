@@ -412,7 +412,7 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         return {"confirmation": conf.model_dump(), "gate": gate_to_dict(gate)}
 
     @app.get("/api/release/diff")
-    def release_diff_ep(base: str, head: str, path: str = "offerings"):
+    def release_diff_ep(base: str, head: str, path: str = "offerings", priced_at_ref: int = 0):
         # base/head are git refs (confirmation ids / release tags) or the literal WORKING.
         for ref in (base, head):
             if ref != WORKING and (not _SAFE_ID.match(ref) or ".." in ref):
@@ -420,7 +420,8 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         target = _resolve(root, path)
         subpath = target.resolve().relative_to(Path(root).resolve()).as_posix()
         try:
-            return compare_releases(ws, Path(root), base, head, subpath=subpath)
+            return compare_releases(ws, Path(root), base, head, subpath=subpath,
+                                    priced_at_ref=bool(priced_at_ref))
         except ValueError as exc:
             raise HTTPException(404, str(exc)) from exc
 

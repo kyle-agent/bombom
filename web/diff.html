@@ -61,13 +61,16 @@
     <div class="ctl"><label for="baseSel">기준 (base)</label><select id="baseSel"></select></div>
     <span class="arrow">→</span>
     <div class="ctl"><label for="headSel">대상 (head)</label><select id="headSel"></select></div>
-    <div class="ctl"><label for="pathIn">경로</label><input id="pathIn" value="offerings" size="28"></div>
+    <div class="ctl"><label for="pathIn">경로</label><input id="pathIn" value="offerings" size="24"></div>
+    <label class="ctl" style="flex-direction:row;align-items:center;gap:6px;padding-bottom:8px">
+      <input type="checkbox" id="pricedAtRef"><span style="font-size:12px">각 시점 가격</span></label>
     <div class="ctl"><label>&nbsp;</label><button id="runBtn" type="button"
          style="border:1px solid #1e293b;background:#1e293b;color:#fff;border-radius:7px;
          padding:8px 16px;cursor:pointer">비교</button></div>
   </div>
   <div class="hint" id="hint">확정(릴리즈) 두 개 또는 작업본(WORKING)을 골라 비교합니다.
-    슬롯(랙·U) 기준으로 추가 / 제거 / 교체를 보여줍니다. 가격은 현재 가격표 기준(설계 변화만 격리).</div>
+    슬롯(랙·U) 기준으로 추가 / 제거 / 교체를 보여줍니다. 가격은 기본=현재 가격표(설계 변화만 격리),
+    <b>각 시점 가격</b> 체크 시 각 릴리즈 당시 가격으로 평가(가격 변동까지 반영).</div>
   <div id="out"></div>
 </main>
 
@@ -141,7 +144,7 @@ function render(d){
     <div class="kpi add"><div class="k">추가</div><div class="v">${num(c.added)}</div></div>
     <div class="kpi rem"><div class="k">제거</div><div class="v">${num(c.removed)}</div></div>
     <div class="kpi chg"><div class="k">교체</div><div class="v">${num(c.changed)}</div></div>
-    <div class="kpi delta"><div class="k">CAPEX 델타 (${esc(d.base)} → ${esc(d.head)})</div>
+    <div class="kpi delta"><div class="k">CAPEX 델타 (${esc(d.base)} → ${esc(d.head)})${d.priced_at_ref?' · 각 시점가':''}</div>
       <div class="v">${signed(d.capex_delta)}</div></div>
   </div>`;
   html += `<section><h2><span class="dot add"></span>추가된 장비 (${num(c.added)})</h2>
@@ -157,11 +160,13 @@ async function run(){
   const base = document.getElementById('baseSel').value;
   const head = document.getElementById('headSel').value;
   const path = document.getElementById('pathIn').value.trim() || 'offerings';
+  const pricedAtRef = document.getElementById('pricedAtRef').checked ? 1 : 0;
   if(!base || !head){ return; }
   document.getElementById('out').innerHTML = '<div class="empty">비교 중…</div>';
   try{
     const d = await getJSON('/api/release/diff?base=' + encodeURIComponent(base) +
-      '&head=' + encodeURIComponent(head) + '&path=' + encodeURIComponent(path));
+      '&head=' + encodeURIComponent(head) + '&path=' + encodeURIComponent(path) +
+      '&priced_at_ref=' + pricedAtRef);
     render(d);
   }catch(e){
     document.getElementById('out').innerHTML = '<div class="empty">비교 실패: ' + esc(e.message) + '</div>';
@@ -169,6 +174,7 @@ async function run(){
 }
 
 document.getElementById('runBtn').addEventListener('click', run);
+document.getElementById('pricedAtRef').addEventListener('change', run);
 (async () => { await loadRefs(); run(); })();
 </script>
 </body>
