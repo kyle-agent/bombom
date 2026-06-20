@@ -31,7 +31,7 @@ from ..confirm import request as confirm_request
 from ..dashboard import build_dashboard
 from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, validate_rack
 from ..design.writer import write_rack
-from ..export import build_data, inject
+from ..export import build_data, build_report_data, inject
 from ..gitops import add_commit
 from ..hierarchy import list_hierarchy, node_dir, remove_node
 from ..render import rack_elevation_svg
@@ -48,6 +48,7 @@ from ..scaffold import (
 from ..workspace import Workspace
 
 _VIEWER = Path(__file__).resolve().parents[2] / "web" / "viewer.html"
+_REPORT = _VIEWER.parent / "report.html"
 
 # Org-node identifiers become directory/file names — keep them filesystem-safe and traversal-proof.
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -406,6 +407,18 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         fname = f"placed-{release}.csv" if release else "placed-all.csv"
         return Response(csv_text, media_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+    @app.get("/api/report.html", response_class=HTMLResponse)
+    def report_html(path: str = "offerings", release: Optional[str] = None, download: int = 0):
+        if release is not None and not _SAFE_ID.match(release):   # keeps release safe in filename
+            raise HTTPException(400, "invalid release")
+        payload = build_report_data(ws, _resolve(root, path), release=release)
+        html = inject(_REPORT.read_text(), payload)
+        headers = {}
+        if download:
+            fname = f"bombom-report-{release or 'all'}.html"
+            headers["Content-Disposition"] = f'attachment; filename="{fname}"'
+        return HTMLResponse(html, headers=headers)
 
     @app.get("/placed", response_class=HTMLResponse)
     def placed_page():

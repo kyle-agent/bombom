@@ -13,9 +13,11 @@ from pathlib import Path
 from typing import Optional
 
 from .bom import compute_bom
+from .dashboard import build_dashboard
 from .design import load_racks, validate_rack
 from .overlay import required_missing
 from .render import rack_elevation_svg
+from .report import placed_rows
 from .workspace import Workspace
 
 _MARKER = re.compile(r"/\*__BOMBOM_DATA__\*/.*?/\*__END__\*/", re.S)
@@ -28,6 +30,28 @@ def safe_data_blob(payload: dict) -> str:
     raw = (raw.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
               .replace(" ", "\\u2028").replace(" ", "\\u2029"))
     return "/*__BOMBOM_DATA__*/ " + raw + " /*__END__*/"
+
+
+def build_report_data(
+    ws: Workspace,
+    root_path: Path,
+    *,
+    release: Optional[str] = None,
+    valuation_date: Optional[date] = None,
+) -> dict:
+    """Payload for the standalone CAPEX report (server-less HTML). Reuses the same dashboard
+    rollup and placed-device rows the live screens show, so the offline file reconciles with
+    them. `headline_capex` is cumulative (all releases); `placed` honours the release filter."""
+    root_path = Path(root_path)
+    dash = build_dashboard(ws, root_path, valuation_date=valuation_date)
+    placed = placed_rows(ws, root_path, release=release, valuation_date=valuation_date)
+    return {
+        "generated_at": date.today().isoformat(),
+        "path": str(root_path),
+        "release": release or "",
+        "dashboard": dash,
+        "placed": placed,
+    }
 
 
 def inject(template_text: str, payload: dict) -> str:

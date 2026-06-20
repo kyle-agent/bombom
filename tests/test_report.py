@@ -136,6 +136,27 @@ def test_api_placed_release_filter(ws_root):
     assert body["total_capex"] == 1_000_000
 
 
+def test_report_html_standalone(ws_root):
+    client = _client(ws_root)
+    r = client.get("/api/report.html?path=offerings/cloud-a")
+    assert r.status_code == 200, r.text
+    assert "text/html" in r.headers["content-type"]
+    body = r.text
+    assert "/*__BOMBOM_DATA__*/" in body and "/*__END__*/" in body   # data baked in
+    assert "투자 보고서" in body
+    assert "headline_capex" in body and "2000000" in body            # real numbers embedded
+    assert "content-disposition" not in r.headers                    # inline by default
+
+
+def test_report_html_download_and_release_guard(ws_root):
+    client = _client(ws_root)
+    dl = client.get("/api/report.html?path=offerings/cloud-a&release=R26.07&download=1")
+    assert "attachment" in dl.headers["content-disposition"]
+    assert "bombom-report-R26.07.html" in dl.headers["content-disposition"]
+    bad = client.get('/api/report.html?release=x"%0d%0aevil')
+    assert bad.status_code == 400                                    # header-injection guard
+
+
 def test_placed_csv_all_and_per_release(ws_root):
     client = _client(ws_root)
     full = client.get("/api/placed.csv?path=offerings/cloud-a")

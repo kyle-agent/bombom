@@ -108,7 +108,8 @@
         <h4>투자대상 리스트 (CSV)</h4>
         <select id="csvSel"></select>
         <button id="csvBtn" type="button">CSV 다운로드</button>
-        <div class="note">선택한 릴리즈의 투자대상 항목을 CSV로 내려받습니다.</div>
+        <button id="reportBtn" type="button">📄 보고서</button>
+        <div class="note">CSV는 선택 릴리즈 기준. 보고서는 standalone HTML(서버 없이 열림).</div>
       </div>
     </div>
   </div>
@@ -284,6 +285,12 @@ function wireCsv(path){
     const url = '/api/report/invest.csv?release=' + encodeURIComponent(rel) +
                 '&path=' + encodeURIComponent(path);
     window.location = url;
+  });
+  document.getElementById('reportBtn').addEventListener('click', function(){
+    const rel = document.getElementById('csvSel').value;   // optional; '' === 전체
+    let url = '/api/report.html?path=' + encodeURIComponent(path);
+    if(rel) url += '&release=' + encodeURIComponent(rel);
+    window.open(url, '_blank');   // standalone CAPEX report
   });
 }
 

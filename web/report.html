@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 투자 보고서 (BOM/CAPEX)</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#1e293b;--bg:#f8fafc}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+       "Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg)}
+  .sheet{max-width:1080px;margin:0 auto;padding:32px 36px 64px;background:#fff}
+  h1{font-size:22px;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .sub b{color:var(--ink)}
+  .toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);
+           padding:10px 36px;display:flex;gap:10px;align-items:center;justify-content:flex-end}
+  .toolbar .grow{margin-right:auto;font-weight:700;color:var(--accent)}
+  button{border:1px solid var(--line);background:#1e293b;color:#fff;border-radius:8px;
+         padding:7px 14px;font-size:13px;cursor:pointer}
+  button.ghost{background:#fff;color:var(--ink)}
+  button:hover{filter:brightness(1.08)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0 26px}
+  .kpi{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--bg)}
+  .kpi .k{color:var(--muted);font-size:12px}
+  .kpi .v{font-size:22px;font-weight:800;margin-top:4px;letter-spacing:-.5px}
+  .kpi.hero{grid-column:span 2;background:#0f172a;color:#fff;border-color:#0f172a}
+  .kpi.hero .k{color:#cbd5e1}
+  .kpi.hero .v{font-size:30px}
+  .kpi.warn .v{color:#b45309}
+  section{margin:26px 0}
+  h2{font-size:15px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr.tot td{font-weight:800;border-top:2px solid var(--accent);border-bottom:none}
+  .pill{display:inline-block;padding:1px 7px;border-radius:999px;background:#eef2ff;
+        color:#3730a3;font-size:11px}
+  .unp{color:#b45309}
+  .empty{color:var(--muted);padding:16px 0}
+  .scroll{overflow-x:auto}
+  @media print{
+    body{background:#fff}
+    .toolbar{display:none}
+    .sheet{max-width:none;padding:0 6mm}
+    .kpi.hero{background:#0f172a !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    th,td{white-space:normal}
+    section{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="grow">bombom — 투자 보고서</span>
+  <button class="ghost" onclick="window.print()">🖨 인쇄 / PDF</button>
+</div>
+<div class="sheet" id="sheet"></div>
+
+<script>
+"use strict";
+const DATA = /*__BOMBOM_DATA__*/ null /*__END__*/;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function won(n){ return '₩' + Math.round(n||0).toLocaleString('ko-KR'); }
+function wonShort(n){
+  n = n||0;
+  if(n >= 1e8) return '₩' + (n/1e8).toLocaleString('ko-KR',{maximumFractionDigits:1}) + '억';
+  if(n >= 1e4) return '₩' + Math.round(n/1e4).toLocaleString('ko-KR') + '만';
+  return won(n);
+}
+function num(n){ return (n||0).toLocaleString('ko-KR'); }
+
+function rollupTable(title, rows){
+  if(!rows || !rows.length) return `<div><h2>${esc(title)}</h2><div class="empty">데이터 없음</div></div>`;
+  const total = rows.reduce((a,r)=>a+(r.capex||0),0);
+  const body = rows.map(r=>`<tr><td>${esc(r.label||'—')}</td><td class="num">${won(r.capex)}</td></tr>`).join('');
+  return `<div><h2>${esc(title)}</h2><table><thead><tr><th>구분</th><th class="num">CAPEX</th></tr></thead>
+    <tbody>${body}<tr class="tot"><td>합계</td><td class="num">${won(total)}</td></tr></tbody></table></div>`;
+}
+
+function render(){
+  const sheet = document.getElementById('sheet');
+  if(!DATA){ sheet.innerHTML = '<div class="empty">보고서 데이터가 없습니다.</div>'; return; }
+  const d = DATA.dashboard || {};
+  const c = d.counts || {};
+  const rel = DATA.release ? `릴리즈 <b>${esc(DATA.release)}</b>` : '전체 릴리즈';
+  let html = '';
+  html += `<h1>투자 보고서 — BOM / CAPEX</h1>`;
+  html += `<div class="sub">${rel} · 평가일 <b>${esc(d.valuation_date||DATA.generated_at)}</b>
+           · 생성 ${esc(DATA.generated_at)} · 경로 <b>${esc(DATA.path||'')}</b></div>`;
+
+  // KPIs
+  const unpriced = c.unpriced||0;
+  html += `<div class="kpis">
+    <div class="kpi hero"><div class="k">누적 총 CAPEX</div><div class="v">${won(d.headline_capex)}</div>
+      <div class="k">${wonShort(d.headline_capex)} · 전력 ${num(d.power_w)} W</div></div>
+    <div class="kpi"><div class="k">랙 / 장비</div><div class="v">${num(c.racks)} / ${num(c.devices)}</div></div>
+    <div class="kpi ${unpriced?'warn':''}"><div class="k">미가격 / 메타누락</div>
+      <div class="v">${num(unpriced)} / ${num(c.meta_missing)}</div></div>
+  </div>`;
+
+  // rollups
+  const lv = d.by_level || {};
+  html += `<section class="grid2">
+    ${rollupTable('리전별 CAPEX', lv.region)}
+    ${rollupTable('존별 CAPEX', lv.zone)}
+    ${rollupTable('Rack-Type별 CAPEX', lv.rack_type)}
+    ${rollupTable('카테고리별 CAPEX', d.by_category)}
+  </section>`;
+
+  // release summary
+  const rs = d.release_summary || [];
+  if(rs.length){
+    const body = rs.map(r=>`<tr><td><span class="pill">${esc(r.release||'—')}</span></td>
+      <td class="num">${num(r.qty)}</td><td class="num">${won(r.increment_capex)}</td>
+      <td class="num">${won(r.cumulative_capex)}</td></tr>`).join('');
+    html += `<section><h2>릴리즈 추이</h2><table>
+      <thead><tr><th>릴리즈</th><th class="num">장비</th><th class="num">증분 CAPEX</th>
+      <th class="num">누적 CAPEX</th></tr></thead><tbody>${body}</tbody></table></section>`;
+  }
+
+  // top devices
+  const td = d.top_devices || [];
+  if(td.length){
+    const body = td.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${num(x.qty)}</td>
+      <td class="num">${won(x.capex)}</td></tr>`).join('');
+    html += `<section><h2>상위 지출 장비 (Top ${td.length})</h2><table>
+      <thead><tr><th>장비</th><th class="num">수량</th><th class="num">CAPEX</th></tr></thead>
+      <tbody>${body}</tbody></table></section>`;
+  }
+
+  // placed device table
+  const rows = DATA.placed || [];
+  html += `<section><h2>배치 장비 목록 ${DATA.release?`· ${esc(DATA.release)}`:''} (${rows.length})</h2>`;
+  if(!rows.length){
+    html += '<div class="empty">배치된 장비가 없습니다.</div>';
+  } else {
+    let total = 0;
+    const body = rows.map(r=>{
+      total += (r.subtotal||0);
+      const uc = r.priced ? won(r.unit_cost) : '<span class="unp">미가격</span>';
+      const st = r.priced ? won(r.subtotal) : '<span class="unp">—</span>';
+      return `<tr>
+        <td>${esc(r.region)}</td><td>${esc(r.zone)}</td><td>${esc(r.rack_type)}</td>
+        <td>${esc(r.rack)}</td><td>${esc(r.name)}</td><td>${esc(r.category)}</td>
+        <td><span class="pill">${esc(r.release||'—')}</span></td>
+        <td class="num">${num(r.qty)}</td><td class="num">${uc}</td><td class="num">${st}</td>
+      </tr>`;
+    }).join('');
+    html += `<div class="scroll"><table>
+      <thead><tr><th>리전</th><th>존</th><th>Rack-Type</th><th>랙</th><th>장비</th><th>카테고리</th>
+      <th>릴리즈</th><th class="num">수량</th><th class="num">단가</th><th class="num">소계</th></tr></thead>
+      <tbody>${body}<tr class="tot"><td colspan="9">합계</td><td class="num">${won(total)}</td></tr>
+      </tbody></table></div>`;
+  }
+  html += `</section>`;
+
+  sheet.innerHTML = html;
+  document.title = `bombom 보고서 — ${DATA.release||'전체'} (${DATA.generated_at})`;
+}
+render();
+</script>
+</body>
+</html>

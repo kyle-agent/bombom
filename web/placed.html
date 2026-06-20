@@ -89,6 +89,7 @@
       </div>
       <div class="ctl">
         <button id="csvBtn" type="button">CSV 다운로드</button>
+        <button id="reportBtn" type="button">📄 보고서</button>
         <div class="note" id="csvNote"></div>
       </div>
       <span class="pathnote" id="pathnote">경로 —</span>
@@ -177,6 +178,11 @@ function wireCsv(){
     let url = '/api/placed.csv?path=' + encodeURIComponent(PATH);
     if(selectedRelease) url += '&release=' + encodeURIComponent(selectedRelease);
     window.location = url;   // works for 전체(all) and per-release
+  });
+  document.getElementById('reportBtn').addEventListener('click', function(){
+    let url = '/api/report.html?path=' + encodeURIComponent(PATH);
+    if(selectedRelease) url += '&release=' + encodeURIComponent(selectedRelease);
+    window.open(url, '_blank');   // standalone CAPEX report (server-less HTML)
   });
 }
 
