@@ -1,49 +1,60 @@
-# 브리프: 용어 정리 (Rack-Type=용도 / Rack Model=물리) + 랙 모델 picker
+# Brief: 확정 워크플로우 (Confirm — gate → 화면 리뷰 → tag 봉인, 로컬 git · git 비노출)
 
-**목표**
-계층 용어를 **Offering → Region → Zone → Rack-Type(용도) → Rack**로 정리하고, 카탈로그 물리 랙을
-**Rack Model**로 분리 명명한다. 화면/CLI에서 **Rack Model을 고르는 picker**를 추가한다.
+> Locked 2026-06-20. Roadmap P1. Decisions recorded in
+> `docs/decisions/2026-06-20-confirm-workflow.md`.
 
-## 용어 매핑
-- 계층 레벨 (Zone 아래 그룹) : `rack-groups/` → **`rack-types/<control|data|storage|network>/`**.
-  용도(purpose)는 **디렉터리 레벨**에서 옴 (rack YAML의 `role` 필드 제거).
-- 카탈로그 물리 랙 참조 : rack YAML `rack_type:` → **`rack_model:`** (CatalogRef, 예 vertiv-vr3300).
-- **카탈로그 패키지는 불변**: `RackTypeSpec`, `get_rack_type`, kind="rack", `vendor/`는 그대로
-  (NetBox 물리 랙 정의 자체).
+## Goal
+설계자가 작업한 변경(릴리즈 추가분 또는 신규 빌드)을 **화면만으로** 확정 게이트(필수 메타
+0누락·U충돌 0·가격누락 경고) 통과 후 in-review로 올리고, 승인자가 **화면에서** 변경셋을 리뷰하고
+"확정"을 누르면 백엔드가 `confirmations/<id>.yaml` 매니페스트 갱신 + annotated git 태그로
+봉인한다. 사용자는 git 명령·태그·PR을 전혀 다루지 않는다. release와 build(clone 신규 오퍼링)는
+`kind`로 구분하되 같은 게이트·상태머신·태그 기계를 공유한다.
 
 ## Scope IN
-- design 레이어 리네임: `RackDesign.rack_type`→`rack_model`, `role` 제거; loader 마커
-  `rack-groups`→`rack-types`(키 `rack_group`→`rack_type`); validate/writer/svg 반영.
-- 용도(purpose)는 `hierarchy["rack_type"]`(디렉터리)에서 → engine/export의 meta scope(role:)와
-  카테고리 집계에 사용.
-- scaffold: `scaffold rack-type` (구 rack-group), `scaffold rack … --rack-model <slug>`.
-- **Rack Model picker**: `/api/catalog/search?kind=rack` 추가(카탈로그 rack 65종 검색);
-  에디터에 "Rack Model 고르기" UI; 선택 시 `rack_model` 설정·U높이 갱신.
-- export/뷰어/에디터 트리 키 `rack_groups`→`rack_types`, 라벨 "Rack Group"→"Rack-Type",
-  헤더 rack_type→rack_model.
-- 샘플 데이터 이동: `…/rack-groups/row-3/racks/R02.yaml` → `…/rack-types/data/racks/R02.yaml`
-  (`rack_model:` 사용, `role` 제거).
-- 문서/메모리/ADR 용어 갱신(+ 새 ADR: 용어 확정).
+- `confirmations/<id>.yaml` 매니페스트 모델 + 읽기/쓰기 (`bombom/confirm/`):
+  `{id, kind: release|build, scope, status: draft|in-review|confirmed, requester, approver,
+  created_at, confirmed_at, tag}`.
+  - `kind=release` → `scope.release: R26.07`; 영향 랙 = 그 릴리즈 placement를 가진 모든 랙.
+  - `kind=build` → `scope.paths: [offerings/cloud-b]`; 영향 랙 = 그 경로 하위 모든 랙.
+- 확정 게이트(영향 랙만, 기존 `validate_rack` 재사용): 필수 메타 누락=error, U충돌=error,
+  가격 누락=warning(비차단).
+- API: `POST /api/confirm/request`, `POST /api/confirm/approve`, `GET /api/confirm`,
+  `GET /api/confirm/{id}`(상세=status·scope·게이트 errors/warnings·변경셋(영향 랙 + 추가 장비 +
+  scope CAPEX)).
+- 에디터 UI 전 과정(핵심): 설계자 "확정 요청"(게이트 결과 화면, 누락 클릭→해당 랙 이동),
+  승인자 "확정 대기" 목록+변경셋 리뷰+"확정" 버튼, 상태 뱃지, 확정 태그명 화면 표시.
+- CLI 패리티: `bombom confirm request|approve|list|show`.
+- 테스트(throwaway git repo) + UI 흐름 점검.
 
 ## Scope OUT
-- 카탈로그 패키지/`vendor/` 변경(불변).
-- 브라우저 직접 커밋(Decap)·Pages 편집(이전 결정 유지).
-- 다중 offering 트리(뷰어는 단일 offering 유지).
+- GitHub PR 생성·머지·머지 감지 — P5(로컬 태그가 봉인 수단).
+- 서버측 인증/권한 분리(설계자≠승인자 강제) — P5(P1은 기록만).
+- 멀티 브랜치 머지(`confirmed` 브랜치 등) — P1은 태그만.
+- 장비 제거/교체/decommission — append-only(보류).
+- 외부 템플릿 Excel 리포트 — P2/P4.
+- git diff/patch 형태 리뷰 — 변경셋은 사람이 읽는 요약(랙·장비·금액)으로.
 
 ## Constraints
-- `bombom/catalog/**`, `vendor/**` 읽기전용. git=원본. 테스트 전부 green 유지.
-- 리네임 일관성: `rack_type`(카탈로그/물리) 잔재가 설계 레이어에 남지 않게.
+- 사용자는 git을 다루지 않는다 — commit·tag·매니페스트는 전부 백엔드, UI에 git 용어 비노출.
+- `vendor/devicetype-library/` 수정 금지(read-only). `confirmations/`는 신규 최상위 디렉터리.
+- 재사용: `validate_rack`·`load_racks`·`tag_release`·`add_commit` 재구현 금지.
+- 기존 `PUT /api/rack`, `/api/bom`, `export`, 랙 추가 흐름 동작 변경 없음.
+- 확정 로직은 인터페이스 뒤에 두어 향후 GitHub PR(P5) 주입 가능.
 
 ## Exit Criteria
-- [ ] 디렉터리가 `…/zones/<z>/rack-types/<type>/racks/<rack>.yaml`; rack YAML은 `rack_model:` 사용,
-  `role` 없음. `bombom bom offerings/cloud-a` = ₩84,220,000 그대로.
-- [ ] `bombom scaffold rack-type …`, `scaffold rack … --rack-model <slug>` 동작.
-- [ ] `/api/catalog/search?kind=rack&q=vertiv` 가 카탈로그 랙(예 vertiv-vr3300) 반환.
-- [ ] 에디터에서 Rack Model을 검색·선택하면 `rack_model`이 바뀌고 저장 시 YAML/커밋 반영.
-- [ ] 뷰어/에디터 트리가 Rack-Type(용도)별로 랙을 묶어 표시.
-- [ ] `pytest` 전부 통과(리네임 반영), ruff/secrets clean.
+- [ ] 깨끗한 릴리즈로 "확정 요청" → git 명령 없이 status=in-review, `confirmations/R26.07.yaml`
+  생성 + 커밋 1개 증가.
+- [ ] 필수 메타 누락 랙 포함 시 "확정 요청" → 화면에 누락 항목 표시(클릭→장비 이동);
+  매니페스트 미생성·커밋 0.
+- [ ] in-review 확정에 "확정" → status=confirmed·approver·confirmed_at, `git tag`에 annotated
+  태그 존재, 커밋 1개 증가.
+- [ ] `kind=build`로 clone된 경로(`offerings/cloud-b`)에 대해 request→approve 성공, tag 채워짐.
+- [ ] in-review 아닌 id를 approve → 4xx, 태그 미생성.
+- [ ] `GET /api/confirm/{id}`가 영향 랙 + scope CAPEX + 가격누락 warnings 반환.
 
 ## Risk Flags
-- 광범위 리네임 → 카탈로그(물리 rack) 개념과 혼동 금지: 설계=rack_model, 카탈로그=RackTypeSpec.
-- 용도를 디렉터리에서만 → meta scope(role:)·카테고리 집계가 hierarchy 값을 쓰도록 빠짐없이 교체.
-- 프론트(viewer/editor) 트리 키 변경 누락 시 화면 깨짐 → 키 일괄 교체 + export 검증.
+- 비-git 사용자를 위해 게이트 실패가 수정 가능한 형태(어느 랙·장비·필드)로 화면에 떠야 함.
+- 로컬 "확정=태그"가 향후 GitHub PR 모델과 갈릴 수 있음 → 확정 로직 인터페이스 분리.
+- confirmed 태그는 immutable; 이후 변경은 새 confirmation/release(append-only). 재확정 거부.
+- release·build 병행 시 scope 경로 겹침 가능 → P1은 겹침 감지 안 함(감시 항목).
+- 대형 트리 게이트 비용 → 영향 랙으로만 한정.

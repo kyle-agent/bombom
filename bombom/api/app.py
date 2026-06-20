@@ -6,12 +6,18 @@ import logging
 import re
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
+from ..confirm import ConfirmError, ConfirmScope, GateBlocked
+from ..confirm import approve as confirm_approve
+from ..confirm import detail as confirm_detail
+from ..confirm import gate_to_dict
+from ..confirm import list_confirmations
+from ..confirm import request as confirm_request
 from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, validate_rack
 from ..design.writer import write_rack
 from ..export import build_data, inject
@@ -52,6 +58,24 @@ class NewRackBody(BaseModel):
     @classmethod
     def _check_model(cls, v: str) -> str:
         return _safe_id(v, "rack_model")
+
+
+class ConfirmRequestBody(BaseModel):
+    """Open/refresh a confirmation: run the gate, write it as in-review."""
+
+    id: str
+    kind: Literal["release", "build"]
+    scope: ConfirmScope = Field(default_factory=ConfirmScope)
+    requester: Optional[str] = None
+
+    @field_validator("id")
+    @classmethod
+    def _check_id(cls, v: str) -> str:
+        return _safe_id(v, "id")
+
+
+class ConfirmApproveBody(BaseModel):
+    approver: Optional[str] = None
 
 
 def _search_catalog(db_path: str, q: str, limit: int = 50, kind: str = "device") -> list[dict]:
@@ -175,7 +199,55 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         rel = target.relative_to(base).as_posix()
         return {"ok": True, "commit": sha, "path": rel, "rack": body.rack}
 
+    # ── confirm workflow (release + build) ────────────────────────────────
+    @app.post("/api/confirm/request")
+    def confirm_request_ep(body: ConfirmRequestBody):
+        _validate_scope(root, body.kind, body.scope)
+        try:
+            conf, gate, sha = confirm_request(ws, conf_id=body.id, kind=body.kind,
+                                              scope=body.scope, requester=body.requester)
+        except GateBlocked as gb:
+            raise HTTPException(400, {"gate": gate_to_dict(gb.gate)}) from gb
+        except ConfirmError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return {"ok": True, "commit": sha, "confirmation": conf.model_dump(),
+                "gate": gate_to_dict(gate)}
+
+    @app.post("/api/confirm/approve")
+    def confirm_approve_ep(body: ConfirmApproveBody, id: str):
+        try:
+            conf, gate, sha, tag = confirm_approve(ws, conf_id=id, approver=body.approver)
+        except GateBlocked as gb:
+            raise HTTPException(400, {"gate": gate_to_dict(gb.gate)}) from gb
+        except ConfirmError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return {"ok": True, "commit": sha, "tag": tag, "confirmation": conf.model_dump(),
+                "gate": gate_to_dict(gate)}
+
+    @app.get("/api/confirm")
+    def confirm_list_ep():
+        return [c.model_dump() for c in list_confirmations(ws.root)]
+
+    @app.get("/api/confirm/{id}")
+    def confirm_detail_ep(id: str):
+        got = confirm_detail(ws, id)
+        if got is None:
+            raise HTTPException(404, "confirmation not found")
+        conf, gate = got
+        return {"confirmation": conf.model_dump(), "gate": gate_to_dict(gate)}
+
     return app
+
+
+def _validate_scope(root: Path | str, kind: str, scope: ConfirmScope) -> None:
+    if kind == "release":
+        if not scope.release:
+            raise HTTPException(400, "release kind requires scope.release")
+    else:  # build
+        if not scope.paths:
+            raise HTTPException(400, "build kind requires scope.paths")
+        for rel in scope.paths:
+            _resolve(root, rel)   # under-root + existence guard (400/404)
 
 
 def _resolve_rack_write(root: Path | str, path: str) -> Path:

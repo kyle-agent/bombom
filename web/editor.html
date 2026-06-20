@@ -19,7 +19,9 @@
   header .relchip{background:#1e293b;border:1px solid #334155;color:#fde68a;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600}
   header .rackchip{background:#1e293b;border:1px solid #334155;color:#cbd5e1;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
   header .rackchip .dot{width:8px;height:8px;border-radius:50%}
-  header .state{margin-left:auto;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
+  header .confirmbtn{margin-left:auto;background:#1e293b;border:1px solid #334155;color:#86efac;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;cursor:pointer}
+  header .confirmbtn:hover{background:#334155;color:#bbf7d0}
+  header .state{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
   header .state.saved{background:var(--ok)}
   header .state.dirty{background:var(--new)}
   header .state.none{background:#475569}
@@ -164,6 +166,34 @@
   .issues .lvl.error{color:var(--bad)}.issues .lvl.warning{color:var(--warn)}.issues .lvl.info{color:var(--muted)}
   .banner{margin:10px;border-radius:8px;padding:8px 10px;font-size:12px}
   .banner.err{border:1px solid #fecaca;background:#fef2f2;color:var(--bad)}
+  /* confirm (확정) modal */
+  .modal.wide{width:600px}
+  .cbadge{display:inline-block;font-size:10px;font-weight:700;border-radius:5px;padding:1px 7px;text-transform:uppercase;letter-spacing:.3px;color:#fff}
+  .cbadge.draft{background:var(--muted)}
+  .cbadge.in-review{background:var(--new)}
+  .cbadge.confirmed{background:var(--ok)}
+  .kindpick{display:flex;gap:8px;margin-top:4px}
+  .kindbtn{flex:1;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)}
+  .kindbtn.active{border-color:var(--accent);background:#eff6ff;color:#1e40af}
+  .gateres{margin-top:12px}
+  .gateres .ghead{font-size:12px;font-weight:700;margin-bottom:6px}
+  .gateres .ghead.bad{color:var(--bad)}
+  .gateres .ghead.ok{color:var(--ok)}
+  .erow{border:1px solid #fecaca;background:#fef2f2;border-radius:7px;padding:7px 9px;margin:4px 0;font-size:12px;color:var(--bad);cursor:pointer}
+  .erow:hover{background:#fee2e2}
+  .erow .ep{color:var(--muted);font-size:11px}
+  .wrow{border:1px solid #fde68a;background:#fffbeb;border-radius:7px;padding:7px 9px;margin:4px 0;font-size:12px;color:var(--warn)}
+  .crow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;cursor:pointer;background:#fff}
+  .crow:hover{background:#f8fafc}
+  .crow .cid{font-weight:700}
+  .crow .ckind{color:var(--muted);font-size:11px}
+  .crow .ctag{margin-left:auto;font-size:11px;color:var(--muted)}
+  .crow .capvbtn{border:1px solid var(--ok);background:#f0fdf4;color:var(--ok);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer}
+  .crow .capvbtn:hover{background:#dcfce7}
+  .cdetail{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px;background:#f8fafc}
+  .cdetail .dh{font-size:12px;font-weight:700;margin:0 0 6px}
+  .csum{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:8px;font-weight:700}
+  .csum .amt{color:var(--warn);font-size:15px}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
     padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:99}
   #toast.show{opacity:1}
@@ -175,6 +205,7 @@
   <span class="logo">bombom — 에디터</span>
   <span class="relchip" id="relchip">● 현재 작업 릴리즈 —</span>
   <span class="rackchip" id="rackchip" style="display:none"></span>
+  <button class="confirmbtn" id="confirmBtn" title="확정 워크플로우">✅ 확정</button>
   <span class="state none" id="statechip">랙 미선택</span>
 </header>
 
@@ -266,6 +297,45 @@
     <div class="mfoot">
       <button id="arCancel">취소</button>
       <button class="primary" id="arCreate" disabled>생성 (git commit)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ 확정 (Confirm) modal -->
+<div class="modal-back" id="confirmModal">
+  <div class="modal wide">
+    <h4>✅ 확정</h4>
+    <div class="mtabs">
+      <button class="mtab active" data-ctab="request">확정 요청</button>
+      <button class="mtab" data-ctab="status">확정 현황</button>
+    </div>
+    <!-- Tab A — 확정 요청 -->
+    <div class="mbody" id="ctabRequest">
+      <label class="fl">대상 종류</label>
+      <div class="kindpick">
+        <button type="button" class="kindbtn active" id="ckRelease" data-kind="release">릴리즈</button>
+        <button type="button" class="kindbtn" id="ckBuild" data-kind="build">신규 빌드</button>
+      </div>
+      <label class="fl">확정 ID</label>
+      <input type="text" id="cReqId" placeholder="예: R26.07">
+      <div id="cBuildPath" style="display:none">
+        <label class="fl">대상 경로</label>
+        <input type="text" id="cReqPath" placeholder="예: offerings/cloud-b">
+      </div>
+      <label class="fl">요청자(선택)</label>
+      <input type="text" id="cReqRequester" placeholder="이름 (선택)">
+      <div class="mfoot" style="padding:12px 0 0">
+        <button class="primary" id="cReqBtn">게이트 검사 &amp; 확정 요청</button>
+      </div>
+      <div class="gateres" id="cReqResult"></div>
+    </div>
+    <!-- Tab B — 확정 현황 -->
+    <div class="mbody" id="ctabStatus" style="display:none">
+      <div id="cList"><div class="empty">불러오는 중…</div></div>
+      <div id="cListDetail"></div>
+    </div>
+    <div class="mfoot">
+      <button id="cClose">닫기</button>
     </div>
   </div>
 </div>
@@ -1006,6 +1076,154 @@ async function createRack(){
   }
 }
 
+// ── ✅ 확정 (confirm workflow) ───────────────────────────────────────────
+let confirmKind='release';   // 'release' | 'build'
+
+function stemOf(path){ const seg=String(path||'').split('/').pop()||''; return seg.replace(/\.yaml$/,''); }
+
+function openConfirm(){
+  document.getElementById('confirmModal').classList.add('show');
+  switchCTab('request');
+  setConfirmKind('release');
+  document.getElementById('cReqResult').innerHTML='';
+}
+function closeConfirm(){ document.getElementById('confirmModal').classList.remove('show'); }
+
+function switchCTab(name){
+  document.querySelectorAll('.mtab[data-ctab]').forEach(t=>t.classList.toggle('active', t.dataset.ctab===name));
+  document.getElementById('ctabRequest').style.display = name==='request'?'':'none';
+  document.getElementById('ctabStatus').style.display = name==='status'?'':'none';
+  if(name==='status'){ document.getElementById('cListDetail').innerHTML=''; loadConfirmList(); }
+}
+
+function setConfirmKind(kind){
+  confirmKind=kind;
+  document.getElementById('ckRelease').classList.toggle('active', kind==='release');
+  document.getElementById('ckBuild').classList.toggle('active', kind==='build');
+  document.getElementById('cBuildPath').style.display = kind==='build'?'':'none';
+  const idIn=document.getElementById('cReqId');
+  if(kind==='release'){ idIn.value=selectedRelease||''; idIn.placeholder='예: R26.07'; }
+  else { idIn.value=''; idIn.placeholder='예: cloud-b-init'; document.getElementById('cReqPath').value=TREE_PATH; }
+}
+
+function renderGateErrors(gate, box){
+  const errs=(gate&&gate.errors)||[];
+  let h=`<div class="ghead bad">확정 불가 — 아래 항목을 고치세요</div>`;
+  h+=errs.map((e,i)=>`<div class="erow" data-eidx="${i}">${esc(e.message||'')}<div class="ep">${esc(e.path||'')}${e.index!=null?` · 배치 #${esc(String(e.index))}`:''}</div></div>`).join('');
+  box.innerHTML=h;
+  box.querySelectorAll('[data-eidx]').forEach(el=>el.addEventListener('click', ()=>{
+    const e=errs[+el.dataset.eidx]; if(!e||!e.path) return;
+    closeConfirm();
+    loadRack(stemOf(e.path), e.path);
+  }));
+}
+function renderGateWarnings(gate){
+  const ws=(gate&&gate.warnings)||[];
+  if(!ws.length) return '';
+  return ws.map(w=>`<div class="wrow">${esc(w.message||'')}<div class="ep" style="color:var(--warn)">${esc(w.path||'')}</div></div>`).join('');
+}
+
+async function submitConfirmRequest(){
+  const id=document.getElementById('cReqId').value.trim();
+  if(!id){ toast('확정 ID를 입력하세요', true); return; }
+  const requester=document.getElementById('cReqRequester').value.trim();
+  const body={ id, kind:confirmKind, scope:{}, requester:requester||undefined };
+  if(confirmKind==='release'){ body.scope.release=id; }
+  else { body.scope.paths=[document.getElementById('cReqPath').value.trim()]; }
+  const btn=document.getElementById('cReqBtn'); btn.disabled=true; const ot=btn.textContent; btn.textContent='검사 중…';
+  const box=document.getElementById('cReqResult'); box.innerHTML='';
+  try{
+    const r=await fetch('/api/confirm/request', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data=await r.json().catch(()=>null);
+    if(r.status===400){ renderGateErrors(data&&data.detail&&data.detail.gate, box); return; }
+    if(r.status===409 || r.status===422){
+      box.innerHTML=`<div class="erow" style="cursor:default">${esc(detailMsg(data, r.status))}</div>`;
+      toast(detailMsg(data, r.status), true); return;
+    }
+    if(!r.ok) throw new Error(detailMsg(data, r.status));
+    // 200
+    const gate=data.gate||{};
+    const racks=(gate.affected_racks||[]).length;
+    let h=`<div class="ghead ok">요청됨 → 검토중(in-review)</div>`;
+    h+=`<div class="cdetail"><div class="dh">대상 랙 ${racks}대 · 변경셋 CAPEX ${won(gate.capex)}</div>${renderGateWarnings(gate)}</div>`;
+    box.innerHTML=h;
+    toast('확정 요청됨 ('+esc(id)+')');
+  }catch(e){
+    box.innerHTML=`<div class="erow" style="cursor:default">${esc(e.message||String(e))}</div>`;
+    toast('확정 요청 실패: '+e.message, true);
+  }finally{ btn.disabled=false; btn.textContent=ot; }
+}
+
+async function loadConfirmList(){
+  const box=document.getElementById('cList');
+  box.innerHTML='<div class="empty">불러오는 중…</div>';
+  try{
+    const rows=await apiGet('/api/confirm');
+    if(!rows.length){ box.innerHTML='<div class="empty">확정 항목이 없습니다.</div>'; return; }
+    box.innerHTML=rows.map(c=>{
+      const tag=c.tag?`<span class="ctag">봉인 태그 ${esc(c.tag)}</span>`:'';
+      const apv=c.status==='in-review'?`<button class="capvbtn" data-apv="${esc(c.id)}">확정</button>`:'';
+      return `<div class="crow" data-cid="${esc(c.id)}">
+        <span class="cid">${esc(c.id)}</span>
+        <span class="ckind">${esc(c.kind||'')}</span>
+        <span class="cbadge ${esc(c.status||'draft')}">${esc(c.status||'draft')}</span>
+        ${tag}${apv}</div>`;
+    }).join('');
+    box.querySelectorAll('[data-apv]').forEach(el=>el.addEventListener('click', e=>{ e.stopPropagation(); approveConfirm(el.dataset.apv); }));
+    box.querySelectorAll('.crow').forEach(el=>el.addEventListener('click', ()=>showConfirmDetail(el.dataset.cid)));
+  }catch(e){
+    box.innerHTML='<div class="banner err">확정 현황을 불러오지 못했습니다: '+esc(e.message)+'</div>';
+  }
+}
+
+async function approveConfirm(id){
+  try{
+    const r=await fetch('/api/confirm/approve?id='+encodeURIComponent(id), {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const data=await r.json().catch(()=>null);
+    if(r.status===400){
+      const box=document.getElementById('cListDetail'); box.innerHTML='';
+      renderGateErrors(data&&data.detail&&data.detail.gate, box);
+      toast('확정 불가 (게이트 오류)', true); return;
+    }
+    if(r.status===409){ toast(detailMsg(data, r.status), true); return; }
+    if(!r.ok) throw new Error(detailMsg(data, r.status));
+    toast('확정됨 (봉인 태그 '+(data.tag||'?')+')');
+    loadConfirmList();
+  }catch(e){ toast('확정 실패: '+e.message, true); }
+}
+
+async function showConfirmDetail(id){
+  const box=document.getElementById('cListDetail');
+  box.innerHTML='<div class="cdetail"><div class="empty">불러오는 중…</div></div>';
+  try{
+    const data=await apiGet('/api/confirm/'+encodeURIComponent(id));
+    const gate=data.gate||{};
+    const racks=gate.affected_racks||[];
+    const items=gate.items||[];
+    let h=`<div class="cdetail"><div class="dh">${esc(id)} · 대상 랙 ${racks.length}대</div>`;
+    if(racks.length) h+=`<div class="rackmeta" style="margin-bottom:8px">${racks.map(p=>esc(p)).join('<br>')}</div>`;
+    if(items.length){
+      h+=`<table><thead><tr><th>장비명</th><th>카테고리</th><th>릴리즈</th><th class="num">수량</th><th class="num">단가</th><th class="num">소계</th></tr></thead><tbody>`;
+      h+=items.map(it=>`<tr>
+        <td>${esc(it.name||it.device||'')}<div class="mfr" style="color:var(--muted);font-size:11px">${esc(it.rack_id||'')}</div></td>
+        <td>${esc(it.category||'')}</td>
+        <td>${esc(it.release||'')}</td>
+        <td class="num">${it.qty||1}</td>
+        <td class="num">${it.unit_cost==null?'<span class="miss">미등록</span>':won(it.unit_cost)}</td>
+        <td class="num">${won(it.subtotal)}</td></tr>`).join('');
+      h+=`</tbody></table>`;
+    }else{
+      h+=`<div class="empty">변경 항목이 없습니다.</div>`;
+    }
+    h+=`<div class="csum"><span>변경셋 CAPEX</span><span class="amt">${won(gate.capex)}</span></div>`;
+    h+=renderGateWarnings(gate);
+    h+=`</div>`;
+    box.innerHTML=h;
+  }catch(e){
+    box.innerHTML='<div class="banner err">확정 상세를 불러오지 못했습니다: '+esc(e.message)+'</div>';
+  }
+}
+
 // ── render all ──────────────────────────────────────────────────────────
 function renderAll(){ renderReleaseSel(); renderMain(); renderMeta(); renderBom(); renderShortlist(); renderState(); }
 
@@ -1021,8 +1239,16 @@ function init(){
     loadRack(selectedRackId, selectedRackFile);
   });
   document.getElementById('catSearch').addEventListener('input', scheduleCatSearch);
-  // ① model-select tabs
-  document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click', ()=>switchMTab(t.dataset.tab)));
+  // ① model-select tabs (scoped to data-tab so the 확정 modal's data-ctab tabs don't collide)
+  document.querySelectorAll('.mtab[data-tab]').forEach(t=>t.addEventListener('click', ()=>switchMTab(t.dataset.tab)));
+  // ✅ 확정 workflow
+  document.getElementById('confirmBtn').addEventListener('click', openConfirm);
+  document.getElementById('cClose').addEventListener('click', closeConfirm);
+  document.getElementById('confirmModal').addEventListener('click', e=>{ if(e.target.id==='confirmModal') closeConfirm(); });
+  document.querySelectorAll('.mtab[data-ctab]').forEach(t=>t.addEventListener('click', ()=>switchCTab(t.dataset.ctab)));
+  document.getElementById('ckRelease').addEventListener('click', ()=>setConfirmKind('release'));
+  document.getElementById('ckBuild').addEventListener('click', ()=>setConfirmKind('build'));
+  document.getElementById('cReqBtn').addEventListener('click', submitConfirmRequest);
   // ＋ add rack
   document.getElementById('addRackBtn').addEventListener('click', openAddRack);
   document.getElementById('arCancel').addEventListener('click', closeAddRack);

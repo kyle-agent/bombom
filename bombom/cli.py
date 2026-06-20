@@ -17,10 +17,12 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from . import confirm as confirm_mod
 from . import release as release_mod
 from . import scaffold as scaffold_mod
 from .bom import compute_bom
 from .catalog import Catalog, CatalogError, reindex, sync
+from .confirm import ConfirmError, ConfirmScope, GateBlocked
 from .export import build_data, write_export
 from .overlay import CategoryBook, TypeMetaBook
 from .workspace import Workspace
@@ -175,6 +177,58 @@ def _cmd_release(args) -> int:
     return 0
 
 
+def _print_gate(gate) -> None:
+    if gate.affected_racks:
+        print(f"  영향 랙 {len(gate.affected_racks)}개 · 변경셋 CAPEX {_won(gate.capex)}")
+    for i in gate.errors:
+        print(f"  ✗ {i.path}: {i.message}")
+    for i in gate.warnings:
+        print(f"  ⚠ {i.path}: {i.message}")
+
+
+def _cmd_confirm(args) -> int:
+    ws = Workspace.open(".")
+    if args.confirm_cmd == "list":
+        rows = confirm_mod.list_confirmations(ws.root)
+        if not rows:
+            print("(no confirmations)")
+        for c in rows:
+            tag = f" tag={c.tag}" if c.tag else ""
+            print(f"  {c.id}  [{c.kind}]  {c.status}{tag}")
+        return 0
+    if args.confirm_cmd == "show":
+        got = confirm_mod.detail(ws, args.id)
+        if got is None:
+            print(f"error: confirmation not found: {args.id}", file=sys.stderr)
+            return 2
+        conf, gate = got
+        print(f"{conf.id} [{conf.kind}] {conf.status}"
+              + (f" tag={conf.tag}" if conf.tag else ""))
+        _print_gate(gate)
+        return 0
+    try:
+        if args.confirm_cmd == "request":
+            scope = ConfirmScope(release=args.release) if args.kind == "release" \
+                else ConfirmScope(paths=args.paths or [])
+            conf, gate, _ = confirm_mod.request(ws, conf_id=args.id, kind=args.kind,
+                                                scope=scope, requester=args.requester)
+            print(f"requested: {conf.id} → {conf.status}")
+            _print_gate(gate)
+            return 0
+        # approve
+        conf, gate, _, tag = confirm_mod.approve(ws, conf_id=args.id, approver=args.approver)
+        print(f"confirmed: {conf.id} → {conf.status}  (tag {tag})")
+        _print_gate(gate)
+        return 0
+    except GateBlocked as gb:
+        print("확정 게이트 실패 (error를 고친 뒤 다시 시도):", file=sys.stderr)
+        _print_gate(gb.gate)
+        return 1
+    except ConfirmError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
 def _cmd_export(args) -> int:
     ws = Workspace.open(".")
     payload = build_data(ws, args.path, release=args.release, is_mock=False)
@@ -265,6 +319,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_rel_tag = p_rel.add_parser("tag")
     p_rel_tag.add_argument("name")
     p_rel_tag.set_defaults(func=_cmd_release)
+
+    p_conf = sub.add_parser("confirm", help="confirm workflow (gate → in-review → tag)"
+                            ).add_subparsers(dest="confirm_cmd", required=True)
+    p_conf.add_parser("list").set_defaults(func=_cmd_confirm)
+    p_conf_show = p_conf.add_parser("show")
+    p_conf_show.add_argument("id")
+    p_conf_show.set_defaults(func=_cmd_confirm)
+    p_conf_req = p_conf.add_parser("request", help="run the gate and open an in-review confirmation")
+    p_conf_req.add_argument("id")
+    p_conf_req.add_argument("--kind", choices=("release", "build"), default="release")
+    p_conf_req.add_argument("--release", help="scope.release (kind=release)")
+    p_conf_req.add_argument("--paths", nargs="*", help="scope.paths (kind=build)")
+    p_conf_req.add_argument("--requester")
+    p_conf_req.set_defaults(func=_cmd_confirm)
+    p_conf_app = p_conf.add_parser("approve", help="confirm an in-review item and tag it")
+    p_conf_app.add_argument("id")
+    p_conf_app.add_argument("--approver")
+    p_conf_app.set_defaults(func=_cmd_confirm)
 
     p_exp = sub.add_parser("export", help="bake a static viewer HTML with real data")
     p_exp.add_argument("out", help="output .html path")

@@ -69,7 +69,11 @@ CAPEX BOM 집계·리포트, 현황 조회.
 
 ---
 
-## P1 — 설계 → 확정 (릴리즈 단위 + 태그 봉인)  ⟵ 다음
+## P1 — 설계 → 확정 (릴리즈 단위 + 태그 봉인)  ⟵ 구현됨 (로컬 git)
+
+> 구현 완료: `bombom/confirm/` + `/api/confirm/*` + 에디터 확정 UI + `bombom confirm` CLI.
+> 확정 = `confirmations/<id>.yaml` 매니페스트 + annotated 태그(로컬 git, GitHub 무관).
+> 설계 결정: ADR `docs/decisions/2026-06-20-confirm-workflow.md`. 미구현 항목은 Scope OUT 참고.
 
 **목표:** "확정"을 git 흐름으로 정의한다. **확정 단위 = 릴리즈.**
 
