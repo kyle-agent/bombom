@@ -96,6 +96,31 @@ def test_get_then_meta_persist_clears_missing(gitws):
     assert all(not p["meta_missing"] for p in out["rack"]["placements"])
 
 
+def test_put_rejects_legacy_role_field(gitws):
+    # The editor used to send a `role` field; it was removed in the rack_type/rack_model
+    # refactor and RackDesign forbids extras. A stray `role` must be rejected (regression:
+    # this broke every editor save with a 422 while the rack looked "saved" from POST /new).
+    client, root = _client(gitws)
+    body = {"rack_model": {"slug": "acme-rack42"}, "role": "data", "placements": []}
+    r = client.put(f"/api/rack?path={RACKFILE}&message=x", json=body)
+    assert r.status_code == 422
+    assert any(e.get("loc", [])[-1] == "role" for e in r.json()["detail"])
+
+
+def test_put_accepts_editor_payload_with_custom_items(gitws):
+    # The canonical editor save shape (rack_model + placements + custom_line_items, NO role).
+    client, root = _client(gitws)
+    body = {
+        "rack_model": {"slug": "acme-rack42"},
+        "placements": [{"device": "arista-test-sw", "position": 1, "release": "R26.07",
+                        "qty": 1, "meta": {}}],
+        "custom_line_items": [{"name": "케이블", "qty": 2, "unit_cost": 5000,
+                               "release": "R26.07", "category": "other"}],
+    }
+    r = client.put(f"/api/rack?path={RACKFILE}&message=editor+save", json=body)
+    assert r.status_code == 200, r.text
+
+
 def test_put_path_traversal_blocked(gitws):
     client, root = _client(gitws)
     r = client.put("/api/rack?path=../evil/racks/x.yaml&message=x",

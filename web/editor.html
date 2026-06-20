@@ -906,9 +906,8 @@ async function save(){
   if(message===null) return; // cancelled
   const body={
     rack_model:{ slug:(work.rack_model&&work.rack_model.slug)||'' },
-    role:work.role,
     placements:work.placements.map(p=>({
-      device:p.device, position:p.position, release:p.release, qty:p.qty||1,
+      device:p.device, position:p.position, release:p.release||currentRelease, qty:p.qty||1,
       meta:p.meta||{}
     })),
     custom_line_items:(work.custom_line_items||[]).map(c=>({
