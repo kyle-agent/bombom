@@ -69,6 +69,27 @@ def clone_rack(src: Path, dst_rack: str) -> Path:
     return dst
 
 
+def clone_racks(src: Path, dst_racks: list[str]) -> list[Path]:
+    """Clone one rack into several new ids at once (lay one rack out, stamp N more like it).
+
+    All-or-nothing on conflicts: every destination is checked free before any copy, so a
+    collision aborts the batch without writing a partial set."""
+    src = Path(src)
+    if not src.is_file():
+        raise FileNotFoundError(f"clone source must be a rack file: {src}")
+    targets: list[Path] = []
+    for name in dst_racks:
+        if not name or "/" in name or "\\" in name or ".." in name:
+            raise ValueError(f"unsafe rack id: {name!r}")
+        dst = src.parent / f"{name}.yaml"
+        if dst.exists() or dst in targets:
+            raise FileExistsError(f"already exists: {dst}")
+        targets.append(dst)
+    for dst in targets:
+        shutil.copy2(src, dst)
+    return targets
+
+
 def clone_subtree(src: Path, dst_name: str) -> Path:
     """Copy a hierarchy subtree to a sibling with a new identifier (new region/zone bootstrap)."""
     src = Path(src)

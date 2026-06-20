@@ -112,6 +112,37 @@ def test_clone_rack_rejects_unsafe_id(gitws):
     assert r.status_code == 422
 
 
+def test_clone_bulk_makes_n_copies_one_commit(gitws):
+    client, root = _client(gitws)
+    before = _count(root)
+    r = client.post("/api/rack/clone-bulk",
+                    json={"source_path": RACKFILE, "racks": ["R10", "R11", "R12"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["count"] == 3
+    assert _count(root) == before + 1                        # single commit for the batch
+    for name in ("R10", "R11", "R12"):
+        dst = RACKFILE.replace("R02.yaml", f"{name}.yaml")
+        assert load_racks(root / dst).racks[0].design.placements    # placements carried
+
+
+def test_clone_bulk_conflict_is_all_or_nothing(gitws):
+    client, root = _client(gitws)
+    before = _count(root)
+    # R02 already exists → whole batch aborts, no file written, no commit
+    r = client.post("/api/rack/clone-bulk",
+                    json={"source_path": RACKFILE, "racks": ["R20", "R02"]})
+    assert r.status_code == 409
+    assert _count(root) == before
+    assert not (root / RACKFILE.replace("R02.yaml", "R20.yaml")).exists()
+
+
+def test_clone_bulk_rejects_duplicate_ids(gitws):
+    client, _ = _client(gitws)
+    r = client.post("/api/rack/clone-bulk",
+                    json={"source_path": RACKFILE, "racks": ["R30", "R30"]})
+    assert r.status_code == 422
+
+
 def test_get_then_meta_persist_clears_missing(gitws):
     client, root = _client(gitws)
     got = client.get(f"/api/rack?path={RACKFILE}").json()

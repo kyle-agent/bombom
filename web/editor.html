@@ -214,6 +214,7 @@
   <nav class="topnav"><a href="/">뷰어</a><a href="/manage">기준정보</a><a href="/candidates">후보</a><a href="/placed">목록</a><a href="/dashboard">현황</a><a href="/diff">변경비교</a></nav>
   <button class="confirmbtn" id="confirmBtn" title="확정 워크플로우">✅ 확정</button>
   <button class="clonebtn" id="cloneBtn" title="이 랙을 같은 Rack-Type에 복제" disabled>⧉ 복제</button>
+  <button class="clonebtn" id="cloneBulkBtn" title="이 랙을 여러 ID로 한 번에 복제" disabled>⧉ 여러 개</button>
   <span class="state none" id="statechip">랙 미선택</span>
 </header>
 
@@ -398,8 +399,10 @@ function setDirty(d){ dirty=d; renderState(); }
 function renderState(){
   const s=document.getElementById('statechip'), btn=document.getElementById('saveBtn');
   const clone=document.getElementById('cloneBtn');
-  if(!selectedRackId){ s.className='state none'; s.textContent='랙 미선택'; btn.disabled=true; if(clone) clone.disabled=true; return; }
+  const cloneBulk=document.getElementById('cloneBulkBtn');
+  if(!selectedRackId){ s.className='state none'; s.textContent='랙 미선택'; btn.disabled=true; if(clone) clone.disabled=true; if(cloneBulk) cloneBulk.disabled=true; return; }
   if(clone) clone.disabled=false;
+  if(cloneBulk) cloneBulk.disabled=false;
   btn.disabled=!dirty;
   if(dirty){ s.className='state dirty'; s.textContent='● 변경됨 (미저장)'; }
   else { s.className='state saved'; s.textContent='저장됨'; }
@@ -517,6 +520,51 @@ async function cloneRack(){
     toast('복제 실패: '+e.message, true);
   }finally{
     renderState();   // restore the clone button's enabled/disabled state
+  }
+}
+
+// ── bulk clone rack (POST /api/rack/clone-bulk — many byte-for-byte copies, one commit) ──
+function expandRackNames(spec){
+  const out = [];
+  spec.split(',').map(s => s.trim()).filter(Boolean).forEach(tok => {
+    const m = tok.match(/^(.*?)(\d+)\.\.(?:.*?)(\d+)$/);   // prefix + start..end (numeric)
+    if(m){
+      const pre = m[1], aStr = m[2];
+      let lo = parseInt(m[2],10), hi = parseInt(m[3],10);
+      const pad = aStr.length;
+      if(hi < lo){ const t=lo; lo=hi; hi=t; }
+      for(let i=lo;i<=hi && (i-lo)<100; i++) out.push(pre + String(i).padStart(pad,'0'));
+    } else { out.push(tok); }
+  });
+  return out;
+}
+async function cloneRackBulk(){
+  if(!selectedRackId || !selectedRackFile){ toast('먼저 랙을 선택하세요', true); return; }
+  const spec=prompt('복제할 랙 ID들 — 쉼표 구분, 범위는 .. 사용\n예: R10,R11  또는  web-02..web-05', '');
+  if(spec===null) return;
+  if(!spec.trim()) return;
+  const list=expandRackNames(spec);
+  if(!list.length){ toast('복제할 ID가 없습니다', true); return; }
+  if(list.length>100){ toast('한 번에 100개까지만 가능합니다', true); return; }
+  const btn=document.getElementById('cloneBulkBtn'); if(btn) btn.disabled=true;
+  try{
+    const r=await fetch('/api/rack/clone-bulk', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({source_path:selectedRackFile, racks:list})});
+    const data=await r.json().catch(()=>null);
+    if(!r.ok){
+      let msg=(data&&data.detail)||('HTTP '+r.status);
+      if(r.status===409) msg='이미 있는 ID가 있어 전체 취소됨';
+      else if(r.status===422) msg='ID 형식/중복 오류';
+      toast(String(msg), true);
+      return;
+    }
+    toast(data.count + '개 복제됨');
+    // several racks were made — refresh the tree, don't navigate to one specific rack
+    await loadTree();
+  }catch(e){
+    toast('복제 실패: '+e.message, true);
+  }finally{
+    renderState();   // restore the clone buttons' enabled/disabled state
   }
 }
 
@@ -1284,6 +1332,7 @@ function init(){
   // ✅ 확정 workflow
   document.getElementById('confirmBtn').addEventListener('click', openConfirm);
   document.getElementById('cloneBtn').addEventListener('click', cloneRack);
+  document.getElementById('cloneBulkBtn').addEventListener('click', cloneRackBulk);
   document.getElementById('cClose').addEventListener('click', closeConfirm);
   document.getElementById('confirmModal').addEventListener('click', e=>{ if(e.target.id==='confirmModal') closeConfirm(); });
   document.querySelectorAll('.mtab[data-ctab]').forEach(t=>t.addEventListener('click', ()=>switchCTab(t.dataset.ctab)));

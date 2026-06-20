@@ -39,6 +39,7 @@ from ..render import rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
 from ..scaffold import (
     clone_rack,
+    clone_racks,
     clone_subtree,
     scaffold_offering,
     scaffold_rack,
@@ -122,6 +123,21 @@ class CloneRackBody(BaseModel):
     @classmethod
     def _check_rack(cls, v: str) -> str:
         return _safe_id(v, "rack")
+
+
+class CloneRackBulkBody(BaseModel):
+    """Clone one rack into several new ids in one commit (e.g. web-02 … web-10)."""
+
+    source_path: str
+    racks: list[str] = Field(min_length=1, max_length=100)
+
+    @field_validator("racks")
+    @classmethod
+    def _check_racks(cls, v: list[str]) -> list[str]:
+        out = [_safe_id(x, "rack") for x in v]
+        if len(set(out)) != len(out):
+            raise ValueError("duplicate rack ids")
+        return out
 
 
 class CloneSubtreeBody(BaseModel):
@@ -303,6 +319,26 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         sha = add_commit([dst], msg, cwd=base)
         rel = dst.resolve().relative_to(base.resolve()).as_posix()
         return {"ok": True, "commit": sha, "path": rel, "rack": body.rack}
+
+    @app.post("/api/rack/clone-bulk")
+    def clone_rack_bulk_ep(body: CloneRackBulkBody, message: str = ""):
+        base = Path(root)
+        src = _resolve_rack_write(root, body.source_path)
+        if not src.is_file():
+            raise HTTPException(404, "source rack not found")
+        if next(iter(load_racks(src).racks), None) is None:   # source must itself be valid
+            raise HTTPException(400, "source rack failed to load")
+        try:
+            dsts = clone_racks(src, body.racks)               # all-or-nothing on conflicts
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        msg = (message or f"clone rack {src.stem} -> {len(dsts)} copies").replace(
+            "\n", " ").strip()[:500]
+        sha = add_commit(dsts, msg, cwd=base)
+        rels = [d.resolve().relative_to(base.resolve()).as_posix() for d in dsts]
+        return {"ok": True, "commit": sha, "paths": rels, "count": len(dsts)}
 
     @app.post("/api/hierarchy/clone")
     def clone_subtree_ep(body: CloneSubtreeBody, message: str = ""):
