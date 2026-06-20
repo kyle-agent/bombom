@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
+from datetime import date
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -17,6 +18,15 @@ from ..confirm import approve as confirm_approve
 from ..confirm import detail as confirm_detail
 from ..confirm import gate_to_dict
 from ..confirm import list_confirmations
+from ..bom import PriceBook
+from ..candidates import (
+    Candidate,
+    add_candidate,
+    load_pool,
+    remove_candidate,
+    set_note,
+    set_price,
+)
 from ..confirm import request as confirm_request
 from ..dashboard import build_dashboard
 from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, validate_rack
@@ -96,6 +106,19 @@ class HierarchyBody(BaseModel):
     zone: Optional[str] = None
     rack_type: Optional[str] = None
     name: Optional[str] = None
+
+
+class CandidateAddBody(BaseModel):
+    slug: str
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
+class CandidateUpdateBody(BaseModel):
+    """Edit a candidate from the selection screen: price and/or extra note."""
+
+    note: Optional[str] = Field(default=None, max_length=500)
+    unit_cost: Optional[int] = Field(default=None, ge=0)
+    source: Optional[str] = Field(default=None, max_length=200)
 
 
 def _search_catalog(db_path: str, q: str, limit: int = 50, kind: str = "device") -> list[dict]:
@@ -327,7 +350,91 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             return HTMLResponse("<h1>manage page not built</h1>", status_code=500)
         return HTMLResponse(page.read_text())
 
+    # ── device candidate pool (후보풀 + 가격/부가정보) ──────────────────────
+    def _refresh_prices():
+        # the pool/dashboard/report/confirm views all read ws.pricebook — keep it live after a
+        # price write so a just-entered price shows up everywhere without a server restart.
+        ws.pricebook = PriceBook.load(Path(root) / "pricing")
+
+    def _candidate_row(cand) -> dict:
+        dev = ws.catalog.get_device_type(cand.slug)
+        price = ws.pricebook.lookup(date.today(), slug=cand.slug,
+                                    part_number=dev.part_number if dev else None) if dev else None
+        return {
+            "slug": cand.slug,
+            "model": dev.model if dev else None,
+            "manufacturer": dev.manufacturer if dev else None,
+            "in_catalog": dev is not None,
+            "category": ws.categories.get(cand.slug, model=dev.model, manufacturer=dev.manufacturer)
+            if dev else "other",
+            "note": cand.note,
+            "added_at": cand.added_at,
+            "unit_cost": price.unit_cost if price else None,
+            "priced": price is not None,
+        }
+
+    @app.get("/api/candidates")
+    def candidates_list():
+        return [_candidate_row(c) for c in load_pool(Path(root))]
+
+    @app.post("/api/candidates")
+    def candidates_add(body: CandidateAddBody):
+        slug = _safe_slug(body.slug)
+        if ws.catalog.get_device_type(slug) is None:
+            raise HTTPException(404, f"unknown device: {slug}")
+        try:
+            cand, path = add_candidate(Path(root), slug, body.note)
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        add_commit([path], f"candidate add {slug}", cwd=Path(root))
+        return {"ok": True, "candidate": _candidate_row(cand)}
+
+    @app.put("/api/candidates/{slug}")
+    def candidates_update(slug: str, body: CandidateUpdateBody):
+        slug = _safe_slug(slug)
+        if not any(c.slug == slug for c in load_pool(Path(root))):
+            raise HTTPException(404, f"not a candidate: {slug}")
+        paths = []
+        try:
+            if body.note is not None:
+                paths.append(set_note(Path(root), slug, body.note))
+            if body.unit_cost is not None:
+                paths.append(set_price(Path(root), slug, body.unit_cost, source=body.source))
+        except KeyError as exc:
+            raise HTTPException(404, f"not a candidate: {slug}") from exc
+        if not paths:
+            raise HTTPException(400, "nothing to update (note or unit_cost required)")
+        add_commit(paths, f"candidate update {slug}", cwd=Path(root))
+        if body.unit_cost is not None:
+            _refresh_prices()
+        cand = next((c for c in load_pool(Path(root)) if c.slug == slug), Candidate(slug=slug))
+        return {"ok": True, "candidate": _candidate_row(cand)}
+
+    @app.delete("/api/candidates/{slug}")
+    def candidates_delete(slug: str):
+        slug = _safe_slug(slug)
+        try:
+            path = remove_candidate(Path(root), slug)
+        except KeyError as exc:
+            raise HTTPException(404, f"not a candidate: {slug}") from exc
+        add_commit([path], f"candidate remove {slug}", cwd=Path(root))
+        return {"ok": True, "slug": slug}
+
+    @app.get("/candidates", response_class=HTMLResponse)
+    def candidates_page():
+        page = _VIEWER.parent / "candidates.html"
+        if not page.exists():
+            return HTMLResponse("<h1>candidates page not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
+
     return app
+
+
+def _safe_slug(value: str) -> str:
+    try:
+        return _safe_id(value, "slug")
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def _require(value, field: str) -> None:
