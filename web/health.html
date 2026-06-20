@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 검증</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#1e293b;--bg:#f8fafc;
+        --err:#b91c1c;--warn:#b45309;--info:#1d4ed8;--ok:#15803d}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+       "Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:#0f172a;color:#fff;display:flex;align-items:center;gap:10px;padding:10px 18px}
+  header .logo{font-weight:700}
+  header .topnav{display:flex;gap:6px;margin-left:14px;flex-wrap:wrap}
+  header .topnav a{color:#cbd5e1;text-decoration:none;font-size:13px;padding:3px 8px;border-radius:6px}
+  header .topnav a:hover{background:rgba(255,255,255,.14);color:#fff}
+  main{max-width:1000px;margin:0 auto;padding:22px 24px 64px}
+  .bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+  .ctl{display:flex;flex-direction:column;gap:4px}
+  .ctl label{font-size:12px;color:var(--muted)}
+  input{border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:13px}
+  button{border:1px solid #1e293b;background:#1e293b;color:#fff;border-radius:7px;padding:8px 14px;cursor:pointer}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
+  .kpi{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#fff;text-align:center}
+  .kpi .v{font-size:24px;font-weight:800}
+  .kpi .k{font-size:12px;color:var(--muted);margin-top:2px}
+  .kpi.err .v{color:var(--err)} .kpi.warn .v{color:var(--warn)} .kpi.info .v{color:var(--info)}
+  .allok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:12px;
+         padding:22px;text-align:center;font-weight:700;font-size:16px}
+  section{margin:20px 0}
+  h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .d-err{background:var(--err)} .d-warn{background:var(--warn)} .d-info{background:var(--info)}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--line);
+        border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12px;background:#f8fafc}
+  tr:last-child td{border-bottom:none}
+  .loc{color:var(--muted);font-size:12px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  .pill{display:inline-block;padding:1px 7px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:11px}
+  .empty{color:var(--muted);padding:18px 2px}
+  a.fix{color:#2563eb;text-decoration:none;font-size:12px}
+  a.fix:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">bombom — 검증</span>
+  <nav class="topnav"><a href="/">뷰어</a><a href="/edit">에디터</a><a href="/manage">기준정보</a>
+    <a href="/candidates">후보</a><a href="/placed">목록</a><a href="/dashboard">현황</a>
+    <a href="/diff">변경비교</a><a href="/search">검색</a></nav>
+</header>
+<main>
+  <div class="bar">
+    <div class="ctl"><label for="pathIn">경로</label><input id="pathIn" value="offerings" size="30"></div>
+    <button id="runBtn" type="button">검사</button>
+    <span class="loc" id="asof"></span>
+  </div>
+  <div id="out"><div class="empty">검사 중…</div></div>
+</main>
+
+<script>
+"use strict";
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function locCell(r){
+  return `<span>${esc(r.location||'—')}</span>`;
+}
+
+function issueTable(rows, dotCls){
+  if(!rows.length) return '';
+  const body = rows.map(r => `<tr><td>${locCell(r)}</td><td>${esc(r.message)}</td></tr>`).join('');
+  return `<table><thead><tr><th>위치</th><th>내용</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function unpricedTable(rows){
+  if(!rows.length) return '';
+  const body = rows.map(r => `<tr><td>${locCell(r)}</td>
+    <td>${esc(r.device)} <span class="pill">${esc(r.category)}</span>${r.qty>1?' ×'+r.qty:''}</td>
+    <td><a class="fix" href="/candidates">가격 입력 →</a></td></tr>`).join('');
+  return `<table><thead><tr><th>위치</th><th>장비</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function candTable(rows, kind){
+  if(!rows.length) return '';
+  const body = rows.map(r => {
+    const extra = kind === 'meta'
+      ? '필수 누락: ' + (r.missing||[]).map(esc).join(', ')
+      : '가격 미정';
+    return `<tr><td><span class="mono">${esc(r.slug)}</span> ${esc(r.model||'')}</td>
+      <td>${extra}</td><td><a class="fix" href="/candidates">후보 화면 →</a></td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>후보</th><th>내용</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function render(d){
+  document.getElementById('asof').textContent = '평가일 ' + (d.valuation_date||'') + ' · 경로 ' + (d.path||'');
+  const c = d.counts;
+  let html = `<div class="kpis">
+    <div class="kpi err"><div class="v">${c.errors}</div><div class="k">검증 오류</div></div>
+    <div class="kpi warn"><div class="v">${c.warnings}</div><div class="k">경고</div></div>
+    <div class="kpi info"><div class="v">${c.unpriced}</div><div class="k">미가격 배치</div></div>
+    <div class="kpi info"><div class="v">${c.candidate_unpriced}</div><div class="k">미가격 후보</div></div>
+    <div class="kpi warn"><div class="v">${c.candidate_meta_missing}</div><div class="k">후보 메타누락</div></div>
+  </div>`;
+
+  if(d.ok){
+    html += '<div class="allok">✓ 이슈 없음 — 확정(✅) 진행 가능한 깨끗한 상태입니다.</div>';
+    document.getElementById('out').innerHTML = html;
+    return;
+  }
+  const sec = (title, dotCls, content) => content
+    ? `<section><h2><span class="dot ${dotCls}"></span>${title}</h2>${content}</section>` : '';
+  html += sec(`검증 오류 (${c.errors}) — 확정 차단`, 'd-err', issueTable(d.errors, 'd-err'));
+  html += sec(`경고 (${c.warnings})`, 'd-warn', issueTable(d.warnings, 'd-warn'));
+  html += sec(`미가격 배치 장비 (${c.unpriced})`, 'd-info', unpricedTable(d.unpriced));
+  html += sec(`미가격 후보 (${c.candidate_unpriced})`, 'd-info', candTable(d.candidate_unpriced, 'price'));
+  html += sec(`후보 메타 누락 (${c.candidate_meta_missing})`, 'd-warn', candTable(d.candidate_meta_missing, 'meta'));
+  document.getElementById('out').innerHTML = html;
+}
+
+async function run(){
+  const path = document.getElementById('pathIn').value.trim() || 'offerings';
+  document.getElementById('out').innerHTML = '<div class="empty">검사 중…</div>';
+  try{
+    const r = await fetch('/api/health?path=' + encodeURIComponent(path));
+    if(!r.ok){ let m; try{ m=(await r.json()).detail; }catch(e){} throw new Error(m||('HTTP '+r.status)); }
+    render(await r.json());
+  }catch(e){
+    document.getElementById('out').innerHTML = '<div class="empty">검사 실패: ' + esc(e.message) + '</div>';
+  }
+}
+document.getElementById('runBtn').addEventListener('click', run);
+run();
+</script>
+</body>
+</html>

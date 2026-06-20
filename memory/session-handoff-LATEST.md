@@ -24,6 +24,9 @@ The end-to-end designer flow is built and pushed on the feature branch, all scre
   등) 입력칸이 뜨고 `candidate.meta`에 저장된다. `GET /api/candidate-fields`.
 - `/search` — 전역 검색: 노드/랙/배치 장비를 이름으로 찾기(`GET /api/search`). 랙·장비 결과는
   뷰어로 딥링크.
+- `/health` — 검증 대시보드: confirm 전에 검증오류·경고·미가격배치·미가격후보·후보메타누락을 한
+  화면에 모아 클릭으로 수정 이동. `bombom/health.py` `build_health`(= compute_bom 이슈/unpriced +
+  후보풀 갭 집계), `GET /api/health?path=`.
 - `/edit` — 배치: "① 모델 선택" 검색이 후보풀만(`?pool=1`) 본다. ✅확정 모달(게이트→봉인 태그).
 - `/placed` — 배치예정 장비 목록 + 합계 CAPEX + 릴리즈 필터 + CSV(전체/릴리즈별).
 - `/dashboard` — 누적 총 CAPEX 헤드라인 + 계층/카테고리 롤업 + 릴리즈 추이 + 상위 지출.
@@ -58,7 +61,12 @@ Remaining needs a USER decision or is heavier:
 
 DONE this session: clone (rack + subtree + bulk N), standalone report export, release diff
 (/diff) + per-ref valuation, workspace search (/search), structured candidate fields
-(meta applies_to: candidate), node delete (empty-only), full placed CSV, cross-page nav.
+(meta applies_to: candidate), validation dashboard (/health), node delete (empty-only),
+full placed CSV, cross-page nav.
+
+Next feature ideas (offered to user; not yet picked): power/thermal budget per rack+zone
+(reuse bom power_w), physical-fit validation (weight/depth/connector vs rack), rack template
+library, bulk price import (CSV), OPEX/TCO overlay, elevation color-by-release.
 
 ## Blockers
 None. Branch is green; merge to main is a separate explicit step (Tier-0: needs confirmation).

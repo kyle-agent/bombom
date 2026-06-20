@@ -34,6 +34,7 @@ from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, valida
 from ..design.writer import write_rack
 from ..export import build_data, build_report_data, inject
 from ..gitops import add_commit
+from ..health import build_health
 from ..hierarchy import list_hierarchy, node_dir, remove_node
 from ..overlay import required_missing
 from ..release.diff import WORKING, compare_releases
@@ -502,6 +503,17 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         results = search_workspace(ws, Path(root), q, path=path,
                                    limit=min(max(limit, 1), 500))
         return {"q": q, "count": len(results), "results": results}
+
+    @app.get("/api/health")
+    def health_ep(path: str = "offerings"):
+        return build_health(ws, _resolve(root, path))
+
+    @app.get("/health", response_class=HTMLResponse)
+    def health_page():
+        page = _VIEWER.parent / "health.html"
+        if not page.exists():
+            return HTMLResponse("<h1>health not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
 
     @app.get("/search", response_class=HTMLResponse)
     def search_page():
