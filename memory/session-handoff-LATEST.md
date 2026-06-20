@@ -3,7 +3,7 @@
 > Forward-looking only. This is "what to do next", not "what was done". Rewritten by
 > `/session-checkpoint` at the end of each session. Git history preserves old state.
 
-> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 110 tests pass, ruff clean.
+> Branch: `claude/vibrant-tesla-okhpxz` (not yet merged to main). 113 tests pass, ruff clean.
 
 ## Where things are (2026-06-20)
 
@@ -18,8 +18,9 @@ The end-to-end designer flow is built and pushed on the feature branch, all scre
 - `/dashboard` — 누적 총 CAPEX 헤드라인 + 계층/카테고리 롤업 + 릴리즈 추이 + 상위 지출.
 - 확정 워크플로우: `bombom/confirm/` (release+build, manifest `confirmations/<id>.yaml`,
   annotated 태그). ADR confirm-workflow.
-- **복제**: 에디터 `⧉ 복제`(랙→같은 Rack-Type 새 랙, 배치 그대로), `/manage` 노드별 `⧉ 복제`
-  (존/타입/리전 서브트리 통째). `POST /api/rack/clone`·`/api/hierarchy/clone`. ADR clone.
+- **복제**: 에디터 `⧉ 복제`(랙→같은 Rack-Type 새 랙, 배치 그대로) + `⧉ 여러 개`(일괄 N개,
+  `R10,R11`/`web-02..05` 패턴, 단일 커밋), `/manage` 노드별 `⧉ 복제`(존/타입/리전 서브트리
+  통째). `POST /api/rack/clone`·`/api/rack/clone-bulk`·`/api/hierarchy/clone`. ADR clone.
 - **보고서 export**: `/placed`·`/dashboard`의 `📄 보고서` → `GET /api/report.html`(데이터 구운
   standalone HTML, 인쇄/PDF). `export.build_report_data` = dashboard 롤업 + placed 행.
 - **변경 비교(/diff)**: 확정 태그(=릴리즈) 또는 작업본(WORKING) 두 개를 슬롯 단위로 비교 →
@@ -51,8 +52,8 @@ That clarification unblocked the release-diff feature (DONE this session). Remai
 5. **Bulk rack clone** (N copies / naming pattern in one action) — extends the clone primitive;
    scoped OUT of clone v1. Low-risk, buildable autonomously.
 
-DONE this session: clone (rack + subtree), standalone report export, release diff (/diff),
-node delete (empty-only), full placed CSV, cross-page nav.
+DONE this session: clone (rack + subtree + bulk N), standalone report export, release diff
+(/diff), node delete (empty-only), full placed CSV, cross-page nav.
 
 ## Blockers
 None. Branch is green; merge to main is a separate explicit step (Tier-0: needs confirmation).
