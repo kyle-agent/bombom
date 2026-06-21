@@ -288,7 +288,7 @@ def _cmd_serve(args) -> int:
 
     from .api import create_app
 
-    uvicorn.run(create_app("."), host=args.host, port=args.port)
+    uvicorn.run(create_app(args.root), host=args.host, port=args.port)
     return 0
 
 
@@ -406,6 +406,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_exp.set_defaults(func=_cmd_export)
 
     p_srv = sub.add_parser("serve", help="run the read-only web app (uvicorn)")
+    p_srv.add_argument("--root", default=".", help="workspace dir to serve (default: cwd)")
     p_srv.add_argument("--host", default="127.0.0.1")
     p_srv.add_argument("--port", type=int, default=8000)
     p_srv.set_defaults(func=_cmd_serve)

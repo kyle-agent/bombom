@@ -40,10 +40,29 @@ session-start hook, and a memory layer.
 pip install -e ".[dev]"
 bombom catalog sync && bombom catalog reindex   # once: init submodule + build index
 bombom serve            # http://127.0.0.1:8000/  (read-only view)  ·  /edit  (editor)
+bombom serve --root PATH # serve a specific workspace dir (default: cwd)
 bombom export out.html  # self-contained static viewer (no server)
 ```
 
 Editing in `/edit` writes the rack YAML and **commits to git** (`PUT /api/rack`).
+
+## Try it locally (demo workspace)
+
+One command seeds a realistic workspace so every page has data to click through:
+
+```
+make demo               # seed demo-workspace/ + start the server
+# or, by hand:
+python scripts/demo.py             # → ./demo-workspace (multi-zone, 2 release tags)
+bombom serve --root demo-workspace # → http://127.0.0.1:8000/
+```
+
+The seed deliberately includes validation issues (U overlap, missing required serial,
+unpriced placement, candidate gaps) so `/health` isn't empty, and tags two releases
+(R25.01, R26.07) plus one uncommitted edit so `/diff` shows real deltas. Pages to visit:
+`/manage` (+ `⬇ draw.io` export per AZ/Rack-Type) · `/candidates` · `/search` · `/health` ·
+`/edit` · `/placed` · `/dashboard` · `/diff`. The hardware catalog stays shared (repo's
+`.index/catalog.db`); only org/pricing data lives in the demo dir, which is gitignored.
 
 ## GitHub Pages (read-only viewer)
 
