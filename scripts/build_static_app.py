@@ -12,19 +12,65 @@ via `bombom export`. A landing index.html links every screen.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from showcase import seed as seed_showcase  # noqa: E402
 
-from starlette.testclient import TestClient  # noqa: E402
-
 from bombom.api import create_app  # noqa: E402
 from bombom.export import build_data, inject  # noqa: E402
 from bombom.workspace import Workspace  # noqa: E402
+
+
+# Minimal ASGI GET client — drives the real FastAPI app without TestClient (which pulls in
+# httpx/httpx2, a version-fragile test dep not installed for the Pages build).
+class _Resp:
+    def __init__(self, status: int, ct: str, text: str):
+        self.status_code, self._ct, self.text = status, ct, text
+        self.headers = {"content-type": ct}
+
+    def json(self):
+        return json.loads(self.text)
+
+
+class _AsgiClient:
+    def __init__(self, app):
+        self.app = app
+
+    def get(self, path: str, params: dict | None = None) -> _Resp:
+        qs = urlencode(params or {}).encode()
+        scope = {
+            "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
+            "method": "GET", "scheme": "http", "path": path, "raw_path": path.encode(),
+            "query_string": qs, "headers": [(b"host", b"testserver")],
+            "server": ("testserver", 80), "client": ("127.0.0.1", 50000),
+        }
+        out: list[dict] = []
+
+        async def receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def send(m):
+            out.append(m)
+
+        try:
+            asyncio.run(self.app(scope, receive, send))
+        except Exception as exc:  # noqa: BLE001 — record as 500 like raise_server_exceptions=False
+            return _Resp(500, "text/plain", repr(exc))
+        status, ct, body = 500, "application/json", b""
+        for m in out:
+            if m["type"] == "http.response.start":
+                status = m["status"]
+                hdrs = {k.decode().lower(): v.decode() for k, v in m.get("headers", [])}
+                ct = hdrs.get("content-type", ct)
+            elif m["type"] == "http.response.body":
+                body += m.get("body", b"")
+        return _Resp(status, ct, body.decode("utf-8"))
 
 REPO = Path(__file__).resolve().parent.parent
 WEB = REPO / "web"
@@ -62,7 +108,7 @@ def _node_paths(root: Path) -> list[str]:
     return paths
 
 
-def capture(client: TestClient, root: Path) -> dict[str, dict]:
+def capture(client: _AsgiClient, root: Path) -> dict[str, dict]:
     """Return {key: {status, ct, body}} for every GET the frontend can issue."""
     cache: dict[str, dict] = {}
 
@@ -253,7 +299,7 @@ def build(out: Path) -> Path:
         root = seed_showcase(Path(tmp) / "ws")
         ws = Workspace.open(root)
         app = create_app(root, db_path=ws.catalog.db_path)
-        client = TestClient(app, raise_server_exceptions=False)
+        client = _AsgiClient(app)
 
         cache = capture(client, root)
         # strip the throwaway workspace's absolute path so screens show "offerings/…" not /tmp/…
