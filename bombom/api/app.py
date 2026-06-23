@@ -251,6 +251,27 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
                                  categories=ws.categories, highlight_release=release)
         return Response(svg, media_type="image/svg+xml")
 
+    @app.get("/api/layout")
+    def layout(path: str = "offerings", release: Optional[str] = None):
+        # every rack beneath `path` (zone / rack-type / single rack), rendered for the
+        # pan/zoom rack-layout view. Each rack carries its SVG + hierarchy for click-detail.
+        loaded = load_racks(_resolve(root, path))
+        if not loaded.racks:
+            raise HTTPException(404, "no rack found at path")
+        racks = sorted(loaded.racks, key=lambda r: r.path)
+        out = []
+        for lr in racks:
+            rk = ws.catalog.get_rack_type(lr.design.rack_model.slug)
+            out.append({
+                "rack_id": lr.rack_id,
+                "hierarchy": lr.hierarchy,
+                "rack_model": lr.design.rack_model.slug,
+                "rack_u": int(rk.u_height) if rk else 42,
+                "svg": rack_elevation_svg(lr.design, ws.catalog, categories=ws.categories,
+                                          highlight_release=release, u_px=18, width=240),
+            })
+        return {"path": path, "count": len(out), "racks": out}
+
     @app.get("/api/rack/elevation.drawio")
     def rack_drawio(path: str = "offerings", release: Optional[str] = None, download: int = 0):
         # path may point at a single rack OR any subtree (zone / rack-type): every rack
@@ -535,6 +556,13 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         page = _VIEWER.parent / "search.html"
         if not page.exists():
             return HTMLResponse("<h1>search not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
+
+    @app.get("/layout", response_class=HTMLResponse)
+    def layout_page():
+        page = _VIEWER.parent / "layout.html"
+        if not page.exists():
+            return HTMLResponse("<h1>layout page not built</h1>", status_code=500)
         return HTMLResponse(page.read_text())
 
     # ── base-data hierarchy management (기준정보 / Rack-Type) ──────────────

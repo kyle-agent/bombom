@@ -273,9 +273,12 @@ function renderMain(){
   // rack header (role badge + id + rack_type slug)
   const head = document.createElement('div');
   head.className = 'rackhead';
+  const zpath = zonePathFor(rk.id);
   head.innerHTML = `<span class="rolebadge" style="background:${color}">${esc(role.toUpperCase())}</span>
     <b>${esc(rk.id)}</b>
-    <span class="rackmeta">· rack-type: ${esc(slug)}${uh?` (${esc(String(uh))}U)`:''} · Front</span>`;
+    <span class="rackmeta">· rack-type: ${esc(slug)}${uh?` (${esc(String(uh))}U)`:''} · Front</span>`
+    + (zpath ? ` <a class="rackmeta" style="margin-left:8px;color:#2563eb;text-decoration:none"
+        href="/layout?path=${encodeURIComponent(zpath)}" title="존 전체 랙구성도를 줌/이동으로 보기">🗺 존 전체 구성도</a>` : '');
   mv.appendChild(head);
 
   // elevation — inject server-rendered SVG as-is, scale via CSS transform
@@ -402,6 +405,16 @@ function crumbFor(rid){
   })));
   if(!path) return '';
   return path.map((p,i)=> i>=3 ? `<b>${esc(p)}</b>` : esc(p)).join(' / ');
+}
+// workspace path string for the zone containing rid (for the rack-layout view)
+function zonePathFor(rid){
+  const t = D.tree; if(!t) return '';
+  let found = null;
+  (t.regions||[]).forEach(rg=>(rg.zones||[]).forEach(z=>(z.rack_types||[]).forEach(grp=>{
+    if((grp.racks||[]).includes(rid)) found = {region:rg.region, zone:z.zone};
+  })));
+  if(!found) return '';
+  return `offerings/${t.offering}/regions/${found.region}/zones/${found.zone}`;
 }
 
 function initStatic(){

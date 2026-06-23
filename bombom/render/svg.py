@@ -68,8 +68,14 @@ def rack_elevation_svg(
         sw = 2 if sel else 1
         label = html.escape(device.model)
         rel = html.escape(str(pl.release))
+        # data-* attrs let an interactive viewer (pan/zoom layout) show a click-detail panel
+        attrs = (
+            f'class="dev" data-device="{html.escape(str(pl.device), quote=True)}" '
+            f'data-model="{label}" data-pos="{pl.position}" data-span="{span}" '
+            f'data-rel="{rel}" data-cat="{html.escape(cat, quote=True)}"'
+        )
         parts.append(
-            f'<g><rect x="{pad_left + 1}" y="{y + 1}" width="{body_w}" height="{bh}" rx="3" '
+            f'<g {attrs}><rect x="{pad_left + 1}" y="{y + 1}" width="{body_w}" height="{bh}" rx="3" '
             f'fill="{fill}" stroke="{stroke}" stroke-width="{sw}"/>'
             f'<text x="{pad_left + 6}" y="{y + 1 + bh / 2 + 3}" font-size="9" fill="#fff">'
             f'{label} <tspan fill="#e2e8f0">U{pl.position}·{rel}</tspan></text></g>'
