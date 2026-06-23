@@ -1,6 +1,8 @@
-name: Deploy read-only viewer to GitHub Pages
+name: Deploy demo + read-only viewer to GitHub Pages
 
-# Builds the static, read-only bombom viewer (bombom export) and publishes it to Pages.
+# Publishes two static, backend-free pages to GitHub Pages:
+#   index.html   — interactive rack-layout demo (zoom/pan/click-detail, light theme)
+#   viewer.html  — read-only bombom viewer (bombom export)
 # Editing stays via `bombom serve` / PRs — Pages is view-only (the cost data is public-OK).
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions".
 
@@ -13,6 +15,9 @@ on:
       - "categories/**"
       - "meta/**"
       - "web/viewer.html"
+      - "web/layout.html"
+      - "scripts/build_static_demo.py"
+      - "scripts/demo.py"
       - "bombom/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -42,10 +47,11 @@ jobs:
       - run: pip install -e .
       - name: Build catalog index
         run: bombom catalog reindex
-      - name: Export static viewer
+      - name: Build static demo (interactive rack-layout, landing page) + viewer
         run: |
           mkdir -p public
-          bombom export public/index.html --path offerings/cloud-a
+          python scripts/build_static_demo.py --out public/index.html
+          bombom export public/viewer.html --path offerings/cloud-a
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
