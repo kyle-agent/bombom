@@ -1,8 +1,9 @@
-name: Deploy demo + read-only viewer to GitHub Pages
+name: Deploy full-app static demo to GitHub Pages
 
-# Publishes two static, backend-free pages to GitHub Pages:
-#   index.html   — interactive rack-layout demo (zoom/pan/click-detail, light theme)
-#   viewer.html  — read-only bombom viewer (bombom export)
+# Publishes the WHOLE bombom app as a backend-free, read-only static demo:
+#   index.html — landing menu; viewer / dashboard / placed / layout / manage / candidates /
+#   diff / health / search — every screen, with a filled showcase dataset baked in.
+# Built by scripts/build_static_app.py (captures GET responses + injects a fetch shim).
 # Editing stays via `bombom serve` / PRs — Pages is view-only (the cost data is public-OK).
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions".
 
@@ -10,14 +11,9 @@ on:
   push:
     branches: [claude/vibrant-tesla-okhpxz, main]
     paths:
-      - "offerings/**"
-      - "pricing/**"
-      - "categories/**"
-      - "meta/**"
-      - "web/viewer.html"
-      - "web/layout.html"
-      - "scripts/build_static_demo.py"
-      - "scripts/demo.py"
+      - "web/**"
+      - "scripts/build_static_app.py"
+      - "scripts/showcase.py"
       - "bombom/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -47,11 +43,8 @@ jobs:
       - run: pip install -e .
       - name: Build catalog index
         run: bombom catalog reindex
-      - name: Build static demo (interactive rack-layout, landing page) + viewer
-        run: |
-          mkdir -p public
-          python scripts/build_static_demo.py --out public/index.html
-          bombom export public/viewer.html --path offerings/cloud-a
+      - name: Build full-app static demo (all screens, filled showcase data)
+        run: python scripts/build_static_app.py --out public
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

@@ -33,7 +33,9 @@ def test_seed_loads_expected_racks(seeded):
 
 
 def test_seed_tags_two_releases(seeded):
-    assert list_tags(seeded) == ["R25.01", "R26.07"]
+    # order-insensitive: list_tags sorts by -creatordate, so two tags created in the same run
+    # tiebreak unpredictably depending on whether they cross a clock-second boundary.
+    assert sorted(list_tags(seeded)) == ["R25.01", "R26.07"]
 
 
 def test_seed_leaves_working_edit(seeded):
@@ -50,4 +52,4 @@ def test_seed_is_idempotent(tmp_path):
     target = tmp_path / "ws"
     mod.seed(target)
     mod.seed(target)  # second run wipes + rebuilds, must not raise
-    assert list_tags(target) == ["R25.01", "R26.07"]
+    assert sorted(list_tags(target)) == ["R25.01", "R26.07"]
