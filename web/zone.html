@@ -11,24 +11,34 @@
  .logo{font-weight:700;font-size:15px;color:#2563eb}
  .crumb{color:#334155;font-size:13px}
  .crumb b{color:#0f172a}
- nav{margin-left:auto;display:flex;gap:2px}
+ nav{margin-left:auto;display:flex;gap:6px;align-items:center}
  nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
  nav a:hover{background:#f1f5f9}
+ nav a.editbtn{background:#2563eb;color:#fff;font-weight:600;padding:6px 13px}
+ nav a.editbtn:hover{background:#1d4ed8}
  .summary{display:flex;gap:18px;padding:9px 16px;border-bottom:1px solid #e2e8f0;background:#fff;flex:0 0 auto;flex-wrap:wrap}
  .summary .s{display:flex;flex-direction:column}
  .summary .s .n{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
  .summary .s .l{color:#94a3b8;font-size:11px}
  .main{flex:1 1 auto;display:flex;min-height:0}
- /* device list */
+ /* device list — grouped rack → category → device(qty) */
  aside{flex:0 0 380px;border-right:1px solid #e2e8f0;background:#fff;display:flex;flex-direction:column;min-height:0}
  aside .h{padding:9px 14px;font-weight:600;font-size:13px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center}
  aside .h .cnt{color:#94a3b8;font-weight:400}
- .list{overflow:auto;flex:1 1 auto}
- table{width:100%;border-collapse:collapse;font-size:12px}
- th,td{text-align:left;padding:6px 14px;border-bottom:1px solid #f1f5f9;white-space:nowrap}
- th{position:sticky;top:0;background:#f8fafc;color:#64748b;font-weight:600;z-index:1}
- td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
- .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+ .list{overflow:auto;flex:1 1 auto;padding:6px 0}
+ .rackgrp{border-bottom:1px solid #eef2f7}
+ .rackgrp .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 14px 5px;position:sticky;top:0;background:#fff}
+ .rackgrp .rh b{font-size:13px}
+ .rackgrp .rh .rmeta{color:#94a3b8;font-size:11px;font-variant-numeric:tabular-nums}
+ .catgrp{padding:0 0 6px}
+ .catgrp .ch{display:flex;align-items:center;gap:6px;padding:3px 14px;color:#64748b;font-size:11px;font-weight:600}
+ .catgrp .ch .dot{width:8px;height:8px;border-radius:2px}
+ .catgrp .ch .cq{color:#94a3b8;font-weight:400}
+ .devrow{display:flex;justify-content:space-between;gap:8px;padding:3px 14px 3px 28px;font-size:12px}
+ .devrow .nm{color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .devrow .q{color:#0f172a;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+ .devrow .q .sub{color:#94a3b8;font-weight:400;margin-left:6px}
+ .devrow .q .np{color:#dc2626;font-weight:400}
  /* elevations */
  #viewport{position:relative;flex:1 1 auto;overflow:hidden;cursor:grab;
    background:linear-gradient(#e8edf3 1px,transparent 1px) 0 0/24px 24px,
@@ -49,15 +59,14 @@
 <header>
  <span class="logo">bombom</span>
  <span class="crumb" id="crumb">— 존</span>
- <nav><a href="/home">← 메인</a><a href="/summary">투자 리포트</a><a id="dash" href="/dashboard">현황</a></nav>
+ <nav><a href="/home">← 메인</a><a href="/summary">투자 리포트</a><a id="dash" href="/dashboard">현황</a>
+   <a id="editbtn" class="editbtn" href="/edit">✏ 편집 (랙 배치)</a></nav>
 </header>
 <div class="summary" id="summary"></div>
 <div class="main">
  <aside>
    <div class="h">장비 리스트 <span class="cnt" id="devcnt"></span></div>
-   <div class="list"><table id="devtable"><thead><tr>
-     <th>랙</th><th>장비</th><th>카테고리</th><th>릴리즈</th><th class="r">수량</th><th class="r">소계</th>
-   </tr></thead><tbody id="devbody"></tbody></table></div>
+   <div class="list" id="devlist"></div>
  </aside>
  <div id="viewport">
    <div class="vtools"><span id="zl">100%</span>
@@ -108,20 +117,45 @@ Promise.all([
     <div class="s"><span class="n">${t.servers}</span><span class="l">서버</span></div>
     <div class="s"><span class="n">${t.devices}</span><span class="l">전체 장비</span></div>
     <div class="s"><span class="n">${t.rack_types}</span><span class="l">Rack-Type</span></div>`;
-  // device list
+  // device list — grouped by rack → category, identical devices collapsed to a quantity
   const rows=placed.rows||[];
-  document.getElementById('devcnt').textContent=rows.length+'행';
-  document.getElementById('devbody').innerHTML = rows.map(r=>`<tr>
-    <td>${esc(r.rack)}</td><td>${esc(r.name)}</td>
-    <td><span class="dot" style="background:${CAT[r.category]||CAT.other}"></span>${esc(r.category)}</td>
-    <td>${esc(r.release)}</td><td class="r">${r.qty}</td>
-    <td class="r">${r.priced?won(r.subtotal):'<span style="color:#dc2626">미가격</span>'}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="empty">장비가 없습니다.</td></tr>';
-  // elevations
+  const CATORDER=['server','network','storage','other'];
+  const byRack={};
+  rows.forEach(r=>{
+    const rk=byRack[r.rack]||(byRack[r.rack]={devices:0,cats:{}});
+    rk.devices+=r.qty;
+    const c=rk.cats[r.category]||(rk.cats[r.category]={qty:0,items:{}});
+    c.qty+=r.qty;
+    const it=c.items[r.name]||(c.items[r.name]={name:r.name,qty:0,subtotal:0,priced:true});
+    it.qty+=r.qty; it.subtotal+=r.subtotal; it.priced=it.priced&&r.priced;
+  });
+  const rackIds=Object.keys(byRack).sort();
+  document.getElementById('devcnt').textContent=rackIds.length+'랙 · '+t.devices+'대';
+  document.getElementById('devlist').innerHTML = rackIds.length ? rackIds.map(rid=>{
+    const rk=byRack[rid];
+    const cats=CATORDER.filter(c=>rk.cats[c]).map(cat=>{
+      const c=rk.cats[cat];
+      const items=Object.values(c.items).sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name));
+      const rowsHtml=items.map(it=>`<div class="devrow"><span class="nm">${esc(it.name)}</span>
+        <span class="q">×${it.qty}${it.priced?`<span class="sub">${won(it.subtotal)}</span>`:'<span class="np">미가격</span>'}</span></div>`).join('');
+      return `<div class="catgrp"><div class="ch"><span class="dot" style="background:${CAT[cat]||CAT.other}"></span>
+        ${esc(cat)} <span class="cq">· ${c.qty}대</span></div>${rowsHtml}</div>`;
+    }).join('');
+    return `<div class="rackgrp"><div class="rh"><b>▣ ${esc(rid)}</b><span class="rmeta">${rk.devices}대</span></div>${cats}</div>`;
+  }).join('') : '<div class="empty">장비가 없습니다.</div>';
+
+  // elevations + edit-button target (open the editor straight onto a rack of this zone)
   if((layout.racks||[]).length){
     scene.innerHTML=layout.racks.map(rk=>`<figure class="rack"><figcaption>${esc(rk.rack_id)}
       <small>${esc(rk.rack_model)} · ${rk.rack_u}U</small></figcaption>${rk.svg}</figure>`).join('');
     requestAnimationFrame(fit);
-  } else { scene.innerHTML='<div class="empty">랙 실장도가 없습니다.</div>'; }
+    const off=PATH.split('/regions/')[0];
+    const r0=layout.racks[0], rt=(r0.hierarchy&&r0.hierarchy.rack_type)||'';
+    const rackFile=`${PATH}/rack-types/${rt}/racks/${r0.rack_id}.yaml`;
+    document.getElementById('editbtn').href='/edit?path='+encodeURIComponent(off)+'&rack='+encodeURIComponent(rackFile);
+  } else {
+    scene.innerHTML='<div class="empty">랙 실장도가 없습니다.</div>';
+    document.getElementById('editbtn').href='/edit?path='+encodeURIComponent(PATH.split('/regions/')[0]);
+  }
 }).catch(e=>{ scene.innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
 </script></body></html>

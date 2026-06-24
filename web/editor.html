@@ -1361,10 +1361,13 @@ function init(){
   renderCatChips();
   renderShortlist();
   doCatSearch();   // auto-load top 50 candidates on open (empty q)
-  // allow ?path= override of tree root
+  // allow ?path= override of tree root, and ?rack=<file.yaml> to open straight into edit mode
   const qp=new URLSearchParams(location.search);
   if(qp.get('path')) TREE_PATH=qp.get('path');
-  loadTree();
+  loadTree().then(()=>{
+    const rf=qp.get('rack');
+    if(rf){ loadRack(rf.split('/').pop().replace(/\.yaml$/,''), rf); }
+  });
 }
 init();
 </script>
