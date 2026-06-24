@@ -30,6 +30,7 @@ from ..candidates import (
 )
 from ..confirm import request as confirm_request
 from ..dashboard import build_dashboard
+from ..overview import build_overview
 from ..design import LoadedRack, RackDesign, load_racks, parse_hierarchy, validate_rack
 from ..design.writer import write_rack
 from ..export import build_data, build_report_data, inject
@@ -479,6 +480,10 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
     def dashboard_ep(path: str = "offerings"):
         return build_dashboard(ws, _resolve(root, path))
 
+    @app.get("/api/overview")
+    def overview_ep(path: str = "offerings"):
+        return build_overview(ws, _resolve(root, path))
+
     @app.get("/api/placed")
     def placed_ep(path: str = "offerings", release: Optional[str] = None):
         rows = placed_rows(ws, _resolve(root, path), release=release)
@@ -564,6 +569,24 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         if not page.exists():
             return HTMLResponse("<h1>layout page not built</h1>", status_code=500)
         return HTMLResponse(page.read_text())
+
+    def _serve(name: str):
+        page = _VIEWER.parent / name
+        if not page.exists():
+            return HTMLResponse(f"<h1>{name} not built</h1>", status_code=500)
+        return HTMLResponse(page.read_text())
+
+    @app.get("/home", response_class=HTMLResponse)
+    def home_page():
+        return _serve("home.html")
+
+    @app.get("/zone", response_class=HTMLResponse)
+    def zone_page():
+        return _serve("zone.html")
+
+    @app.get("/summary", response_class=HTMLResponse)
+    def summary_page():
+        return _serve("summary.html")
 
     # ── base-data hierarchy management (기준정보 / Rack-Type) ──────────────
     @app.get("/api/hierarchy")

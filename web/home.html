@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 메인</title>
+<style>
+ :root{font-family:system-ui,-apple-system,sans-serif}
+ *{box-sizing:border-box}
+ body{margin:0;background:#f8fafc;color:#0f172a}
+ header{display:flex;gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid #e2e8f0;background:#fff;position:sticky;top:0;z-index:5}
+ .logo{font-weight:700;font-size:16px;color:#2563eb}
+ .crumb{color:#64748b;font-size:13px}
+ nav{margin-left:auto;display:flex;gap:2px}
+ nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
+ nav a:hover{background:#f1f5f9}
+ .wrap{max-width:1180px;margin:22px auto;padding:0 20px}
+ /* totals */
+ .totals{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:14px;margin-bottom:26px}
+ .tcard{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+ .tcard .k{color:#64748b;font-size:12px;margin-bottom:4px}
+ .tcard .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+ .tcard.cap .v{color:#0f172a}
+ .tcard .sub{color:#94a3b8;font-size:12px;margin-top:2px}
+ /* offering / region / zone */
+ .offering{margin-bottom:26px}
+ .offh{display:flex;align-items:baseline;gap:10px;margin:6px 0 2px}
+ .offh b{font-size:18px}
+ .offh .meta{color:#64748b;font-size:13px}
+ .region{margin:14px 0 4px}
+ .regh{display:flex;align-items:center;gap:8px;color:#334155;font-size:14px;font-weight:600;margin:10px 0 8px}
+ .regh .pill{background:#eef2ff;color:#4338ca;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:500}
+ .zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px}
+ a.zone{display:block;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;
+   text-decoration:none;color:inherit;box-shadow:0 1px 3px rgba(15,23,42,.05);transition:.12s}
+ a.zone:hover{border-color:#93c5fd;box-shadow:0 3px 12px rgba(37,99,235,.13);transform:translateY(-1px)}
+ a.zone .zt{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+ a.zone .zt b{font-size:15px}
+ a.zone .zt .go{color:#2563eb;font-size:13px}
+ a.zone .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+ a.zone .stat{display:flex;flex-direction:column}
+ a.zone .stat .n{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+ a.zone .stat .l{color:#94a3b8;font-size:11px}
+ a.zone .cap{margin-top:11px;padding-top:9px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center}
+ a.zone .cap .l{color:#94a3b8;font-size:11px} a.zone .cap .n{font-weight:700;font-variant-numeric:tabular-nums}
+ .empty{padding:50px;text-align:center;color:#94a3b8}
+</style></head>
+<body>
+<header>
+ <span class="logo">bombom</span><span class="crumb">— 메인 (오퍼링 · 리전 · 존 요약)</span>
+ <nav>
+   <a href="/summary">투자 리포트</a><a href="/dashboard">현황</a>
+   <a href="/">뷰어</a><a href="/edit">에디터</a><a href="/manage">기준정보</a>
+ </nav>
+</header>
+<div class="wrap" id="root"><div class="empty">불러오는 중…</div></div>
+<script>
+const cur = (window.__CURRENCY__||'₩');
+function won(n){ return cur + Number(n||0).toLocaleString(); }
+function eok(n){ const v=Number(n||0)/1e8; return v>=1 ? '약 '+v.toFixed(1)+'억' : Math.round(Number(n||0)/1e4)+'만'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function zoneCard(z){
+  return `<a class="zone" href="/zone?path=${encodeURIComponent(z.path)}">
+    <div class="zt"><b>${esc(z.zone)}</b><span class="go">열기 →</span></div>
+    <div class="stats">
+      <div class="stat"><span class="n">${z.racks}</span><span class="l">랙</span></div>
+      <div class="stat"><span class="n">${z.servers}</span><span class="l">서버</span></div>
+      <div class="stat"><span class="n">${z.devices}</span><span class="l">전체 장비</span></div>
+      <div class="stat"><span class="n">${z.rack_types}</span><span class="l">Rack-Type</span></div>
+    </div>
+    <div class="cap"><span class="l">투자비용(CAPEX)</span><span class="n">${won(z.capex)}</span></div>
+  </a>`;
+}
+
+fetch('/api/overview?path=offerings').then(r=>r.json()).then(d=>{
+  const t = d.totals;
+  let html = `<div class="totals">
+    <div class="tcard cap"><div class="k">누적 총 CAPEX</div><div class="v">${won(t.capex)}</div><div class="sub">${eok(t.capex)}</div></div>
+    <div class="tcard"><div class="k">랙</div><div class="v">${t.racks}</div></div>
+    <div class="tcard"><div class="k">서버</div><div class="v">${t.servers}</div><div class="sub">전체 장비 ${t.devices}</div></div>
+    <div class="tcard"><div class="k">존</div><div class="v">${d.tree.reduce((s,o)=>s+o.regions.reduce((a,r)=>a+r.zones.length,0),0)}</div></div>
+  </div>`;
+  if(!d.tree.length){ document.getElementById('root').innerHTML='<div class="empty">데이터가 없습니다.</div>'; return; }
+  for(const o of d.tree){
+    html += `<div class="offering"><div class="offh"><b>${esc(o.offering)}</b>
+      <span class="meta">랙 ${o.racks} · 서버 ${o.servers} · ${won(o.capex)}</span></div>`;
+    for(const rg of o.regions){
+      html += `<div class="region"><div class="regh">${esc(rg.region)}
+        <span class="pill">존 ${rg.zones.length} · 랙 ${rg.racks} · ${won(rg.capex)}</span></div>
+        <div class="zgrid">${rg.zones.map(zoneCard).join('')}</div></div>`;
+    }
+    html += `</div>`;
+  }
+  document.getElementById('root').innerHTML = html;
+}).catch(e=>{ document.getElementById('root').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
+</script></body></html>

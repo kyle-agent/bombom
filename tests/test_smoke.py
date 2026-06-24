@@ -49,6 +49,10 @@ API_ROUTES = [
     "/api/rack/elevation.drawio?path=offerings/cloud-a",
     "/api/layout?path=offerings/cloud-a",
     "/layout",
+    "/api/overview?path=offerings/cloud-a",
+    "/home",
+    "/zone",
+    "/summary",
     "/api/dashboard?path=offerings/cloud-a",
     "/api/placed?path=offerings/cloud-a",
 ]

@@ -80,10 +80,12 @@ ROUTES = {
     "/": "viewer.html", "/edit": "editor.html", "/placed": "placed.html",
     "/dashboard": "dashboard.html", "/diff": "diff.html", "/health": "health.html",
     "/search": "search.html", "/layout": "layout.html", "/manage": "manage.html",
-    "/candidates": "candidates.html",
+    "/candidates": "candidates.html", "/home": "index.html", "/zone": "zone.html",
+    "/summary": "summary.html",
 }
 PAGES = ["viewer.html", "editor.html", "placed.html", "dashboard.html", "diff.html",
-         "health.html", "search.html", "layout.html", "manage.html", "candidates.html"]
+         "health.html", "search.html", "layout.html", "manage.html", "candidates.html",
+         "home.html", "zone.html", "summary.html"]
 
 
 def _key(pathname: str, params: dict) -> str:
@@ -125,8 +127,13 @@ def capture(client: _AsgiClient, root: Path) -> dict[str, dict]:
     # per-node-path endpoints
     nodes = _node_paths(root)
     for p in nodes:
-        for ep in ("/api/dashboard", "/api/placed", "/api/health", "/api/layout"):
+        for ep in ("/api/dashboard", "/api/placed", "/api/health", "/api/layout",
+                   "/api/overview", "/api/tree"):
             grab(ep, {"path": p})
+
+    # single-rack loads for the editor (tree node → /api/rack?path=<file>.yaml)
+    for rf in sorted((root / "offerings").glob("*/regions/*/zones/*/rack-types/*/racks/*.yaml")):
+        grab("/api/rack", {"path": rf.relative_to(root).as_posix()})
 
     # complete search corpus: union results across every entity token (empty q returns nothing),
     # baked once under a sentinel key; the shim substring-filters it client-side.
@@ -232,8 +239,8 @@ def _shim() -> str:
         "};\n"
         "addEventListener('DOMContentLoaded',()=>{const b=document.createElement('div');b.id='demobar';"
         "b.innerHTML='🔒 bombom 정적 데모 (읽기전용) · "
-        "<a href=\"index.html\">메뉴</a> <a href=\"viewer.html\">뷰어</a> <a href=\"dashboard.html\">현황</a> "
-        "<a href=\"layout.html?path=offerings/cloud-a/regions/kr-east/zones/az1\">랙구성도</a>"
+        "<a href=\"index.html\">메인</a> <a href=\"summary.html\">투자 리포트</a> "
+        "<a href=\"dashboard.html\">현황</a> <a href=\"viewer.html\">뷰어</a> <a href=\"editor.html\">에디터</a>"
         "<span class=\"sp\"></span>편집·저장은 비활성화';document.body.appendChild(b);"
         "document.body.style.paddingBottom='34px';"
         "document.querySelectorAll('#csvBtn,#reportBtn').forEach(el=>el.addEventListener('click',"
@@ -250,46 +257,6 @@ def _hide_downloads(html: str) -> str:
         "[href*='invest.csv'],#dl{display:none!important}</style>\n"
     )
 
-
-def _landing(root: Path) -> str:
-    cards = [
-        ("뷰어", "viewer.html", "랙 실장도 + BOM/CAPEX 한 화면"),
-        ("현황", "dashboard.html", "누적 CAPEX 롤업 (계층/카테고리/릴리즈)"),
-        ("랙구성도", "layout.html?path=offerings/cloud-a/regions/kr-east/zones/az1",
-         "존 전체 랙을 줌/이동/클릭상세로"),
-        ("배치 목록", "placed.html", "배치 장비 목록 + 합계 CAPEX"),
-        ("기준정보", "manage.html", "오퍼링/리전/존/Rack-Type 트리"),
-        ("후보풀", "candidates.html", "후보 장비 + 가격/메타"),
-        ("변경비교", "diff.html", "릴리즈 R25.01 ↔ R26.07 델타"),
-        ("검증", "health.html", "검증오류·미가격·메타 갭"),
-        ("검색", "search.html", "노드/랙/장비 검색"),
-    ]
-    items = "\n".join(
-        f'<a class="card" href="{href}"><b>{title}</b><span>{desc}</span></a>'
-        for title, href, desc in cards
-    )
-    return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>bombom — 정적 데모</title>
-<style>
- :root{{font-family:system-ui,sans-serif}}
- body{{margin:0;background:#f8fafc;color:#0f172a}}
- header{{padding:22px 28px;border-bottom:1px solid #e2e8f0;background:#fff}}
- header b{{font-size:20px;color:#2563eb}} header span{{color:#64748b;margin-left:8px;font-size:14px}}
- .wrap{{max-width:980px;margin:28px auto;padding:0 20px}}
- .note{{color:#64748b;font-size:13px;margin-bottom:18px}}
- .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}}
- a.card{{display:flex;flex-direction:column;gap:6px;padding:16px 18px;background:#fff;border:1px solid #e2e8f0;
-   border-radius:12px;text-decoration:none;color:inherit;box-shadow:0 1px 3px rgba(15,23,42,.05)}}
- a.card:hover{{border-color:#93c5fd;box-shadow:0 2px 10px rgba(37,99,235,.12)}}
- a.card b{{font-size:15px}} a.card span{{color:#64748b;font-size:13px}}
-</style></head><body>
-<header><b>bombom</b><span>인프라 BOM/CAPEX 설계 · 정적 데모 (읽기전용)</span></header>
-<div class="wrap">
- <div class="note">실제 앱을 백엔드 없이 구운 데모입니다. 모든 화면을 둘러볼 수 있고, 편집·저장만 비활성화되어 있습니다.</div>
- <div class="grid">{items}</div>
-</div></body></html>
-"""
 
 
 def build(out: Path) -> Path:
@@ -324,7 +291,8 @@ def build(out: Path) -> Path:
             html = _hide_downloads(_link_rewrite(html)).replace("</head>", shim + "</head>", 1)
             (out / page).write_text(html)
 
-        (out / "index.html").write_text(_landing(root))
+        # main page = the overview (home.html), served as the Pages landing
+        (out / "index.html").write_text((out / "home.html").read_text())
         (out / ".nojekyll").write_text("")  # serve _api.js (Jekyll skips underscore files)
     return out
 

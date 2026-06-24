@@ -686,6 +686,15 @@ function renderMain(){
       +`<span class="rm" title="제거" data-rm="${idx}">✕</span>`;
     rack.appendChild(blk);
   });
+  // scroll/wheel over the rack = zoom the elevation (keep the pointed U roughly in place)
+  rack.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const before = uslotPx();
+    const uAt = (rack.scrollHeight - (e.offsetY)) / before;   // U index under the cursor
+    setZoom(zoom + (e.deltaY < 0 ? 0.1 : -0.1));
+    const after = uslotPx();
+    mv.scrollTop += (after - before) * uAt;                   // re-center on that U
+  }, {passive:false});
   mv.appendChild(rack);
 
   // 0U items row (PDUs etc.)

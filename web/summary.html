@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 투자 리포트</title>
+<style>
+ :root{font-family:system-ui,-apple-system,sans-serif}
+ *{box-sizing:border-box}
+ body{margin:0;background:#f8fafc;color:#0f172a}
+ header{display:flex;gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid #e2e8f0;background:#fff;position:sticky;top:0;z-index:5}
+ .logo{font-weight:700;font-size:16px;color:#2563eb}
+ .crumb{color:#64748b;font-size:13px}
+ nav{margin-left:auto;display:flex;gap:2px}
+ nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
+ nav a:hover{background:#f1f5f9}
+ .wrap{max-width:1040px;margin:22px auto;padding:0 20px}
+ .controls{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+ .controls .lbl{color:#64748b;font-size:13px;margin-right:2px}
+ .seg{display:inline-flex;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:#fff}
+ .seg button{border:0;background:#fff;padding:7px 14px;font-size:13px;cursor:pointer;color:#334155;border-right:1px solid #e2e8f0}
+ .seg button:last-child{border-right:0}
+ .seg button.on{background:#2563eb;color:#fff}
+ .sortsel{margin-left:auto;font-size:13px;color:#64748b}
+ .sortsel select{font-size:13px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:7px;background:#fff}
+ .totbar{display:flex;gap:20px;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:14px;flex-wrap:wrap}
+ .totbar .t{display:flex;flex-direction:column}
+ .totbar .t .n{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+ .totbar .t .l{color:#94a3b8;font-size:11px}
+ table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
+ th,td{padding:11px 14px;border-bottom:1px solid #f1f5f9;font-size:14px;text-align:left}
+ th{background:#f8fafc;color:#64748b;font-weight:600;font-size:12px;cursor:pointer;user-select:none}
+ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+ tr:last-child td{border-bottom:0}
+ tbody tr:hover{background:#f8fafc}
+ .bar{height:6px;border-radius:3px;background:#dbeafe;margin-top:5px}
+ .bar i{display:block;height:100%;border-radius:3px;background:#2563eb}
+ td .g{color:#0f172a;font-weight:600}
+ tfoot td{font-weight:700;background:#f8fafc;border-top:2px solid #e2e8f0}
+ .empty{padding:40px;text-align:center;color:#94a3b8}
+</style></head>
+<body>
+<header>
+ <span class="logo">bombom</span><span class="crumb">— 투자 리포트 (선택 집계)</span>
+ <nav><a href="/home">← 메인</a><a href="/dashboard">현황</a><a href="/placed">배치 목록</a></nav>
+</header>
+<div class="wrap">
+ <div class="controls">
+   <span class="lbl">집계 단위</span>
+   <div class="seg" id="seg">
+     <button data-g="offering">오퍼링별</button>
+     <button data-g="region">리전별</button>
+     <button data-g="zone" class="on">존별</button>
+     <button data-g="rack_type">랙타입별</button>
+   </div>
+   <span class="sortsel">정렬
+     <select id="sort">
+       <option value="capex">투자비용 ↓</option>
+       <option value="servers">서버 수 ↓</option>
+       <option value="devices">전체 장비 ↓</option>
+       <option value="racks">랙 수 ↓</option>
+       <option value="label">이름순</option>
+     </select>
+   </span>
+ </div>
+ <div class="totbar" id="totbar"></div>
+ <div id="tablewrap"><div class="empty">불러오는 중…</div></div>
+</div>
+<script>
+const cur='₩';
+function won(n){return cur+Number(n||0).toLocaleString();}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+let DATA=null, group='zone', sort='capex';
+const GLABEL={offering:'오퍼링',region:'리전',zone:'존',rack_type:'랙타입'};
+
+function render(){
+  if(!DATA) return;
+  const t=DATA.totals;
+  document.getElementById('totbar').innerHTML=`
+    <div class="t"><span class="n">${won(t.capex)}</span><span class="l">총 투자비용(CAPEX)</span></div>
+    <div class="t"><span class="n">${t.servers}</span><span class="l">서버 대수</span></div>
+    <div class="t"><span class="n">${t.devices}</span><span class="l">전체 장비</span></div>
+    <div class="t"><span class="n">${t.racks}</span><span class="l">랙</span></div>`;
+  let rows=(DATA.groups[group]||[]).slice();
+  rows.sort((a,b)=> sort==='label' ? String(a.label).localeCompare(String(b.label)) : (b[sort]-a[sort]));
+  const maxCap=Math.max(1,...rows.map(r=>r.capex));
+  if(!rows.length){ document.getElementById('tablewrap').innerHTML='<div class="empty">데이터가 없습니다.</div>'; return; }
+  const body=rows.map(r=>`<tr>
+    <td><span class="g">${esc(r.label)}</span><div class="bar"><i style="width:${Math.round(r.capex/maxCap*100)}%"></i></div></td>
+    <td class="r">${won(r.capex)}</td>
+    <td class="r">${r.servers}</td>
+    <td class="r">${r.devices}</td>
+    <td class="r">${r.racks}</td>
+    <td class="r">${r.rack_types}</td></tr>`).join('');
+  document.getElementById('tablewrap').innerHTML=`<table>
+    <thead><tr><th>${esc(GLABEL[group])}</th><th class="r">투자비용</th><th class="r">서버</th>
+      <th class="r">전체 장비</th><th class="r">랙</th><th class="r">Rack-Type</th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td>합계</td><td class="r">${won(t.capex)}</td><td class="r">${t.servers}</td>
+      <td class="r">${t.devices}</td><td class="r">${t.racks}</td><td class="r">${t.rack_types}</td></tr></tfoot>
+  </table>`;
+}
+
+document.getElementById('seg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  group=b.dataset.g;
+  [...document.querySelectorAll('#seg button')].forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
+document.getElementById('sort').addEventListener('change',e=>{ sort=e.target.value; render(); });
+
+fetch('/api/overview?path=offerings').then(r=>r.json()).then(d=>{ DATA=d; render(); })
+  .catch(e=>{ document.getElementById('tablewrap').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
+</script></body></html>
