@@ -111,10 +111,11 @@ def test_invest_csv_rejects_unsafe_release(ws_root):
     assert r.status_code == 400          # header-injection guard on release
 
 
-def test_dashboard_page_served(ws_root):
+def test_dashboard_route_removed(ws_root):
+    # /dashboard screen consolidated into 메인(/) + 투자 리포트(/summary); API endpoint remains
     client = _client(ws_root)
-    r = client.get("/dashboard")
-    assert r.status_code == 200 and "현황 대시보드" in r.text
+    assert client.get("/dashboard").status_code == 404
+    assert client.get("/api/dashboard?path=offerings/cloud-a").status_code == 200
 
 
 def test_api_placed_lists_all_with_total(ws_root):
@@ -170,7 +171,8 @@ def test_placed_csv_all_and_per_release(ws_root):
     assert bad.status_code == 400          # release header-injection guard
 
 
-def test_placed_page_served(ws_root):
+def test_placed_route_removed(ws_root):
+    # /placed screen consolidated; /api/placed + /api/placed.csv endpoints remain
     client = _client(ws_root)
-    r = client.get("/placed")
-    assert r.status_code == 200 and "배치" in r.text
+    assert client.get("/placed").status_code == 404
+    assert client.get("/api/placed?path=offerings/cloud-a").status_code == 200

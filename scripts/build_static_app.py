@@ -23,7 +23,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from showcase import seed as seed_showcase  # noqa: E402
 
 from bombom.api import create_app  # noqa: E402
-from bombom.export import build_data, inject  # noqa: E402
 from bombom.workspace import Workspace  # noqa: E402
 
 
@@ -77,15 +76,13 @@ WEB = REPO / "web"
 
 # in-app route → static file (for link rewriting). "/" is the viewer.
 ROUTES = {
-    "/": "viewer.html", "/edit": "editor.html", "/placed": "placed.html",
-    "/dashboard": "dashboard.html", "/diff": "diff.html", "/health": "health.html",
-    "/search": "search.html", "/layout": "layout.html", "/manage": "manage.html",
-    "/candidates": "candidates.html", "/home": "index.html", "/zone": "zone.html",
-    "/summary": "summary.html", "/place": "place.html",
+    "/": "index.html", "/home": "index.html", "/edit": "editor.html",
+    "/diff": "diff.html", "/health": "health.html", "/search": "search.html",
+    "/manage": "manage.html", "/candidates": "candidates.html",
+    "/zone": "zone.html", "/summary": "summary.html", "/place": "place.html",
 }
-PAGES = ["viewer.html", "editor.html", "placed.html", "dashboard.html", "diff.html",
-         "health.html", "search.html", "layout.html", "manage.html", "candidates.html",
-         "home.html", "zone.html", "summary.html", "place.html"]
+PAGES = ["editor.html", "diff.html", "health.html", "search.html", "manage.html",
+         "candidates.html", "home.html", "zone.html", "summary.html", "place.html"]
 
 
 def _key(pathname: str, params: dict) -> str:
@@ -127,8 +124,7 @@ def capture(client: _AsgiClient, root: Path) -> dict[str, dict]:
     # per-node-path endpoints
     nodes = _node_paths(root)
     for p in nodes:
-        for ep in ("/api/dashboard", "/api/placed", "/api/health", "/api/layout",
-                   "/api/overview", "/api/tree"):
+        for ep in ("/api/health", "/api/layout", "/api/overview", "/api/tree"):
             grab(ep, {"path": p})
 
     # single-rack loads for the editor (tree node → /api/rack?path=<file>.yaml)
@@ -240,7 +236,7 @@ def _shim() -> str:
         "addEventListener('DOMContentLoaded',()=>{const b=document.createElement('div');b.id='demobar';"
         "b.innerHTML='🔒 bombom 정적 데모 (읽기전용) · "
         "<a href=\"index.html\">메인</a> <a href=\"summary.html\">투자 리포트</a> "
-        "<a href=\"dashboard.html\">현황</a> <a href=\"viewer.html\">뷰어</a> <a href=\"editor.html\">에디터</a>"
+        "<a href=\"manage.html\">기준정보</a> <a href=\"editor.html\">랙관리</a>"
         "<span class=\"sp\"></span>편집·저장은 비활성화';document.body.appendChild(b);"
         "document.body.style.paddingBottom='34px';"
         "document.querySelectorAll('#csvBtn,#reportBtn').forEach(el=>el.addEventListener('click',"
@@ -261,6 +257,10 @@ def _hide_downloads(html: str) -> str:
 
 def build(out: Path) -> Path:
     out.mkdir(parents=True, exist_ok=True)
+    # clear prior artifacts so retired pages don't linger in the output dir
+    for f in [*out.glob("*.html"), out / "_api.js", out / ".nojekyll"]:
+        if f.exists():
+            f.unlink()
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         root = seed_showcase(Path(tmp) / "ws")
@@ -278,15 +278,7 @@ def build(out: Path) -> Path:
             "window.__API__=" + json.dumps(cache, ensure_ascii=False) + ";\n")
         shim = _shim()
 
-        # viewer: baked data (self-contained), then shim for nav + downloads hidden
-        viewer = inject((WEB / "viewer.html").read_text(),
-                        build_data(ws, root, is_mock=False))
-        viewer = _hide_downloads(_link_rewrite(viewer)).replace("</head>", shim + "</head>", 1)
-        (out / "viewer.html").write_text(viewer)
-
         for page in PAGES:
-            if page == "viewer.html":
-                continue
             html = (WEB / page).read_text()
             html = _hide_downloads(_link_rewrite(html)).replace("</head>", shim + "</head>", 1)
             (out / page).write_text(html)

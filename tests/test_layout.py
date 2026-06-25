@@ -58,7 +58,7 @@ def test_layout_missing_path_is_404(client):
     assert client.get("/api/layout?path=offerings/nope").status_code == 404
 
 
-def test_layout_page_served(client):
-    r = client.get("/layout")
-    assert r.status_code == 200
-    assert "랙구성도" in r.text
+def test_layout_route_removed(client):
+    # the standalone /layout screen was folded into 존 화면(/place); the API endpoint remains
+    assert client.get("/layout").status_code == 404
+    assert client.get("/api/layout?path=offerings/cloud-a").status_code == 200

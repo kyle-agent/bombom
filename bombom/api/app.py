@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import re
 import sqlite3
 from datetime import date
@@ -201,16 +200,10 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
     app = FastAPI(title="bombom", docs_url="/api/docs")
 
     @app.get("/", response_class=HTMLResponse)
-    def index(path: str = "offerings"):
-        # Serve the viewer with live data baked in (falls back to the template's sample).
-        if not _VIEWER.exists():
-            return HTMLResponse("<h1>viewer not built</h1>", status_code=500)
-        try:
-            payload = build_data(ws, _resolve(root, path), is_mock=False)
-            return HTMLResponse(inject(_VIEWER.read_text(), payload))
-        except Exception:
-            logging.exception("index: build_data failed for path=%s", path)
-            return HTMLResponse(_VIEWER.read_text())
+    def index():
+        # Root is the main dashboard (overview). Older standalone screens (viewer/layout/
+        # placed/dashboard) were consolidated into 메인 → 존(place) → 투자 리포트(summary).
+        return _serve("home.html")
 
     @app.get("/edit", response_class=HTMLResponse)
     def editor():
@@ -517,19 +510,8 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             headers["Content-Disposition"] = f'attachment; filename="{fname}"'
         return HTMLResponse(html, headers=headers)
 
-    @app.get("/placed", response_class=HTMLResponse)
-    def placed_page():
-        page = _VIEWER.parent / "placed.html"
-        if not page.exists():
-            return HTMLResponse("<h1>placed page not built</h1>", status_code=500)
-        return HTMLResponse(page.read_text())
-
-    @app.get("/dashboard", response_class=HTMLResponse)
-    def dashboard_page():
-        page = _VIEWER.parent / "dashboard.html"
-        if not page.exists():
-            return HTMLResponse("<h1>dashboard not built</h1>", status_code=500)
-        return HTMLResponse(page.read_text())
+    # /placed and /dashboard screens were consolidated into 메인(/) + 투자 리포트(/summary);
+    # their /api/placed, /api/dashboard, /api/placed.csv endpoints remain (reports/CLI).
 
     @app.get("/diff", response_class=HTMLResponse)
     def diff_page():
@@ -563,12 +545,7 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             return HTMLResponse("<h1>search not built</h1>", status_code=500)
         return HTMLResponse(page.read_text())
 
-    @app.get("/layout", response_class=HTMLResponse)
-    def layout_page():
-        page = _VIEWER.parent / "layout.html"
-        if not page.exists():
-            return HTMLResponse("<h1>layout page not built</h1>", status_code=500)
-        return HTMLResponse(page.read_text())
+    # /layout screen folded into 존 화면(/place, 보기 모드); /api/layout endpoint remains.
 
     def _serve(name: str):
         page = _VIEWER.parent / name

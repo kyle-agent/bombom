@@ -190,7 +190,7 @@ def test_put_path_traversal_blocked(gitws):
 def test_edit_route_serves_editor(gitws):
     client, _ = _client(gitws)
     r = client.get("/edit")
-    assert r.status_code == 200 and "에디터" in r.text
+    assert r.status_code == 200 and "랙관리" in r.text
 
 
 def test_new_rack_creates_file_and_commits(gitws):

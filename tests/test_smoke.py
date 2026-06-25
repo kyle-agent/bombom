@@ -37,7 +37,7 @@ def client(library, tmp_path):
     return TestClient(create_app(root, db_path=db), raise_server_exceptions=False)
 
 
-PAGE_ROUTES = ["/", "/edit", "/manage", "/candidates", "/placed", "/dashboard", "/diff",
+PAGE_ROUTES = ["/", "/edit", "/manage", "/candidates", "/diff",
                "/search", "/health"]
 API_ROUTES = [
     "/api/hierarchy",
@@ -48,7 +48,6 @@ API_ROUTES = [
     "/api/health?path=offerings/cloud-a",
     "/api/rack/elevation.drawio?path=offerings/cloud-a",
     "/api/layout?path=offerings/cloud-a",
-    "/layout",
     "/api/overview?path=offerings/cloud-a",
     "/home",
     "/zone",
