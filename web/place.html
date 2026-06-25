@@ -13,33 +13,54 @@
  select,.btn{font-size:13px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:6px 10px;cursor:pointer}
  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
  .btn.primary:hover{background:#1d4ed8}
+ .btn.sm{padding:3px 8px;font-size:12px}
  .spacer{margin-left:auto}
  nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
  nav a:hover{background:#f1f5f9}
  .dirty{color:#d97706;font-size:12px;font-weight:600}
  .main{flex:1 1 auto;display:flex;min-height:0}
- /* left: 배치 목록 (live summary) */
- aside{flex:0 0 300px;border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
- aside .h{padding:9px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center}
- aside .h .cnt{color:#94a3b8;font-weight:400}
- .list{overflow:auto;flex:1 1 auto;padding:6px 0}
- .rackgrp .rh{display:flex;justify-content:space-between;padding:7px 14px 4px;font-size:13px;font-weight:600;position:sticky;top:0;background:#fff}
- .rackgrp .rh .rm{color:#94a3b8;font-weight:400;font-size:11px}
- .ch{display:flex;align-items:center;gap:6px;padding:3px 14px;color:var(--muted);font-size:11px;font-weight:600}
+ /* left column: placed tree (top) + palette (bottom) */
+ aside{flex:0 0 320px;border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
+ .sec{display:flex;flex-direction:column;min-height:0}
+ .sec.placed{flex:1 1 58%;border-bottom:1px solid var(--line)}
+ .sec.palette{flex:1 1 42%}
+ .sec .h{padding:8px 12px;font-size:13px;font-weight:600;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px}
+ .sec .h .cnt{color:#94a3b8;font-weight:400;font-size:12px}
+ .sec .h .sp{margin-left:auto}
+ .list{overflow:auto;flex:1 1 auto;padding:4px 0}
+ /* collapsible rack tree */
+ .rnode .rh{display:flex;align-items:center;gap:7px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:600}
+ .rnode .rh:hover{background:#f8fafc}
+ .rnode .tw{width:10px;color:#94a3b8;transition:transform .12s}
+ .rnode.open .tw{transform:rotate(90deg)}
+ .rnode .rm{margin-left:auto;color:#94a3b8;font-weight:400;font-size:11px}
+ .rbody{display:none;padding:0 0 5px}
+ .rnode.open .rbody{display:block}
+ .ch{display:flex;align-items:center;gap:6px;padding:2px 12px 2px 26px;color:var(--muted);font-size:11px;font-weight:600}
  .ch .dot{width:8px;height:8px;border-radius:2px}
- .devrow{display:flex;justify-content:space-between;gap:8px;padding:2px 14px 2px 28px;font-size:12px}
+ .devrow{display:flex;justify-content:space-between;gap:8px;padding:1px 12px 1px 38px;font-size:12px}
  .devrow .nm{color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .devrow .q{font-weight:600;font-variant-numeric:tabular-nums}
+ /* palette tray (vertical) */
+ .ptray{overflow:auto;flex:1 1 auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+ .ptray .phint{color:#94a3b8;font-size:12px;line-height:1.5}
+ .ptray .phint b{color:var(--accent)}
+ .chip{display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:9px;padding:7px 9px;background:#fff;cursor:pointer;flex:0 0 auto}
+ .chip:hover{border-color:#93c5fd}
+ .chip.armed{border-color:var(--accent);background:#eff6ff;box-shadow:0 0 0 2px rgba(37,99,235,.18)}
+ .chip .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+ .chip .cn{font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .chip .cu{font-size:11px;color:var(--muted)}
+ .chip .cx{cursor:pointer;color:#94a3b8}
  /* canvas */
  #viewport{position:relative;flex:1 1 auto;overflow:hidden;cursor:grab;
    background:linear-gradient(#e8edf3 1px,transparent 1px) 0 0/24px 24px,
      linear-gradient(90deg,#e8edf3 1px,transparent 1px) 0 0/24px 24px,#fbfdff}
- #viewport.grabbing{cursor:grabbing}
- #viewport.arming{cursor:copy}
+ #viewport.grabbing{cursor:grabbing}#viewport.arming{cursor:copy}
  .vtools{position:absolute;right:12px;top:12px;z-index:4;display:flex;gap:6px;align-items:center}
  .vtools button{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 9px;font-size:13px;cursor:pointer}
  #zl{color:var(--muted);font-size:12px;min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
- #scene{position:absolute;left:0;top:0;transform-origin:0 0;display:flex;gap:34px;padding:34px 34px 96px;align-items:flex-start}
+ #scene{position:absolute;left:0;top:0;transform-origin:0 0;display:flex;gap:34px;padding:34px;align-items:flex-start}
  .rackcol{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
  .rackcol .rhead{font-size:12px;color:#334155;text-align:center;margin-bottom:6px;white-space:nowrap}
  .rackcol .rhead small{color:#94a3b8}
@@ -48,27 +69,16 @@
  .uslot .un{position:absolute;left:3px;top:1px}
  .uslot.over{background:#dbeafe}.uslot.bad{background:#fee2e2}
  .blk{position:absolute;left:18px;right:3px;border-radius:3px;color:#fff;font-size:9px;
-   display:flex;align-items:center;gap:4px;padding:0 5px;cursor:grab;overflow:hidden;border:1px solid rgba(255,255,255,.3)}
+   display:flex;align-items:center;gap:3px;padding:0 4px;cursor:grab;overflow:hidden;border:1px solid rgba(255,255,255,.3)}
  .blk .bnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
- .blk .x{cursor:pointer;opacity:.85}
+ .blk .cp,.blk .x{cursor:pointer;opacity:.85;flex:0 0 auto}
+ .blk .cp:hover,.blk .x:hover{opacity:1}
  .blk.warn{outline:2px solid #f59e0b;outline-offset:-2px}
- /* armed banner */
  .armbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:12px;
    padding:7px 13px;border-radius:9px;z-index:6;display:none;align-items:center;gap:10px;box-shadow:0 4px 14px rgba(15,23,42,.2)}
- .armbar.on{display:flex}
- .armbar b{font-weight:700}
+ .armbar.on{display:flex}.armbar b{font-weight:700}
  .armbar button{background:#334155;color:#fff;border:0;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer}
- /* palette (선반) */
- .palette{position:absolute;left:0;right:0;bottom:0;min-height:54px;background:#fff;border-top:1px solid var(--line);
-   display:flex;gap:8px;align-items:center;padding:8px 12px;overflow-x:auto;z-index:5}
- .palette .plabel{color:var(--muted);font-size:12px;flex:0 0 auto;white-space:nowrap}
- .palette .plabel b{color:var(--accent)}
- .chip{display:flex;align-items:center;gap:7px;border:1px solid #cbd5e1;border-radius:9px;padding:5px 10px;background:#fff;cursor:pointer;flex:0 0 auto;white-space:nowrap}
- .chip:hover{border-color:#93c5fd}
- .chip.armed{border-color:var(--accent);background:#eff6ff;box-shadow:0 0 0 2px rgba(37,99,235,.18)}
- .chip .dot{width:9px;height:9px;border-radius:2px}
- .chip .cn{font-size:12px;font-weight:600}.chip .cu{font-size:11px;color:var(--muted)}
- .chip .cx{cursor:pointer;color:#94a3b8;margin-left:1px}
+ .hint{position:absolute;left:12px;bottom:10px;color:#94a3b8;font-size:12px;z-index:4}
  /* add popup */
  .modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:flex-start;justify-content:center;z-index:20}
  .modal.on{display:flex}
@@ -81,20 +91,18 @@
  .modal .res{overflow:auto;padding:6px 12px 14px}
  .mrow{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--line);border-radius:9px;margin:6px 0}
  .mrow .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
- .mrow .info{flex:1;min-width:0}
- .mrow .info .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mrow .info{flex:1;min-width:0}.mrow .info .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .mrow .info .m{font-size:11px;color:var(--muted)}
  .mrow .u{font-size:11px;color:#334155;font-variant-numeric:tabular-nums}
  .mrow .add{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex:0 0 auto}
  .mrow .add:hover{background:#1d4ed8}
- .empty{padding:30px;color:#94a3b8;text-align:center}
- #toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
+ .empty{padding:24px;color:#94a3b8;text-align:center;font-size:13px}
+ #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
  #toast.on{opacity:.96}
 </style></head>
 <body>
 <header>
  <span class="logo">bombom</span><span class="crumb" id="crumb">— 존 배치</span>
- <button class="btn primary" id="addBtn">＋ 장비 추가</button>
  릴리즈 <select id="relSel"></select>
  <span class="dirty" id="dirty"></span>
  <span class="spacer"></span>
@@ -103,8 +111,15 @@
 </header>
 <div class="main">
  <aside>
-   <div class="h">배치 목록 <span class="cnt" id="cnt"></span></div>
-   <div class="list" id="list"></div>
+   <div class="sec placed">
+     <div class="h">배치된 목록 <span class="cnt" id="cnt"></span>
+       <span class="sp"></span><button class="btn sm" id="toggleAll">모두 펼치기</button></div>
+     <div class="list" id="list"></div>
+   </div>
+   <div class="sec palette">
+     <div class="h">담을 장비 (팔레트) <span class="sp"></span><button class="btn primary sm" id="addBtn">＋ 장비 추가</button></div>
+     <div class="ptray" id="palette"></div>
+   </div>
  </aside>
  <div id="viewport">
    <div class="vtools"><span id="zl">100%</span>
@@ -112,13 +127,13 @@
      <button onclick="fit()">맞춤</button></div>
    <div class="armbar" id="armbar"></div>
    <div id="scene"><div class="empty">불러오는 중…</div></div>
-   <div class="palette" id="palette"></div>
+   <div class="hint">팔레트 칩 클릭→빈칸 클릭 = 배치 · 블록 드래그 = 이동 · 블록 ⧉ = 팔레트에 담기(복제) · Alt+드래그 = 복사 · ✕ = 제거</div>
  </div>
 </div>
 <div class="modal" id="modal"><div class="box">
   <div class="mh"><b>＋ 장비 추가 (후보풀)</b><span class="x" id="mClose">×</span></div>
   <div class="controls"><input class="s" id="mSearch" placeholder="제조사/모델/슬러그 검색…"></div>
-  <div class="mhint">＋담기 → 아래 <b>팔레트</b>에 담깁니다. 닫고 팔레트에서 장비를 클릭한 뒤 랙의 빈 칸을 클릭하세요.</div>
+  <div class="mhint">＋담기 → 왼쪽 <b>팔레트</b>에 담깁니다. 팔레트에서 장비를 클릭한 뒤 랙의 빈 칸을 클릭하세요.</div>
   <div class="res" id="mRes"><div class="empty">불러오는 중…</div></div>
 </div></div>
 <div id="toast"></div>
@@ -131,10 +146,10 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1900);}
 document.getElementById('back').href='/zone?path='+encodeURIComponent(PATH);
 
-let RACKS=[];          // [{file,id,rack_type,rack_u,model_slug,placements:[{...,_id}],dirty}]
+let RACKS=[];          // [{file,id,rack_type,rack_u,model_slug,placements:[{...,_id}],dirty,_open}]
 let RELEASES=[], selRelease='', poolCache=[], uid=1;
-let palette=[];        // [{_pid,slug,name,category,u,unit_cost}]  — 담은 장비 선반
-let armed=null;        // palette item currently selected for click-to-place
+let palette=[];        // [{_pid,slug,name,category,u,unit_cost}]
+let armed=null;
 
 // ── pan/zoom ────────────────────────────────────────────────────────────
 const vp=document.getElementById('viewport'), scene=document.getElementById('scene'), zl=document.getElementById('zl');
@@ -143,28 +158,21 @@ function apply(){scene.style.transform=`translate(${tx}px,${ty}px) scale(${scale
 function zoomAt(cx,cy,f){const ns=Math.min(6,Math.max(.2,scale*f));tx=cx-(cx-tx)*(ns/scale);ty=cy-(cy-ty)*(ns/scale);scale=ns;apply();}
 function zoomBy(f){const r=vp.getBoundingClientRect();zoomAt(r.width/2,r.height/2,f);}
 function fit(){const r=vp.getBoundingClientRect(),b=scene.getBoundingClientRect();if(!b.width)return;
-  const cw=b.width/scale,ch=b.height/scale;scale=Math.min((r.width-36)/cw,(r.height-130)/ch,2.5);
+  const cw=b.width/scale,ch=b.height/scale;scale=Math.min((r.width-36)/cw,(r.height-60)/ch,2.5);
   tx=Math.max(18,(r.width-cw*scale)/2);ty=18;apply();}
 vp.addEventListener('wheel',e=>{e.preventDefault();const r=vp.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);},{passive:false});
 let pan=null;
-vp.addEventListener('pointerdown',e=>{ if(e.target.closest('.rackcol')||e.target.closest('.palette')||e.target.closest('.armbar'))return;
+vp.addEventListener('pointerdown',e=>{ if(e.target.closest('.rackcol')||e.target.closest('.armbar'))return;
   pan={x:e.clientX-tx,y:e.clientY-ty};vp.classList.add('grabbing');vp.setPointerCapture(e.pointerId);});
 vp.addEventListener('pointermove',e=>{if(!pan)return;tx=e.clientX-pan.x;ty=e.clientY-pan.y;apply();});
 vp.addEventListener('pointerup',()=>{pan=null;vp.classList.remove('grabbing');});
 apply();
 
 // ── model helpers ─────────────────────────────────────────────────────────
-function occupied(rk, exceptId){
-  const s=new Set();
-  rk.placements.forEach(p=>{ if(p._id===exceptId)return; for(let u=p.position;u<p.position+p.u;u++) s.add(u); });
-  return s;
-}
-function fits(rk, pos, h, exceptId){
-  if(pos<1 || pos+h-1>rk.rack_u) return false;
-  const occ=occupied(rk, exceptId);
-  for(let u=pos;u<pos+h;u++) if(occ.has(u)) return false;
-  return true;
-}
+function occupied(rk, exceptId){ const s=new Set();
+  rk.placements.forEach(p=>{ if(p._id===exceptId)return; for(let u=p.position;u<p.position+p.u;u++) s.add(u); }); return s; }
+function fits(rk, pos, h, exceptId){ if(pos<1||pos+h-1>rk.rack_u) return false;
+  const occ=occupied(rk, exceptId); for(let u=pos;u<pos+h;u++) if(occ.has(u)) return false; return true; }
 function markDirty(rk){ rk.dirty=true; const n=RACKS.filter(r=>r.dirty).length; document.getElementById('dirty').textContent=n?`● 미저장 ${n}랙`:''; }
 
 // ── render canvas ───────────────────────────────────────────────────────
@@ -176,76 +184,89 @@ function render(){
       const warn=p.category==='server' && !(p.meta&&p.meta.serial);
       return `<div class="blk${warn?' warn':''}" draggable="true" data-move="${ri}:${p._id}"
         style="bottom:${(p.position-1)*UPX}px;height:${p.u*UPX-1}px;background:${CAT[p.category]||CAT.other}"
-        title="${esc(p.name)} · U${p.position} · ${p.u}U">
-        <span class="bnm">${esc(p.name)}</span><span class="x" data-del="${ri}:${p._id}">✕</span></div>`;
+        title="${esc(p.name)} · U${p.position} · ${p.u}U (드래그=이동 · Alt+드래그=복사 · ⧉=팔레트에 담기)">
+        <span class="bnm">${esc(p.name)}</span>
+        <span class="cp" data-copy="${ri}:${p._id}" title="이 장비를 팔레트에 담기(다른 랙에 복제)">⧉</span>
+        <span class="x" data-del="${ri}:${p._id}">✕</span></div>`;
     }).join('');
     return `<div class="rackcol"><div class="rhead">▣ ${esc(rk.id)} <small>${esc(rk.rack_type)} · ${rk.rack_u}U</small></div>
       <div class="rackbody" style="height:${rk.rack_u*UPX}px" data-rackbody="${ri}">${slots}${blks}</div></div>`;
   }).join('');
   wireCanvas();
-  renderList();
+  renderTree();
 }
-function renderList(){
+// ── left: collapsible placed tree ───────────────────────────────────────────
+function renderTree(){
   const order=['server','network','storage','other'];
   let total=0;
-  const html=RACKS.map(rk=>{
-    const cats={}; rk.placements.forEach(p=>{ (cats[p.category]=cats[p.category]||{}); const m=cats[p.category]; m[p.name]=(m[p.name]||0)+1; });
+  const html=RACKS.map((rk,ri)=>{
+    const cats={}; rk.placements.forEach(p=>{ (cats[p.category]=cats[p.category]||{}); cats[p.category][p.name]=(cats[p.category][p.name]||0)+1; });
     total+=rk.placements.length;
     const body=order.filter(c=>cats[c]).map(c=>{
       const items=Object.entries(cats[c]).sort((a,b)=>b[1]-a[1]);
       return `<div class="ch"><span class="dot" style="background:${CAT[c]||CAT.other}"></span>${esc(c)}</div>`
         + items.map(([nm,q])=>`<div class="devrow"><span class="nm">${esc(nm)}</span><span class="q">×${q}</span></div>`).join('');
-    }).join('');
-    return `<div class="rackgrp"><div class="rh"><span>▣ ${esc(rk.id)}</span><span class="rm">${rk.placements.length}대${rk.dirty?' · <span style="color:#d97706">미저장</span>':''}</span></div>${body||'<div class="devrow" style="color:#94a3b8">비어 있음</div>'}</div>`;
+    }).join('') || '<div class="devrow" style="color:#94a3b8;padding-left:26px">비어 있음</div>';
+    return `<div class="rnode${rk._open?' open':''}" data-ri="${ri}">
+      <div class="rh"><span class="tw">▶</span>▣ ${esc(rk.id)}
+        <span class="rm">${rk.placements.length}대${rk.dirty?' · <span style="color:#d97706">미저장</span>':''}</span></div>
+      <div class="rbody">${body}</div></div>`;
   }).join('');
   document.getElementById('list').innerHTML=html;
   document.getElementById('cnt').textContent=RACKS.length+'랙 · '+total+'대';
-}
-
-// ── palette (선반) + arm/click-to-place ─────────────────────────────────────
-function renderPalette(){
-  const el=document.getElementById('palette');
-  if(!palette.length){
-    el.innerHTML='<span class="plabel">팔레트가 비었습니다 — <b>＋ 장비 추가</b>로 장비를 담은 뒤, 칩을 클릭하고 랙의 빈 칸을 클릭하세요.</span>';
-    return;
-  }
-  el.innerHTML='<span class="plabel">팔레트 · 칩 클릭 → 랙 빈칸 클릭(또는 드래그)</span>'+
-    palette.map((d,i)=>`<div class="chip${armed&&armed._pid===d._pid?' armed':''}" draggable="true" data-pi="${i}" title="${esc(d.name)} · ${d.u}U">
-      <span class="dot" style="background:${CAT[d.category]||CAT.other}"></span>
-      <span class="cn">${esc(d.name)}</span><span class="cu">${d.u}U</span><span class="cx" data-px="${i}">✕</span></div>`).join('');
-  el.querySelectorAll('.chip').forEach(c=>{
-    c.addEventListener('click',e=>{ if(e.target.classList.contains('cx'))return; arm(palette[+c.dataset.pi]); });
-    c.addEventListener('dragstart',e=>{ const d=palette[+c.dataset.pi]; payload={type:'new',dev:d}; e.dataTransfer.setData('text/plain','new'); });
-  });
-  el.querySelectorAll('.cx').forEach(x=>x.addEventListener('click',e=>{
-    e.stopPropagation(); const d=palette[+x.dataset.px]; palette.splice(+x.dataset.px,1);
-    if(armed&&armed._pid===d._pid) arm(null); renderPalette();
+  document.querySelectorAll('.rnode .rh').forEach(h=>h.addEventListener('click',()=>{
+    const ri=+h.parentElement.dataset.ri; RACKS[ri]._open=!RACKS[ri]._open; renderTree();
   }));
 }
+document.getElementById('toggleAll').onclick=()=>{
+  const anyClosed=RACKS.some(r=>!r._open); RACKS.forEach(r=>r._open=anyClosed);
+  document.getElementById('toggleAll').textContent=anyClosed?'모두 접기':'모두 펼치기'; renderTree();
+};
+
+// ── palette + arm/click-to-place ────────────────────────────────────────────
+function renderPalette(){
+  const el=document.getElementById('palette');
+  if(!palette.length){ el.innerHTML='<div class="phint">팔레트가 비었습니다.<br><b>＋ 장비 추가</b>로 담거나, 캔버스의 블록 <b>⧉</b>로 기존 장비를 담을 수 있습니다.<br>담은 칩을 클릭하고 랙의 빈 칸을 클릭하면 배치됩니다.</div>'; return; }
+  el.innerHTML=palette.map((d,i)=>`<div class="chip${armed&&armed._pid===d._pid?' armed':''}" draggable="true" data-pi="${i}" title="${esc(d.name)} · ${d.u}U">
+    <span class="dot" style="background:${CAT[d.category]||CAT.other}"></span>
+    <span class="cn">${esc(d.name)}</span><span class="cu">${d.u}U</span><span class="cx" data-px="${i}">✕</span></div>`).join('');
+  el.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click',e=>{ if(e.target.classList.contains('cx'))return; arm(palette[+c.dataset.pi]); });
+    c.addEventListener('dragstart',e=>{ payload={type:'new',dev:palette[+c.dataset.pi]}; e.dataTransfer.setData('text/plain','new'); });
+  });
+  el.querySelectorAll('.cx').forEach(x=>x.addEventListener('click',e=>{ e.stopPropagation();
+    const d=palette[+x.dataset.px]; palette.splice(+x.dataset.px,1); if(armed&&armed._pid===d._pid) arm(null); renderPalette(); }));
+}
 function arm(dev){
-  armed=(armed&&dev&&armed._pid===dev._pid)?null:dev;   // click again = cancel
-  const bar=document.getElementById('armbar');
-  vp.classList.toggle('arming',!!armed);
+  armed=(armed&&dev&&armed._pid===dev._pid)?null:dev;
+  const bar=document.getElementById('armbar'); vp.classList.toggle('arming',!!armed);
   if(armed){ bar.classList.add('on'); bar.innerHTML=`<b>${esc(armed.name)}</b> 배치 중 — 랙의 빈 칸을 클릭하세요 <button id="armCancel">취소(ESC)</button>`;
-    document.getElementById('armCancel').onclick=()=>arm(null);
-  } else bar.classList.remove('on');
+    document.getElementById('armCancel').onclick=()=>arm(null); }
+  else bar.classList.remove('on');
   renderPalette();
 }
+function addPal(dev){ palette.push({_pid:uid++, ...dev}); renderPalette(); toast('팔레트에 담음: '+dev.name); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') arm(null); });
 
 // ── drag/drop + click-place ─────────────────────────────────────────────────
-let payload=null;   // {type:'new',dev} | {type:'move',ri,id}
+let payload=null;   // {type:'new'|'copy',dev} | {type:'move',ri,id}
 function wireCanvas(){
   scene.querySelectorAll('.blk').forEach(b=>{
-    b.addEventListener('dragstart',e=>{ const [ri,id]=b.dataset.move.split(':'); payload={type:'move',ri:+ri,id:+id}; e.dataTransfer.setData('text/plain','move'); });
+    b.addEventListener('dragstart',e=>{ const [ri,id]=b.dataset.move.split(':').map(Number);
+      const p=RACKS[ri].placements.find(x=>x._id===id);
+      if(e.altKey && p){ payload={type:'copy',dev:{slug:p.device,name:p.name,category:p.category,u:p.u,unit_cost:p.unit_cost}}; }
+      else { payload={type:'move',ri,id}; }
+      e.dataTransfer.setData('text/plain',payload.type); });
   });
-  scene.querySelectorAll('.x[data-del]').forEach(x=>x.addEventListener('click',e=>{
-    e.stopPropagation(); const [ri,id]=x.dataset.del.split(':').map(Number);
-    const rk=RACKS[ri]; rk.placements=rk.placements.filter(p=>p._id!==id); markDirty(rk); render();
-  }));
+  scene.querySelectorAll('.cp[data-copy]').forEach(c=>c.addEventListener('click',e=>{ e.stopPropagation();
+    const [ri,id]=c.dataset.copy.split(':').map(Number); const p=RACKS[ri].placements.find(x=>x._id===id); if(!p)return;
+    addPal({slug:p.device,name:p.name,category:p.category,u:p.u,unit_cost:p.unit_cost}); }));
+  scene.querySelectorAll('.x[data-del]').forEach(x=>x.addEventListener('click',e=>{ e.stopPropagation();
+    const [ri,id]=x.dataset.del.split(':').map(Number);
+    const rk=RACKS[ri]; rk.placements=rk.placements.filter(p=>p._id!==id); markDirty(rk); render(); }));
   scene.querySelectorAll('.uslot').forEach(s=>{
     const ri=+s.dataset.rack,u=+s.dataset.u;
-    const previewH=()=> armed?armed.u : (payload?(payload.type==='new'?payload.dev.u:findP(payload).u):1);
+    const previewH=()=> armed?armed.u : (payload?(payload.type==='move'?findP(payload).u:payload.dev.u):1);
     function highlight(){ const h=previewH(); const ex=payload&&payload.type==='move'?payload.id:null;
       s.parentElement.querySelectorAll('.uslot').forEach(x=>x.classList.remove('over','bad'));
       const ok=fits(RACKS[ri],u,h,ex);
@@ -253,13 +274,11 @@ function wireCanvas(){
     s.addEventListener('dragover',e=>{ e.preventDefault(); highlight(); });
     s.addEventListener('dragleave',()=>s.classList.remove('over','bad'));
     s.addEventListener('drop',e=>{ e.preventDefault(); drop(ri,u); render(); });
-    // click-to-place from an armed palette chip
     s.addEventListener('mousemove',()=>{ if(armed) highlight(); });
-    s.addEventListener('click',()=>{ if(!armed) return;
-      if(placeNew(RACKS[ri],u,armed)) render(); });
+    s.addEventListener('click',()=>{ if(armed && placeNew(RACKS[ri],u,armed)) render(); });
   });
 }
-function findP(pl){ const rk=RACKS[pl.ri]; return rk.placements.find(p=>p._id===pl.id); }
+function findP(pl){ return RACKS[pl.ri].placements.find(p=>p._id===pl.id); }
 function placeNew(rk,u,d){
   if(!fits(rk,u,d.u,null)){ toast('그 위치에는 맞지 않습니다 (겹침/범위 초과)'); return false; }
   rk.placements.push({_id:uid++,device:d.slug,name:d.name,category:d.category,position:u,u:d.u,release:selRelease,unit_cost:d.unit_cost,meta:{}});
@@ -267,27 +286,23 @@ function placeNew(rk,u,d){
 }
 function drop(ri,u){
   const rk=RACKS[ri]; if(!payload) return;
-  if(payload.type==='new'){ placeNew(rk,u,payload.dev); }
+  if(payload.type==='new'||payload.type==='copy'){ placeNew(rk,u,payload.dev); }
   else {
-    const src=RACKS[payload.ri], p=src.placements.find(x=>x._id===payload.id); if(!p) return;
+    const src=RACKS[payload.ri], p=src.placements.find(x=>x._id===payload.id); if(!p){ payload=null; return; }
     if(!fits(rk,u,p.u,payload.ri===ri?p._id:null)){ toast('그 위치에는 맞지 않습니다'); payload=null; return; }
-    src.placements=src.placements.filter(x=>x._id!==p._id);
-    p.position=u; rk.placements.push(p); markDirty(rk); if(src!==rk) markDirty(src);
+    src.placements=src.placements.filter(x=>x._id!==p._id); p.position=u; rk.placements.push(p);
+    markDirty(rk); if(src!==rk) markDirty(src);
   }
   payload=null;
 }
 
-// ── add popup (담기 → 팔레트) ────────────────────────────────────────────────
+// ── add popup ────────────────────────────────────────────────────────────────
 const modal=document.getElementById('modal');
 document.getElementById('addBtn').onclick=()=>{ modal.classList.add('on'); document.getElementById('mSearch').focus(); poolSearch(); };
 document.getElementById('mClose').onclick=()=>modal.classList.remove('on');
 modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('on'); });
 let st=null;
 document.getElementById('mSearch').addEventListener('input',()=>{ clearTimeout(st); st=setTimeout(poolSearch,200); });
-function addToPalette(r){
-  palette.push({_pid:uid++,slug:r.slug,name:(r.model||r.slug),category:r.category||'other',u:(r.u_height|0)||1,unit_cost:r.unit_cost||0});
-  renderPalette(); toast('팔레트에 담음: '+(r.model||r.slug));
-}
 function poolSearch(){
   const q=document.getElementById('mSearch').value.trim();
   const box=document.getElementById('mRes'); box.innerHTML='<div class="empty">불러오는 중…</div>';
@@ -297,12 +312,12 @@ function poolSearch(){
     box.innerHTML=poolCache.map((r,i)=>{
       const cat=r.category||'other', uh=(r.u_height|0)||1;
       const price=r.priced?cur+(r.unit_cost||0).toLocaleString():'<span style="color:#d97706">가격 미정</span>';
-      return `<div class="mrow">
-        <span class="dot" style="background:${CAT[cat]||CAT.other}"></span>
+      return `<div class="mrow"><span class="dot" style="background:${CAT[cat]||CAT.other}"></span>
         <span class="info"><span class="n">${esc(r.model||r.slug)}</span><span class="m">${esc(r.manufacturer||'')} · ${esc(cat)} · ${uh}U · ${price}</span></span>
         <button class="add" data-i="${i}">＋ 담기</button></div>`;
     }).join('');
-    box.querySelectorAll('.add').forEach(btn=>btn.addEventListener('click',()=>addToPalette(poolCache[+btn.dataset.i])));
+    box.querySelectorAll('.add').forEach(btn=>btn.addEventListener('click',()=>{ const r=poolCache[+btn.dataset.i];
+      addPal({slug:r.slug,name:(r.model||r.slug),category:r.category||'other',u:(r.u_height|0)||1,unit_cost:r.unit_cost||0}); }));
   }).catch(e=>{ box.innerHTML='<div class="empty">검색 실패: '+esc(e.message)+'</div>'; });
 }
 
@@ -320,7 +335,7 @@ document.getElementById('saveBtn').onclick=async()=>{
         toast(rk.id+' 저장 실패: '+((d&&d.detail&&'검증 실패')||('HTTP '+r.status))); }
     }catch(e){ toast(rk.id+' 저장 실패: '+e.message); }
   }
-  markDirty({}); renderList();
+  markDirty({}); renderTree();
   if(ok) toast(ok+'개 랙 저장됨');
 };
 
@@ -338,7 +353,7 @@ fetch('/api/layout?path='+encodeURIComponent(PATH)).then(r=>r.ok?r.json():{racks
       if(!RELEASES.length){ RELEASES=d.releases||[]; selRelease=d.current_release||RELEASES[0]||'R26.07';
         document.getElementById('relSel').innerHTML=RELEASES.map(x=>`<option ${x===selRelease?'selected':''}>${esc(x)}</option>`).join(''); }
       const rkm=d.rack;
-      RACKS.push({file,id:rk.rack_id,rack_type:rt,rack_u:rk.rack_u,model_slug:(rkm.rack_model&&rkm.rack_model.slug)||'',
+      RACKS.push({file,id:rk.rack_id,rack_type:rt,rack_u:rk.rack_u,model_slug:(rkm.rack_model&&rkm.rack_model.slug)||'',_open:false,
         placements:(rkm.placements||[]).map(p=>({_id:uid++,device:p.device,name:p.name,category:p.category||'other',position:p.position,u:p.u||1,release:p.release,unit_cost:p.unit_cost||0,meta:p.meta||{}})),dirty:false});
     }catch(e){ /* skip a rack that fails to load */ }
   }
