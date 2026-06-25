@@ -44,8 +44,12 @@ class _Agg:
                 "devices": self.devices, "capex": self.capex}
 
 
-def build_overview(ws, root, *, valuation_date: Optional[date] = None) -> dict:
-    rows = placed_rows(ws, root, valuation_date=valuation_date)
+def build_overview(ws, root, *, release: Optional[str] = None,
+                   valuation_date: Optional[date] = None) -> dict:
+    all_rows = placed_rows(ws, root, valuation_date=valuation_date)
+    # release values present (DRAFT = untagged 작업본); used by report/tagging dropdowns
+    releases = sorted({r["release"] for r in all_rows if r["release"]})
+    rows = all_rows if not release else [r for r in all_rows if r["release"] == release]
 
     groups: dict[str, dict[str, _Agg]] = {"offering": {}, "region": {}, "zone": {}, "rack_type": {}}
     # nested offering→region→zone aggregation for the main-page tree
@@ -110,6 +114,8 @@ def build_overview(ws, root, *, valuation_date: Optional[date] = None) -> dict:
     return {
         "path": str(root),
         "currency": "₩",
+        "release": release or "",
+        "releases": releases,
         "totals": total.row("", "전체"),
         "tree": tree_out,
         "groups": {

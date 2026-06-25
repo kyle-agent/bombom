@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bombom — 배치 목록 · 릴리즈 태깅</title>
+<style>
+ :root{--accent:#2563eb;--line:#e2e8f0;--muted:#64748b;--draft:#d97706;font-family:system-ui,-apple-system,sans-serif}
+ *{box-sizing:border-box}
+ body{margin:0;background:#f8fafc;color:#0f172a}
+ header{display:flex;gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:6}
+ .logo{font-weight:700;font-size:16px;color:var(--accent)}
+ .crumb{color:#64748b;font-size:13px}
+ nav{margin-left:auto;display:flex;gap:2px}
+ nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
+ nav a:hover{background:#f1f5f9}
+ .wrap{max-width:1080px;margin:0 auto;padding:14px 18px 40px}
+ /* bulk bar */
+ .bulkbar{position:sticky;top:53px;z-index:5;background:#0f172a;color:#e2e8f0;border-radius:12px;
+   padding:11px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;box-shadow:0 4px 16px rgba(15,23,42,.15)}
+ .bulkbar .sel{font-weight:700;font-variant-numeric:tabular-nums}
+ .bulkbar select,.bulkbar input,.bulkbar button{font-size:13px;border-radius:7px;border:1px solid #334155;padding:6px 9px;background:#1e293b;color:#e2e8f0}
+ .bulkbar input{width:120px}
+ .bulkbar button.apply{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+ .bulkbar button.save{background:#fff;color:#0f172a;border-color:#fff;font-weight:600;cursor:pointer;margin-left:auto}
+ .bulkbar button:disabled{opacity:.5;cursor:default}
+ .bulkbar .draftn{color:#fbbf24}
+ .filt{display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--muted)}
+ .filt button{border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:5px 11px;font-size:13px;cursor:pointer}
+ .filt button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+ /* rack card */
+ .rack{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+ .rack .rh{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f1f5f9;background:#f8fafc}
+ .rack .rh b{font-size:14px}.rack .rh .loc{color:var(--muted);font-size:12px}
+ .rack .rh .rcount{margin-left:auto;color:var(--muted);font-size:12px}
+ .rack .rh label{font-size:12px;color:#334155;display:flex;align-items:center;gap:5px;cursor:pointer}
+ table{width:100%;border-collapse:collapse}
+ td,th{padding:7px 14px;border-bottom:1px solid #f6f8fa;font-size:13px;text-align:left}
+ th{color:var(--muted);font-weight:600;font-size:11px}
+ tr:last-child td{border-bottom:0}
+ td.c,th.c{width:34px;text-align:center}
+ td.u,th.u{width:60px;text-align:right;font-variant-numeric:tabular-nums;color:#64748b}
+ .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}
+ .relchip{display:inline-block;border-radius:20px;padding:1px 10px;font-size:12px;font-weight:600;background:#eef2ff;color:#4338ca}
+ .relchip.draft{background:#fef3c7;color:var(--draft)}
+ tr.sel{background:#eff6ff}
+ .empty{padding:50px;text-align:center;color:#94a3b8}
+ #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
+ #toast.on{opacity:.96}
+</style></head>
+<body>
+<header>
+ <span class="logo">bombom</span><span class="crumb" id="crumb">— 배치 목록 · 릴리즈 태깅</span>
+ <nav><a href="/">← 메인</a><a id="placeLink" href="/place">존 배치</a><a href="/summary">투자 리포트</a></nav>
+</header>
+<div class="wrap">
+ <div class="bulkbar">
+   <span>선택 <span class="sel" id="seln">0</span>개 →</span>
+   릴리즈 <select id="relSel"></select>
+   <span style="color:#64748b">또는 새 태그</span><input id="relNew" placeholder="예: R26.08">
+   <button class="apply" id="applyBtn" disabled>태깅 적용</button>
+   <span class="draftn" id="draftn"></span>
+   <button class="save" id="saveBtn" disabled>💾 저장</button>
+ </div>
+ <div class="filt">보기:
+   <button data-f="all" class="on">전체</button>
+   <button data-f="draft">미태그만</button>
+   <span style="margin-left:auto" id="scope"></span>
+ </div>
+ <div id="list"><div class="empty">불러오는 중…</div></div>
+</div>
+<div id="toast"></div>
+<script>
+const CAT={server:"#2563eb",network:"#16a34a",storage:"#9333ea",other:"#64748b"};
+const DRAFT="DRAFT";
+const PATH=new URLSearchParams(location.search).get('path')||'offerings';
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2000);}
+document.getElementById('placeLink').href='/place?path='+encodeURIComponent(PATH)+'&edit=1';
+
+let RACKS=[], filter='all';
+function isDraft(p){return (p.release||DRAFT)===DRAFT;}
+function selCount(){return RACKS.reduce((n,rk)=>n+rk.placements.filter(p=>p._sel).length,0);}
+function draftCount(){return RACKS.reduce((n,rk)=>n+rk.placements.filter(p=>isDraft(p)).length,0);}
+
+function render(){
+  const visRacks=RACKS.map(rk=>{
+    const ps=rk.placements.filter(p=>filter==='all'||isDraft(p));
+    return {rk,ps};
+  }).filter(x=>x.ps.length);
+  if(!visRacks.length){ document.getElementById('list').innerHTML='<div class="empty">'+(filter==='draft'?'미태그(작업본) 장비가 없습니다.':'배치된 장비가 없습니다.')+'</div>'; sync(); return; }
+  document.getElementById('list').innerHTML=visRacks.map(({rk,ps})=>{
+    const rows=ps.map(p=>{
+      const dr=isDraft(p);
+      return `<tr class="${p._sel?'sel':''}" data-rk="${rk._i}" data-id="${p._id}">
+        <td class="c"><input type="checkbox" ${p._sel?'checked':''} data-rk="${rk._i}" data-id="${p._id}"></td>
+        <td><span class="dot" style="background:${CAT[p.category]||CAT.other}"></span>${esc(p.name)}</td>
+        <td class="u">U${p.position}</td><td>${esc(p.category)}</td>
+        <td><span class="relchip ${dr?'draft':''}">${dr?'미태그':esc(p.release)}</span></td></tr>`;
+    }).join('');
+    const draftN=rk.placements.filter(isDraft).length;
+    return `<div class="rack"><div class="rh"><b>▣ ${esc(rk.id)}</b>
+      <span class="loc">${esc(rk.region)} / ${esc(rk.zone)} / ${esc(rk.rack_type)}</span>
+      <span class="rcount">${rk.placements.length}대${draftN?` · <span style="color:#d97706">미태그 ${draftN}</span>`:''}</span>
+      <label><input type="checkbox" class="rackall" data-rk="${rk._i}"> 랙 전체</label></div>
+      <table><thead><tr><th class="c"></th><th>장비</th><th class="u">위치</th><th>카테고리</th><th>릴리즈</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  // wire checkboxes — update in place (no full re-render, so the element stays attached)
+  document.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>cb.addEventListener('change',()=>{
+    const rk=RACKS[+cb.dataset.rk], p=rk.placements.find(x=>x._id==cb.dataset.id);
+    p._sel=cb.checked; cb.closest('tr').classList.toggle('sel',cb.checked); sync();
+  }));
+  document.querySelectorAll('.rackall').forEach(cb=>cb.addEventListener('change',()=>{
+    const rk=RACKS[+cb.dataset.rk], on=cb.checked;
+    cb.closest('.rack').querySelectorAll('tbody tr').forEach(tr=>{
+      const p=rk.placements.find(x=>x._id==tr.dataset.id); if(!p) return;
+      p._sel=on; tr.classList.toggle('sel',on); const c=tr.querySelector('input[type=checkbox]'); if(c) c.checked=on;
+    }); sync();
+  }));
+  sync();
+}
+function sync(){
+  const n=selCount(); document.getElementById('seln').textContent=n;
+  document.getElementById('applyBtn').disabled=!n;
+  document.getElementById('draftn').textContent=draftCount()?('미태그 '+draftCount()+'건 남음'):'모두 태깅됨 ✓';
+  document.getElementById('saveBtn').disabled=!RACKS.some(r=>r.dirty);
+}
+document.querySelectorAll('.filt button').forEach(b=>b.addEventListener('click',()=>{
+  filter=b.dataset.f; document.querySelectorAll('.filt button').forEach(x=>x.classList.toggle('on',x===b)); render();
+}));
+document.getElementById('applyBtn').onclick=()=>{
+  const tag=(document.getElementById('relNew').value.trim())||document.getElementById('relSel').value;
+  if(!tag){ toast('적용할 릴리즈를 고르거나 입력하세요'); return; }
+  let n=0; RACKS.forEach(rk=>{ let ch=false; rk.placements.forEach(p=>{ if(p._sel){ p.release=tag; p._sel=false; n++; ch=true; } }); if(ch) rk.dirty=true; });
+  document.getElementById('relNew').value='';
+  if(tag && ![...document.getElementById('relSel').options].some(o=>o.value===tag)){
+    const o=document.createElement('option'); o.value=o.textContent=tag; document.getElementById('relSel').appendChild(o);
+  }
+  toast(n+'개 장비를 ['+tag+']로 태깅 (저장 필요)'); render();
+};
+document.getElementById('saveBtn').onclick=async()=>{
+  const dirty=RACKS.filter(r=>r.dirty); if(!dirty.length) return; let ok=0;
+  for(const rk of dirty){
+    const body={rack_model:{slug:rk.model_slug},placements:rk.placements.map(p=>({device:p.device,position:p.position,release:p.release||DRAFT,qty:1,meta:p.meta||{}})),custom_line_items:rk.customs||[]};
+    try{ const r=await fetch('/api/rack?path='+encodeURIComponent(rk.file)+'&message='+encodeURIComponent('tag release '+rk.id),
+        {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok){ rk.dirty=false; ok++; } else { const d=await r.json().catch(()=>null); toast(rk.id+' 저장 실패: '+((d&&d.detail)||('HTTP '+r.status))); }
+    }catch(e){ toast(rk.id+' 저장 실패: '+e.message); }
+  }
+  render(); if(ok) toast(ok+'개 랙 저장됨');
+};
+
+// ── load ────────────────────────────────────────────────────────────────
+Promise.all([
+  fetch('/api/overview?path=offerings').then(r=>r.json()).catch(()=>({releases:[]})),  // all releases (global)
+  fetch('/api/layout?path='+encodeURIComponent(PATH)).then(r=>r.ok?r.json():{racks:[]}),
+]).then(async ([ov,lay])=>{
+  const rels=ov.releases||[];
+  document.getElementById('relSel').innerHTML=rels.map(x=>`<option>${esc(x)}</option>`).join('')||'<option value="">(없음)</option>';
+  document.getElementById('scope').textContent='범위: '+PATH.replace('offerings','전체').replace(/\/regions\//,' / ').replace(/\/zones\//,' / ').replace(/\/rack-types\/.*/,'');
+  const racks=lay.racks||[];
+  if(!racks.length){ document.getElementById('list').innerHTML='<div class="empty">이 범위에 배치된 랙이 없습니다.</div>'; return; }
+  let i=0;
+  for(const rk of racks){
+    const h=rk.hierarchy||{}; const file=`offerings/${h.offering}/regions/${h.region}/zones/${h.zone}/rack-types/${h.rack_type}/racks/${rk.rack_id}.yaml`;
+    try{ const d=await fetch('/api/rack?path='+encodeURIComponent(file)).then(r=>r.json()); const rkm=d.rack;
+      RACKS.push({_i:i++,file,id:rk.rack_id,region:h.region,zone:h.zone,rack_type:h.rack_type,
+        model_slug:(rkm.rack_model&&rkm.rack_model.slug)||'',customs:rkm.custom_line_items||[],
+        placements:(rkm.placements||[]).map(p=>({_id:'p'+(i)+'_'+p.position,device:p.device,name:p.name,category:p.category||'other',position:p.position,u:p.u||1,release:p.release||DRAFT,meta:p.meta||{},_sel:false})),dirty:false});
+    }catch(e){}
+  }
+  render();
+}).catch(e=>{ document.getElementById('list').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
+</script></body></html>

@@ -38,7 +38,7 @@ def client(library, tmp_path):
 
 
 PAGE_ROUTES = ["/", "/edit", "/manage", "/candidates", "/diff",
-               "/search", "/health"]
+               "/search", "/health", "/placed", "/summary", "/place"]
 API_ROUTES = [
     "/api/hierarchy",
     "/api/candidates",

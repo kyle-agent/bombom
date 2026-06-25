@@ -10,53 +10,50 @@
  header{display:flex;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);background:#fff;flex:0 0 auto}
  .logo{font-weight:700;font-size:15px;color:var(--accent)}
  .crumb{color:#334155;font-size:13px}.crumb b{color:#0f172a}
- select,.btn{font-size:13px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:6px 10px;cursor:pointer}
+ .btn{font-size:13px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:6px 10px;cursor:pointer}
  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
  .btn.primary:hover{background:#1d4ed8}
- .btn.sm{padding:3px 8px;font-size:12px}
- .spacer{margin-left:auto}
- nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
- nav a:hover{background:#f1f5f9}
- .dirty{color:#d97706;font-size:12px;font-weight:600}
  .editonly{display:inline-flex;gap:8px;align-items:center}
  body:not(.editing) .editonly{display:none}
  body:not(.editing) .sec.palette{display:none}
  body:not(.editing) .sec.placed{flex:1 1 100%}
  body:not(.editing) .blk{cursor:default}
+ .dirty{color:#d97706;font-size:12px;font-weight:600}
+ .spacer{margin-left:auto}
+ nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
+ nav a:hover{background:#f1f5f9}
  .main{flex:1 1 auto;display:flex;min-height:0}
- /* left column: placed tree (top) + palette (bottom) */
  aside{flex:0 0 320px;border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
  .sec{display:flex;flex-direction:column;min-height:0}
- .sec.placed{flex:1 1 58%;border-bottom:1px solid var(--line)}
- .sec.palette{flex:1 1 42%}
+ .sec.placed{flex:1 1 56%;border-bottom:1px solid var(--line)}
+ .sec.palette{flex:1 1 44%}
  .sec .h{padding:8px 12px;font-size:13px;font-weight:600;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px}
  .sec .h .cnt{color:#94a3b8;font-weight:400;font-size:12px}
  .sec .h .sp{margin-left:auto}
  .list{overflow:auto;flex:1 1 auto;padding:4px 0}
- /* collapsible rack tree */
+ /* placed tree */
  .rnode .rh{display:flex;align-items:center;gap:7px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:600}
  .rnode .rh:hover{background:#f8fafc}
  .rnode .tw{width:10px;color:#94a3b8;transition:transform .12s}
  .rnode.open .tw{transform:rotate(90deg)}
  .rnode .rm{margin-left:auto;color:#94a3b8;font-weight:400;font-size:11px}
- .rbody{display:none;padding:0 0 5px}
- .rnode.open .rbody{display:block}
+ .rbody{display:none;padding:0 0 5px}.rnode.open .rbody{display:block}
  .ch{display:flex;align-items:center;gap:6px;padding:2px 12px 2px 26px;color:var(--muted);font-size:11px;font-weight:600}
  .ch .dot{width:8px;height:8px;border-radius:2px}
  .devrow{display:flex;justify-content:space-between;gap:8px;padding:1px 12px 1px 38px;font-size:12px}
  .devrow .nm{color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .devrow .q{font-weight:600;font-variant-numeric:tabular-nums}
- /* palette tray (vertical) */
- .ptray{overflow:auto;flex:1 1 auto;padding:8px;display:flex;flex-direction:column;gap:6px}
- .ptray .phint{color:#94a3b8;font-size:12px;line-height:1.5}
- .ptray .phint b{color:var(--accent)}
- .chip{display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:9px;padding:7px 9px;background:#fff;cursor:pointer;flex:0 0 auto}
+ /* candidate palette */
+ .pfilter{padding:7px 10px 4px}
+ .pfilter input{width:100%;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px}
+ .ptray{overflow:auto;flex:1 1 auto;padding:6px 8px;display:flex;flex-direction:column;gap:5px}
+ .ptray .phint{color:#94a3b8;font-size:12px;line-height:1.5;padding:6px}
+ .chip{display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:9px;padding:6px 9px;background:#fff;cursor:pointer;flex:0 0 auto}
  .chip:hover{border-color:#93c5fd}
  .chip.armed{border-color:var(--accent);background:#eff6ff;box-shadow:0 0 0 2px rgba(37,99,235,.18)}
  .chip .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
  .chip .cn{font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .chip .cu{font-size:11px;color:var(--muted)}
- .chip .cx{cursor:pointer;color:#94a3b8}
  /* canvas */
  #viewport{position:relative;flex:1 1 auto;overflow:hidden;cursor:grab;
    background:linear-gradient(#e8edf3 1px,transparent 1px) 0 0/24px 24px,
@@ -76,31 +73,13 @@
  .blk{position:absolute;left:18px;right:3px;border-radius:3px;color:#fff;font-size:9px;
    display:flex;align-items:center;gap:3px;padding:0 4px;cursor:grab;overflow:hidden;border:1px solid rgba(255,255,255,.3)}
  .blk .bnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
- .blk .cp,.blk .x{cursor:pointer;opacity:.85;flex:0 0 auto}
- .blk .cp:hover,.blk .x:hover{opacity:1}
- .blk.warn{outline:2px solid #f59e0b;outline-offset:-2px}
+ .blk .x{cursor:pointer;opacity:.85;flex:0 0 auto}.blk .x:hover{opacity:1}
+ .blk.draft{outline:2px dashed #f59e0b;outline-offset:-2px}
  .armbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:12px;
    padding:7px 13px;border-radius:9px;z-index:6;display:none;align-items:center;gap:10px;box-shadow:0 4px 14px rgba(15,23,42,.2)}
  .armbar.on{display:flex}.armbar b{font-weight:700}
  .armbar button{background:#334155;color:#fff;border:0;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer}
  .hint{position:absolute;left:12px;bottom:10px;color:#94a3b8;font-size:12px;z-index:4}
- /* add popup */
- .modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:flex-start;justify-content:center;z-index:20}
- .modal.on{display:flex}
- .modal .box{background:#fff;border-radius:12px;margin-top:60px;width:540px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(15,23,42,.25)}
- .modal .mh{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
- .modal .mh b{font-size:14px}.modal .mh .x{margin-left:auto;cursor:pointer;color:#94a3b8;font-size:20px}
- .modal .controls{padding:10px 16px 4px;display:flex;gap:8px}
- .modal input.s{flex:1;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px}
- .modal .mhint{padding:0 16px 8px;color:var(--muted);font-size:12px}
- .modal .res{overflow:auto;padding:6px 12px 14px}
- .mrow{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--line);border-radius:9px;margin:6px 0}
- .mrow .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
- .mrow .info{flex:1;min-width:0}.mrow .info .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .mrow .info .m{font-size:11px;color:var(--muted)}
- .mrow .u{font-size:11px;color:#334155;font-variant-numeric:tabular-nums}
- .mrow .add{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex:0 0 auto}
- .mrow .add:hover{background:#1d4ed8}
  .empty{padding:24px;color:#94a3b8;text-align:center;font-size:13px}
  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
  #toast.on{opacity:.96}
@@ -109,21 +88,22 @@
 <header>
  <span class="logo">bombom</span><span class="crumb" id="crumb">— 존</span>
  <button class="btn" id="editToggle">✏ 편집</button>
- <span class="editonly">릴리즈 <select id="relSel"></select>
-   <button class="btn primary" id="saveBtn">💾 저장</button></span>
+ <span class="editonly"><button class="btn primary" id="saveBtn">💾 저장</button>
+   <a class="btn" id="tagLink" href="/placed">🏷 릴리즈 태깅</a></span>
  <span class="dirty" id="dirty"></span>
  <span class="spacer"></span>
- <nav><a id="back" href="/home">← 메인</a></nav>
+ <nav><a id="back" href="/">← 메인</a></nav>
 </header>
 <div class="main">
  <aside>
    <div class="sec placed">
      <div class="h">배치된 목록 <span class="cnt" id="cnt"></span>
-       <span class="sp"></span><button class="btn sm" id="toggleAll">모두 펼치기</button></div>
+       <span class="sp"></span><button class="btn" style="padding:3px 8px;font-size:12px" id="toggleAll">모두 펼치기</button></div>
      <div class="list" id="list"></div>
    </div>
    <div class="sec palette">
-     <div class="h">담을 장비 (팔레트) <span class="sp"></span><button class="btn primary sm" id="addBtn">＋ 장비 추가</button></div>
+     <div class="h">후보 (배치 소스) <span class="cnt" id="poolcnt"></span></div>
+     <div class="pfilter"><input id="pfilter" placeholder="후보 검색 (제조사/모델)…"></div>
      <div class="ptray" id="palette"></div>
    </div>
  </aside>
@@ -133,28 +113,22 @@
      <button onclick="fit()">맞춤</button></div>
    <div class="armbar" id="armbar"></div>
    <div id="scene"><div class="empty">불러오는 중…</div></div>
-   <div class="hint">팔레트 칩 클릭→빈칸 클릭 = 배치 · 블록 드래그 = 이동 · 블록 ⧉ = 팔레트에 담기(복제) · Alt+드래그 = 복사 · ✕ = 제거</div>
+   <div class="hint"></div>
  </div>
 </div>
-<div class="modal" id="modal"><div class="box">
-  <div class="mh"><b>＋ 장비 추가 (후보풀)</b><span class="x" id="mClose">×</span></div>
-  <div class="controls"><input class="s" id="mSearch" placeholder="제조사/모델/슬러그 검색…"></div>
-  <div class="mhint">＋담기 → 왼쪽 <b>팔레트</b>에 담깁니다. 팔레트에서 장비를 클릭한 뒤 랙의 빈 칸을 클릭하세요.</div>
-  <div class="res" id="mRes"><div class="empty">불러오는 중…</div></div>
-</div></div>
 <div id="toast"></div>
 <script>
 const CAT={server:"#2563eb",network:"#16a34a",storage:"#9333ea",other:"#64748b"};
-const UPX=18;
+const UPX=18, DRAFT="DRAFT";
 const PATH=new URLSearchParams(location.search).get('path')||'offerings';
 const cur='₩';
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1900);}
-let RACKS=[];          // [{file,id,rack_type,rack_u,model_slug,placements:[{...,_id}],dirty,_open}]
-let RELEASES=[], selRelease='', poolCache=[], uid=1;
-let palette=[];        // [{_pid,slug,name,category,u,unit_cost}]
-let armed=null;
-let editMode = new URLSearchParams(location.search).get('edit')==='1';   // view by default
+document.getElementById('back').href='/';
+document.getElementById('tagLink').href='/placed?path='+encodeURIComponent(PATH);
+
+let RACKS=[], pool=[], uid=1, armed=null;
+let editMode=new URLSearchParams(location.search).get('edit')==='1';
 
 // ── pan/zoom ────────────────────────────────────────────────────────────
 const vp=document.getElementById('viewport'), scene=document.getElementById('scene'), zl=document.getElementById('zl');
@@ -173,96 +147,78 @@ vp.addEventListener('pointermove',e=>{if(!pan)return;tx=e.clientX-pan.x;ty=e.cli
 vp.addEventListener('pointerup',()=>{pan=null;vp.classList.remove('grabbing');});
 apply();
 
-// ── model helpers ─────────────────────────────────────────────────────────
-function occupied(rk, exceptId){ const s=new Set();
-  rk.placements.forEach(p=>{ if(p._id===exceptId)return; for(let u=p.position;u<p.position+p.u;u++) s.add(u); }); return s; }
-function fits(rk, pos, h, exceptId){ if(pos<1||pos+h-1>rk.rack_u) return false;
-  const occ=occupied(rk, exceptId); for(let u=pos;u<pos+h;u++) if(occ.has(u)) return false; return true; }
-function markDirty(rk){ rk.dirty=true; const n=RACKS.filter(r=>r.dirty).length; document.getElementById('dirty').textContent=n?`● 미저장 ${n}랙`:''; }
+// ── helpers ─────────────────────────────────────────────────────────────
+function occupied(rk,ex){const s=new Set();rk.placements.forEach(p=>{if(p._id===ex)return;for(let u=p.position;u<p.position+p.u;u++)s.add(u);});return s;}
+function fits(rk,pos,h,ex){if(pos<1||pos+h-1>rk.rack_u)return false;const o=occupied(rk,ex);for(let u=pos;u<pos+h;u++)if(o.has(u))return false;return true;}
+function markDirty(rk){rk.dirty=true;const n=RACKS.filter(r=>r.dirty).length;document.getElementById('dirty').textContent=n?`● 미저장 ${n}랙`:'';}
 
-// ── render canvas ───────────────────────────────────────────────────────
+// ── canvas ──────────────────────────────────────────────────────────────
 function render(){
-  scene.innerHTML = RACKS.map((rk,ri)=>{
-    let slots='';
-    for(let u=rk.rack_u; u>=1; u--) slots+=`<div class="uslot" style="height:${UPX}px" data-rack="${ri}" data-u="${u}"><span class="un">${u}</span></div>`;
+  scene.innerHTML=RACKS.map((rk,ri)=>{
+    let slots='';for(let u=rk.rack_u;u>=1;u--)slots+=`<div class="uslot" style="height:${UPX}px" data-rack="${ri}" data-u="${u}"><span class="un">${u}</span></div>`;
     const blks=rk.placements.map(p=>{
-      const warn=p.category==='server' && !(p.meta&&p.meta.serial);
-      const ctl = editMode
-        ? `<span class="cp" data-copy="${ri}:${p._id}" title="이 장비를 팔레트에 담기(다른 랙에 복제)">⧉</span><span class="x" data-del="${ri}:${p._id}">✕</span>`
-        : '';
-      return `<div class="blk${warn?' warn':''}" draggable="${editMode}" data-move="${ri}:${p._id}"
+      const draft=(p.release||DRAFT)===DRAFT;
+      const ctl=editMode?`<span class="x" data-del="${ri}:${p._id}">✕</span>`:'';
+      return `<div class="blk${draft?' draft':''}" draggable="${editMode}" data-move="${ri}:${p._id}"
         style="bottom:${(p.position-1)*UPX}px;height:${p.u*UPX-1}px;background:${CAT[p.category]||CAT.other}"
-        title="${esc(p.name)} · U${p.position} · ${p.u}U${editMode?' (드래그=이동 · Alt+드래그=복사 · ⧉=팔레트에 담기)':''}">
+        title="${esc(p.name)} · U${p.position} · ${p.u}U · ${draft?'미태그(작업본)':esc(p.release)}">
         <span class="bnm">${esc(p.name)}</span>${ctl}</div>`;
     }).join('');
     return `<div class="rackcol"><div class="rhead">▣ ${esc(rk.id)} <small>${esc(rk.rack_type)} · ${rk.rack_u}U</small></div>
-      <div class="rackbody" style="height:${rk.rack_u*UPX}px" data-rackbody="${ri}">${slots}${blks}</div></div>`;
+      <div class="rackbody" style="height:${rk.rack_u*UPX}px">${slots}${blks}</div></div>`;
   }).join('');
-  wireCanvas();
-  renderTree();
+  wireCanvas(); renderTree();
 }
-// ── left: collapsible placed tree ───────────────────────────────────────────
 function renderTree(){
-  const order=['server','network','storage','other'];
-  let total=0;
+  const order=['server','network','storage','other']; let total=0;
   const html=RACKS.map((rk,ri)=>{
-    const cats={}; rk.placements.forEach(p=>{ (cats[p.category]=cats[p.category]||{}); cats[p.category][p.name]=(cats[p.category][p.name]||0)+1; });
+    const cats={}; rk.placements.forEach(p=>{(cats[p.category]=cats[p.category]||{});cats[p.category][p.name]=(cats[p.category][p.name]||0)+1;});
     total+=rk.placements.length;
-    const body=order.filter(c=>cats[c]).map(c=>{
-      const items=Object.entries(cats[c]).sort((a,b)=>b[1]-a[1]);
-      return `<div class="ch"><span class="dot" style="background:${CAT[c]||CAT.other}"></span>${esc(c)}</div>`
-        + items.map(([nm,q])=>`<div class="devrow"><span class="nm">${esc(nm)}</span><span class="q">×${q}</span></div>`).join('');
-    }).join('') || '<div class="devrow" style="color:#94a3b8;padding-left:26px">비어 있음</div>';
-    return `<div class="rnode${rk._open?' open':''}" data-ri="${ri}">
-      <div class="rh"><span class="tw">▶</span>▣ ${esc(rk.id)}
-        <span class="rm">${rk.placements.length}대${rk.dirty?' · <span style="color:#d97706">미저장</span>':''}</span></div>
-      <div class="rbody">${body}</div></div>`;
+    const body=order.filter(c=>cats[c]).map(c=>`<div class="ch"><span class="dot" style="background:${CAT[c]||CAT.other}"></span>${esc(c)}</div>`
+      +Object.entries(cats[c]).sort((a,b)=>b[1]-a[1]).map(([nm,q])=>`<div class="devrow"><span class="nm">${esc(nm)}</span><span class="q">×${q}</span></div>`).join('')).join('')
+      ||'<div class="devrow" style="color:#94a3b8;padding-left:26px">비어 있음</div>';
+    return `<div class="rnode${rk._open?' open':''}" data-ri="${ri}"><div class="rh"><span class="tw">▶</span>▣ ${esc(rk.id)}<span class="rm">${rk.placements.length}대</span></div><div class="rbody">${body}</div></div>`;
   }).join('');
   document.getElementById('list').innerHTML=html;
   document.getElementById('cnt').textContent=RACKS.length+'랙 · '+total+'대';
-  document.querySelectorAll('.rnode .rh').forEach(h=>h.addEventListener('click',()=>{
-    const ri=+h.parentElement.dataset.ri; RACKS[ri]._open=!RACKS[ri]._open; renderTree();
-  }));
+  document.querySelectorAll('.rnode .rh').forEach(h=>h.addEventListener('click',()=>{const ri=+h.parentElement.dataset.ri;RACKS[ri]._open=!RACKS[ri]._open;renderTree();}));
 }
-document.getElementById('toggleAll').onclick=()=>{
-  const anyClosed=RACKS.some(r=>!r._open); RACKS.forEach(r=>r._open=anyClosed);
-  document.getElementById('toggleAll').textContent=anyClosed?'모두 접기':'모두 펼치기'; renderTree();
-};
+document.getElementById('toggleAll').onclick=()=>{const any=RACKS.some(r=>!r._open);RACKS.forEach(r=>r._open=any);document.getElementById('toggleAll').textContent=any?'모두 접기':'모두 펼치기';renderTree();};
 
-// ── palette + arm/click-to-place ────────────────────────────────────────────
+// ── candidate palette (full pool, always visible) ───────────────────────────
 function renderPalette(){
+  const q=(document.getElementById('pfilter').value||'').toLowerCase();
   const el=document.getElementById('palette');
-  if(!palette.length){ el.innerHTML='<div class="phint">팔레트가 비었습니다.<br><b>＋ 장비 추가</b>로 담거나, 캔버스의 블록 <b>⧉</b>로 기존 장비를 담을 수 있습니다.<br>담은 칩을 클릭하고 랙의 빈 칸을 클릭하면 배치됩니다.</div>'; return; }
-  el.innerHTML=palette.map((d,i)=>`<div class="chip${armed&&armed._pid===d._pid?' armed':''}" draggable="true" data-pi="${i}" title="${esc(d.name)} · ${d.u}U">
+  const items=pool.filter(d=>!q||(d.name+' '+d.slug+' '+d.category).toLowerCase().includes(q));
+  document.getElementById('poolcnt').textContent=pool.length+'종';
+  if(!pool.length){ el.innerHTML='<div class="phint">후보풀이 비었습니다 — <b>후보풀</b> 화면에서 1차 후보를 먼저 뽑으세요.</div>'; return; }
+  el.innerHTML=items.map((d,i)=>`<div class="chip${armed&&armed._k===d._k?' armed':''}" draggable="true" data-i="${pool.indexOf(d)}" title="${esc(d.name)} · ${d.u}U">
     <span class="dot" style="background:${CAT[d.category]||CAT.other}"></span>
-    <span class="cn">${esc(d.name)}</span><span class="cu">${d.u}U</span><span class="cx" data-px="${i}">✕</span></div>`).join('');
+    <span class="cn">${esc(d.name)}</span><span class="cu">${d.u}U</span></div>`).join('')
+    || '<div class="phint">검색 결과 없음</div>';
   el.querySelectorAll('.chip').forEach(c=>{
-    c.addEventListener('click',e=>{ if(e.target.classList.contains('cx'))return; arm(palette[+c.dataset.pi]); });
-    c.addEventListener('dragstart',e=>{ payload={type:'new',dev:palette[+c.dataset.pi]}; e.dataTransfer.setData('text/plain','new'); });
+    c.addEventListener('click',()=>arm(pool[+c.dataset.i]));
+    c.addEventListener('dragstart',e=>{ payload={type:'new',dev:pool[+c.dataset.i]}; e.dataTransfer.setData('text/plain','new'); });
   });
-  el.querySelectorAll('.cx').forEach(x=>x.addEventListener('click',e=>{ e.stopPropagation();
-    const d=palette[+x.dataset.px]; palette.splice(+x.dataset.px,1); if(armed&&armed._pid===d._pid) arm(null); renderPalette(); }));
 }
+document.getElementById('pfilter').addEventListener('input',renderPalette);
 function arm(dev){
-  armed=(armed&&dev&&armed._pid===dev._pid)?null:dev;
+  armed=(armed&&dev&&armed._k===dev._k)?null:dev;
   const bar=document.getElementById('armbar'); vp.classList.toggle('arming',!!armed);
   if(armed){ bar.classList.add('on'); bar.innerHTML=`<b>${esc(armed.name)}</b> 배치 중 — 랙의 빈 칸을 클릭하세요 <button id="armCancel">취소(ESC)</button>`;
-    document.getElementById('armCancel').onclick=()=>arm(null); }
-  else bar.classList.remove('on');
+    document.getElementById('armCancel').onclick=()=>arm(null); } else bar.classList.remove('on');
   renderPalette();
 }
-function addPal(dev){ palette.push({_pid:uid++, ...dev}); renderPalette(); toast('팔레트에 담음: '+dev.name); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') arm(null); });
 
-// ── view / edit toggle ──────────────────────────────────────────────────────
+// ── view/edit toggle ────────────────────────────────────────────────────────
 function applyMode(){
-  document.body.classList.toggle('editing', editMode);
+  document.body.classList.toggle('editing',editMode);
   const t=document.getElementById('editToggle');
-  t.textContent = editMode ? '✓ 보기로' : '✏ 편집';
-  t.classList.toggle('primary', editMode);
-  document.querySelector('.hint').innerHTML = editMode
-    ? '팔레트 칩 클릭→빈칸 클릭 = 배치 · 블록 드래그 = 이동 · ⧉ = 팔레트에 담기(복제) · Alt+드래그 = 복사 · ✕ = 제거'
-    : '보기 모드 — 휠=줌 · 빈 곳 드래그=이동 · 수정하려면 상단 <b>✏ 편집</b>을 켜세요';
+  t.textContent=editMode?'✓ 보기로':'✏ 편집'; t.classList.toggle('primary',editMode);
+  document.querySelector('.hint').innerHTML=editMode
+    ? '후보 칩 클릭→빈칸 클릭 = 배치 · 블록 드래그=이동 · Alt+드래그=복사 · ✕=제거 · 점선=미태그(작업본). 릴리즈는 🏷 태깅에서.'
+    : '보기 모드 — 휠=줌 · 빈 곳 드래그=이동 · 수정하려면 <b>✏ 편집</b>을 켜세요';
   if(!editMode) arm(null);
   render(); renderPalette();
 }
@@ -271,112 +227,70 @@ document.getElementById('editToggle').onclick=()=>{ editMode=!editMode; applyMod
 // ── drag/drop + click-place ─────────────────────────────────────────────────
 let payload=null;   // {type:'new'|'copy',dev} | {type:'move',ri,id}
 function wireCanvas(){
-  if(!editMode) return;   // 보기 모드: 드래그/배치 비활성 (pan·zoom·접기는 그대로)
-  scene.querySelectorAll('.blk').forEach(b=>{
-    b.addEventListener('dragstart',e=>{ const [ri,id]=b.dataset.move.split(':').map(Number);
-      const p=RACKS[ri].placements.find(x=>x._id===id);
-      if(e.altKey && p){ payload={type:'copy',dev:{slug:p.device,name:p.name,category:p.category,u:p.u,unit_cost:p.unit_cost}}; }
-      else { payload={type:'move',ri,id}; }
-      e.dataTransfer.setData('text/plain',payload.type); });
-  });
-  scene.querySelectorAll('.cp[data-copy]').forEach(c=>c.addEventListener('click',e=>{ e.stopPropagation();
-    const [ri,id]=c.dataset.copy.split(':').map(Number); const p=RACKS[ri].placements.find(x=>x._id===id); if(!p)return;
-    addPal({slug:p.device,name:p.name,category:p.category,u:p.u,unit_cost:p.unit_cost}); }));
+  if(!editMode) return;
+  scene.querySelectorAll('.blk').forEach(b=>b.addEventListener('dragstart',e=>{
+    const [ri,id]=b.dataset.move.split(':').map(Number); const p=RACKS[ri].placements.find(x=>x._id===id);
+    if(e.altKey&&p) payload={type:'copy',dev:{slug:p.device,name:p.name,category:p.category,u:p.u,unit_cost:p.unit_cost,_k:'c'+id}};
+    else payload={type:'move',ri,id};
+    e.dataTransfer.setData('text/plain',payload.type); }));
   scene.querySelectorAll('.x[data-del]').forEach(x=>x.addEventListener('click',e=>{ e.stopPropagation();
-    const [ri,id]=x.dataset.del.split(':').map(Number);
-    const rk=RACKS[ri]; rk.placements=rk.placements.filter(p=>p._id!==id); markDirty(rk); render(); }));
+    const [ri,id]=x.dataset.del.split(':').map(Number); const rk=RACKS[ri]; rk.placements=rk.placements.filter(p=>p._id!==id); markDirty(rk); render(); }));
   scene.querySelectorAll('.uslot').forEach(s=>{
     const ri=+s.dataset.rack,u=+s.dataset.u;
-    const previewH=()=> armed?armed.u : (payload?(payload.type==='move'?findP(payload).u:payload.dev.u):1);
-    function highlight(){ const h=previewH(); const ex=payload&&payload.type==='move'?payload.id:null;
+    const previewH=()=>armed?armed.u:(payload?(payload.type==='move'?findP(payload).u:payload.dev.u):1);
+    function hl(){const h=previewH();const ex=payload&&payload.type==='move'?payload.id:null;
       s.parentElement.querySelectorAll('.uslot').forEach(x=>x.classList.remove('over','bad'));
-      const ok=fits(RACKS[ri],u,h,ex);
-      for(let k=0;k<h;k++){ const cell=s.parentElement.querySelector(`.uslot[data-u="${u+k}"]`); if(cell) cell.classList.add(ok?'over':'bad'); } }
-    s.addEventListener('dragover',e=>{ e.preventDefault(); highlight(); });
+      const ok=fits(RACKS[ri],u,h,ex);for(let k=0;k<h;k++){const c=s.parentElement.querySelector(`.uslot[data-u="${u+k}"]`);if(c)c.classList.add(ok?'over':'bad');}}
+    s.addEventListener('dragover',e=>{e.preventDefault();hl();});
     s.addEventListener('dragleave',()=>s.classList.remove('over','bad'));
-    s.addEventListener('drop',e=>{ e.preventDefault(); drop(ri,u); render(); });
-    s.addEventListener('mousemove',()=>{ if(armed) highlight(); });
-    s.addEventListener('click',()=>{ if(armed && placeNew(RACKS[ri],u,armed)) render(); });
+    s.addEventListener('drop',e=>{e.preventDefault();drop(ri,u);render();});
+    s.addEventListener('mousemove',()=>{if(armed)hl();});
+    s.addEventListener('click',()=>{if(armed&&placeNew(RACKS[ri],u,armed))render();});
   });
 }
-function findP(pl){ return RACKS[pl.ri].placements.find(p=>p._id===pl.id); }
-function placeNew(rk,u,d){
-  if(!fits(rk,u,d.u,null)){ toast('그 위치에는 맞지 않습니다 (겹침/범위 초과)'); return false; }
-  rk.placements.push({_id:uid++,device:d.slug,name:d.name,category:d.category,position:u,u:d.u,release:selRelease,unit_cost:d.unit_cost,meta:{}});
-  markDirty(rk); return true;
-}
-function drop(ri,u){
-  const rk=RACKS[ri]; if(!payload) return;
+function findP(pl){return RACKS[pl.ri].placements.find(p=>p._id===pl.id);}
+function placeNew(rk,u,d){ if(!fits(rk,u,d.u,null)){toast('그 위치에는 맞지 않습니다 (겹침/범위)');return false;}
+  rk.placements.push({_id:uid++,device:d.slug,name:d.name,category:d.category,position:u,u:d.u,release:DRAFT,unit_cost:d.unit_cost,meta:{}});
+  markDirty(rk); return true; }
+function drop(ri,u){ const rk=RACKS[ri]; if(!payload)return;
   if(payload.type==='new'||payload.type==='copy'){ placeNew(rk,u,payload.dev); }
-  else {
-    const src=RACKS[payload.ri], p=src.placements.find(x=>x._id===payload.id); if(!p){ payload=null; return; }
-    if(!fits(rk,u,p.u,payload.ri===ri?p._id:null)){ toast('그 위치에는 맞지 않습니다'); payload=null; return; }
-    src.placements=src.placements.filter(x=>x._id!==p._id); p.position=u; rk.placements.push(p);
-    markDirty(rk); if(src!==rk) markDirty(src);
-  }
+  else { const src=RACKS[payload.ri], p=src.placements.find(x=>x._id===payload.id); if(!p){payload=null;return;}
+    if(!fits(rk,u,p.u,payload.ri===ri?p._id:null)){toast('그 위치에는 맞지 않습니다');payload=null;return;}
+    src.placements=src.placements.filter(x=>x._id!==p._id); p.position=u; rk.placements.push(p); markDirty(rk); if(src!==rk)markDirty(src); }
   payload=null;
 }
 
-// ── add popup ────────────────────────────────────────────────────────────────
-const modal=document.getElementById('modal');
-document.getElementById('addBtn').onclick=()=>{ modal.classList.add('on'); document.getElementById('mSearch').focus(); poolSearch(); };
-document.getElementById('mClose').onclick=()=>modal.classList.remove('on');
-modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('on'); });
-let st=null;
-document.getElementById('mSearch').addEventListener('input',()=>{ clearTimeout(st); st=setTimeout(poolSearch,200); });
-function poolSearch(){
-  const q=document.getElementById('mSearch').value.trim();
-  const box=document.getElementById('mRes'); box.innerHTML='<div class="empty">불러오는 중…</div>';
-  fetch('/api/catalog/search?kind=device&pool=1&limit=50&q='+encodeURIComponent(q)).then(r=>r.json()).then(rows=>{
-    poolCache=rows||[];
-    if(!poolCache.length){ box.innerHTML='<div class="empty">후보풀이 비었습니다 — /candidates 에서 먼저 추가하세요.</div>'; return; }
-    box.innerHTML=poolCache.map((r,i)=>{
-      const cat=r.category||'other', uh=(r.u_height|0)||1;
-      const price=r.priced?cur+(r.unit_cost||0).toLocaleString():'<span style="color:#d97706">가격 미정</span>';
-      return `<div class="mrow"><span class="dot" style="background:${CAT[cat]||CAT.other}"></span>
-        <span class="info"><span class="n">${esc(r.model||r.slug)}</span><span class="m">${esc(r.manufacturer||'')} · ${esc(cat)} · ${uh}U · ${price}</span></span>
-        <button class="add" data-i="${i}">＋ 담기</button></div>`;
-    }).join('');
-    box.querySelectorAll('.add').forEach(btn=>btn.addEventListener('click',()=>{ const r=poolCache[+btn.dataset.i];
-      addPal({slug:r.slug,name:(r.model||r.slug),category:r.category||'other',u:(r.u_height|0)||1,unit_cost:r.unit_cost||0}); }));
-  }).catch(e=>{ box.innerHTML='<div class="empty">검색 실패: '+esc(e.message)+'</div>'; });
-}
-
-// ── save ────────────────────────────────────────────────────────────────
-document.getElementById('relSel').addEventListener('change',e=>{ selRelease=e.target.value; });
+// ── save (placements keep their release; new = DRAFT/미태그) ──────────────────
 document.getElementById('saveBtn').onclick=async()=>{
-  const dirty=RACKS.filter(r=>r.dirty); if(!dirty.length){ toast('변경된 랙이 없습니다'); return; }
+  const dirty=RACKS.filter(r=>r.dirty); if(!dirty.length){toast('변경된 랙이 없습니다');return;}
   let ok=0;
   for(const rk of dirty){
-    const body={rack_model:{slug:rk.model_slug},placements:rk.placements.map(p=>({device:p.device,position:p.position,release:p.release||selRelease,qty:1,meta:p.meta||{}})),custom_line_items:[]};
-    try{
-      const r=await fetch('/api/rack?path='+encodeURIComponent(rk.file)+'&message='+encodeURIComponent('edit '+rk.id),
+    const body={rack_model:{slug:rk.model_slug},placements:rk.placements.map(p=>({device:p.device,position:p.position,release:p.release||DRAFT,qty:1,meta:p.meta||{}})),custom_line_items:[]};
+    try{ const r=await fetch('/api/rack?path='+encodeURIComponent(rk.file)+'&message='+encodeURIComponent('edit '+rk.id),
         {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if(r.ok){ rk.dirty=false; ok++; } else { const d=await r.json().catch(()=>null);
-        toast(rk.id+' 저장 실패: '+((d&&d.detail&&'검증 실패')||('HTTP '+r.status))); }
-    }catch(e){ toast(rk.id+' 저장 실패: '+e.message); }
+      if(r.ok){rk.dirty=false;ok++;} else {const d=await r.json().catch(()=>null);toast(rk.id+' 저장 실패: '+((d&&d.detail&&'검증 실패')||('HTTP '+r.status)));}
+    }catch(e){toast(rk.id+' 저장 실패: '+e.message);}
   }
-  markDirty({}); renderTree();
-  if(ok) toast(ok+'개 랙 저장됨');
+  markDirty({}); renderTree(); if(ok)toast(ok+'개 랙 저장됨 · 릴리즈는 🏷 태깅에서 부여하세요');
 };
 
 // ── load ────────────────────────────────────────────────────────────────
+fetch('/api/catalog/search?kind=device&pool=1&limit=500&q=').then(r=>r.json()).then(rows=>{
+  pool=(rows||[]).map(r=>({slug:r.slug,name:(r.model||r.slug),category:r.category||'other',u:(r.u_height|0)||1,unit_cost:r.unit_cost||0,_k:r.slug}));
+  renderPalette();
+}).catch(()=>{});
 fetch('/api/layout?path='+encodeURIComponent(PATH)).then(r=>r.ok?r.json():{racks:[]}).then(async lay=>{
   const racks=lay.racks||[];
-  if(!racks.length){ scene.innerHTML='<div class="empty">이 존에 랙이 없습니다.</div>'; renderPalette(); return; }
+  if(!racks.length){ scene.innerHTML='<div class="empty">이 존에 랙이 없습니다.</div>'; return; }
   const zr=(racks[0].hierarchy)||{};
   document.getElementById('crumb').innerHTML=`${esc(zr.region||'')} / <b>${esc(zr.zone||PATH.split('/').pop())}</b> — 배치`;
   for(const rk of racks){
     const rt=(rk.hierarchy&&rk.hierarchy.rack_type)||'';
     const file=`${PATH}/rack-types/${rt}/racks/${rk.rack_id}.yaml`;
-    try{
-      const d=await fetch('/api/rack?path='+encodeURIComponent(file)).then(r=>r.json());
-      if(!RELEASES.length){ RELEASES=d.releases||[]; selRelease=d.current_release||RELEASES[0]||'R26.07';
-        document.getElementById('relSel').innerHTML=RELEASES.map(x=>`<option ${x===selRelease?'selected':''}>${esc(x)}</option>`).join(''); }
-      const rkm=d.rack;
+    try{ const d=await fetch('/api/rack?path='+encodeURIComponent(file)).then(r=>r.json()); const rkm=d.rack;
       RACKS.push({file,id:rk.rack_id,rack_type:rt,rack_u:rk.rack_u,model_slug:(rkm.rack_model&&rkm.rack_model.slug)||'',_open:false,
-        placements:(rkm.placements||[]).map(p=>({_id:uid++,device:p.device,name:p.name,category:p.category||'other',position:p.position,u:p.u||1,release:p.release,unit_cost:p.unit_cost||0,meta:p.meta||{}})),dirty:false});
-    }catch(e){ /* skip a rack that fails to load */ }
+        placements:(rkm.placements||[]).map(p=>({_id:uid++,device:p.device,name:p.name,category:p.category||'other',position:p.position,u:p.u||1,release:p.release||DRAFT,unit_cost:p.unit_cost||0,meta:p.meta||{}})),dirty:false});
+    }catch(e){}
   }
   applyMode(); requestAnimationFrame(fit);
 }).catch(e=>{ scene.innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });

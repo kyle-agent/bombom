@@ -171,8 +171,8 @@ def test_placed_csv_all_and_per_release(ws_root):
     assert bad.status_code == 400          # release header-injection guard
 
 
-def test_placed_route_removed(ws_root):
-    # /placed screen consolidated; /api/placed + /api/placed.csv endpoints remain
+def test_placed_page_served(ws_root):
+    # /placed = 배치 목록·릴리즈 태깅 screen
     client = _client(ws_root)
-    assert client.get("/placed").status_code == 404
-    assert client.get("/api/placed?path=offerings/cloud-a").status_code == 200
+    r = client.get("/placed")
+    assert r.status_code == 200 and "릴리즈 태깅" in r.text

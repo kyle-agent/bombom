@@ -474,8 +474,8 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         return build_dashboard(ws, _resolve(root, path))
 
     @app.get("/api/overview")
-    def overview_ep(path: str = "offerings"):
-        return build_overview(ws, _resolve(root, path))
+    def overview_ep(path: str = "offerings", release: Optional[str] = None):
+        return build_overview(ws, _resolve(root, path), release=release)
 
     @app.get("/api/placed")
     def placed_ep(path: str = "offerings", release: Optional[str] = None):
@@ -564,6 +564,11 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
     @app.get("/summary", response_class=HTMLResponse)
     def summary_page():
         return _serve("summary.html")
+
+    @app.get("/placed", response_class=HTMLResponse)
+    def placed_page():
+        # 배치 목록 · 릴리즈 태깅 (per-rack placed list; assign release tags here, not in /place)
+        return _serve("placed.html")
 
     @app.get("/place", response_class=HTMLResponse)
     def place_page():

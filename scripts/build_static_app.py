@@ -80,9 +80,11 @@ ROUTES = {
     "/diff": "diff.html", "/health": "health.html", "/search": "search.html",
     "/manage": "manage.html", "/candidates": "candidates.html",
     "/zone": "zone.html", "/summary": "summary.html", "/place": "place.html",
+    "/placed": "placed.html",
 }
 PAGES = ["editor.html", "diff.html", "health.html", "search.html", "manage.html",
-         "candidates.html", "home.html", "zone.html", "summary.html", "place.html"]
+         "candidates.html", "home.html", "zone.html", "summary.html", "place.html",
+         "placed.html"]
 
 
 def _key(pathname: str, params: dict) -> str:
@@ -127,9 +129,14 @@ def capture(client: _AsgiClient, root: Path) -> dict[str, dict]:
         for ep in ("/api/health", "/api/layout", "/api/overview", "/api/tree"):
             grab(ep, {"path": p})
 
-    # single-rack loads for the editor (tree node → /api/rack?path=<file>.yaml)
+    # single-rack loads for the editor + placed/tagging screen (tree node → /api/rack?path=)
     for rf in sorted((root / "offerings").glob("*/regions/*/zones/*/rack-types/*/racks/*.yaml")):
         grab("/api/rack", {"path": rf.relative_to(root).as_posix()})
+
+    # release-filtered overview for the 투자 리포트 release dropdown
+    ov_root = json.loads(cache[_key("/api/overview", {"path": "offerings"})]["body"])
+    for rel in [*ov_root.get("releases", []), "DRAFT"]:
+        grab("/api/overview", {"path": "offerings", "release": rel})
 
     # complete search corpus: union results across every entity token (empty q returns nothing),
     # baked once under a sentinel key; the shim substring-filters it client-side.

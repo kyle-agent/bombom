@@ -40,7 +40,7 @@
 <body>
 <header>
  <span class="logo">bombom</span><span class="crumb">— 투자 리포트 (선택 집계)</span>
- <nav><a href="/">← 메인</a><a href="/manage">기준정보</a><a href="/diff">변경비교</a></nav>
+ <nav><a href="/">← 메인</a><a href="/placed">배치 목록</a><a href="/manage">기준정보</a><a href="/diff">변경비교</a></nav>
 </header>
 <div class="wrap">
  <div class="controls">
@@ -51,6 +51,8 @@
      <button data-g="zone" class="on">존별</button>
      <button data-g="rack_type">랙타입별</button>
    </div>
+   <span class="lbl" style="margin-left:14px">릴리즈</span>
+   <select id="relFilter"><option value="">전체</option></select>
    <span class="sortsel">정렬
      <select id="sort">
        <option value="capex">투자비용 ↓</option>
@@ -107,6 +109,19 @@ document.getElementById('seg').addEventListener('click',e=>{
 });
 document.getElementById('sort').addEventListener('change',e=>{ sort=e.target.value; render(); });
 
-fetch('/api/overview?path=offerings').then(r=>r.json()).then(d=>{ DATA=d; render(); })
-  .catch(e=>{ document.getElementById('tablewrap').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
+let relsLoaded=false;
+function load(release){
+  const u='/api/overview?path=offerings'+(release?'&release='+encodeURIComponent(release):'');
+  document.getElementById('tablewrap').innerHTML='<div class="empty">불러오는 중…</div>';
+  fetch(u).then(r=>r.json()).then(d=>{
+    DATA=d;
+    if(!relsLoaded){ relsLoaded=true; const sel=document.getElementById('relFilter');
+      (d.releases||[]).forEach(x=>{ const o=document.createElement('option'); o.value=o.textContent=x; sel.appendChild(o); });
+      const dr=document.createElement('option'); dr.value='DRAFT'; dr.textContent='미태그(작업본)'; sel.appendChild(dr);
+    }
+    render();
+  }).catch(e=>{ document.getElementById('tablewrap').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
+}
+document.getElementById('relFilter').addEventListener('change',e=>load(e.target.value));
+load('');
 </script></body></html>

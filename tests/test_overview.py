@@ -51,6 +51,17 @@ def test_overview_totals_and_split(ws_root):
     assert zones["az1"]["path"] == "offerings/cloud-a/regions/kr-east/zones/az1"
 
 
+def test_overview_release_filter(ws_root):
+    ws, root = ws_root
+    full = build_overview(ws, root)
+    assert set(full["releases"]) == {"R26.07"}        # all placements seeded at R26.07
+    assert full["totals"]["devices"] == 4
+    only = build_overview(ws, root, release="R26.07")
+    assert only["totals"]["devices"] == 4
+    none = build_overview(ws, root, release="R25.01")  # not present
+    assert none["totals"]["devices"] == 0
+
+
 def test_overview_groups_present(ws_root):
     ws, root = ws_root
     ov = build_overview(ws, root)
