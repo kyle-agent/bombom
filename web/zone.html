@@ -151,11 +151,10 @@ Promise.all([
     requestAnimationFrame(fit);
     const off=PATH.split('/regions/')[0];
     const r0=layout.racks[0], rt=(r0.hierarchy&&r0.hierarchy.rack_type)||'';
-    const rackFile=`${PATH}/rack-types/${rt}/racks/${r0.rack_id}.yaml`;
-    document.getElementById('editbtn').href='/edit?path='+encodeURIComponent(off)+'&rack='+encodeURIComponent(rackFile);
+    document.getElementById('editbtn').href='/place?path='+encodeURIComponent(PATH);
   } else {
     scene.innerHTML='<div class="empty">랙 실장도가 없습니다.</div>';
-    document.getElementById('editbtn').href='/edit?path='+encodeURIComponent(PATH.split('/regions/')[0]);
+    document.getElementById('editbtn').href='/place?path='+encodeURIComponent(PATH);
   }
 }).catch(e=>{ scene.innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
 </script></body></html>

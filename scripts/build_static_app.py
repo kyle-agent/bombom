@@ -81,11 +81,11 @@ ROUTES = {
     "/dashboard": "dashboard.html", "/diff": "diff.html", "/health": "health.html",
     "/search": "search.html", "/layout": "layout.html", "/manage": "manage.html",
     "/candidates": "candidates.html", "/home": "index.html", "/zone": "zone.html",
-    "/summary": "summary.html",
+    "/summary": "summary.html", "/place": "place.html",
 }
 PAGES = ["viewer.html", "editor.html", "placed.html", "dashboard.html", "diff.html",
          "health.html", "search.html", "layout.html", "manage.html", "candidates.html",
-         "home.html", "zone.html", "summary.html"]
+         "home.html", "zone.html", "summary.html", "place.html"]
 
 
 def _key(pathname: str, params: dict) -> str:

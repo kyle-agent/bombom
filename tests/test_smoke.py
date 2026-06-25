@@ -53,6 +53,7 @@ API_ROUTES = [
     "/home",
     "/zone",
     "/summary",
+    "/place",
     "/api/dashboard?path=offerings/cloud-a",
     "/api/placed?path=offerings/cloud-a",
 ]

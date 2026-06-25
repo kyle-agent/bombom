@@ -588,6 +588,10 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
     def summary_page():
         return _serve("summary.html")
 
+    @app.get("/place", response_class=HTMLResponse)
+    def place_page():
+        return _serve("place.html")
+
     # ── base-data hierarchy management (기준정보 / Rack-Type) ──────────────
     @app.get("/api/hierarchy")
     def hierarchy_list():
