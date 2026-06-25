@@ -18,6 +18,11 @@
  nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
  nav a:hover{background:#f1f5f9}
  .dirty{color:#d97706;font-size:12px;font-weight:600}
+ .editonly{display:inline-flex;gap:8px;align-items:center}
+ body:not(.editing) .editonly{display:none}
+ body:not(.editing) .sec.palette{display:none}
+ body:not(.editing) .sec.placed{flex:1 1 100%}
+ body:not(.editing) .blk{cursor:default}
  .main{flex:1 1 auto;display:flex;min-height:0}
  /* left column: placed tree (top) + palette (bottom) */
  aside{flex:0 0 320px;border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
@@ -102,12 +107,13 @@
 </style></head>
 <body>
 <header>
- <span class="logo">bombom</span><span class="crumb" id="crumb">— 존 배치</span>
- 릴리즈 <select id="relSel"></select>
+ <span class="logo">bombom</span><span class="crumb" id="crumb">— 존</span>
+ <button class="btn" id="editToggle">✏ 편집</button>
+ <span class="editonly">릴리즈 <select id="relSel"></select>
+   <button class="btn primary" id="saveBtn">💾 저장</button></span>
  <span class="dirty" id="dirty"></span>
  <span class="spacer"></span>
- <button class="btn primary" id="saveBtn">💾 저장</button>
- <nav><a id="back" href="/home">← 존</a></nav>
+ <nav><a id="back" href="/home">← 메인</a></nav>
 </header>
 <div class="main">
  <aside>
@@ -144,12 +150,11 @@ const PATH=new URLSearchParams(location.search).get('path')||'offerings';
 const cur='₩';
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1900);}
-document.getElementById('back').href='/zone?path='+encodeURIComponent(PATH);
-
 let RACKS=[];          // [{file,id,rack_type,rack_u,model_slug,placements:[{...,_id}],dirty,_open}]
 let RELEASES=[], selRelease='', poolCache=[], uid=1;
 let palette=[];        // [{_pid,slug,name,category,u,unit_cost}]
 let armed=null;
+let editMode = new URLSearchParams(location.search).get('edit')==='1';   // view by default
 
 // ── pan/zoom ────────────────────────────────────────────────────────────
 const vp=document.getElementById('viewport'), scene=document.getElementById('scene'), zl=document.getElementById('zl');
@@ -182,12 +187,13 @@ function render(){
     for(let u=rk.rack_u; u>=1; u--) slots+=`<div class="uslot" style="height:${UPX}px" data-rack="${ri}" data-u="${u}"><span class="un">${u}</span></div>`;
     const blks=rk.placements.map(p=>{
       const warn=p.category==='server' && !(p.meta&&p.meta.serial);
-      return `<div class="blk${warn?' warn':''}" draggable="true" data-move="${ri}:${p._id}"
+      const ctl = editMode
+        ? `<span class="cp" data-copy="${ri}:${p._id}" title="이 장비를 팔레트에 담기(다른 랙에 복제)">⧉</span><span class="x" data-del="${ri}:${p._id}">✕</span>`
+        : '';
+      return `<div class="blk${warn?' warn':''}" draggable="${editMode}" data-move="${ri}:${p._id}"
         style="bottom:${(p.position-1)*UPX}px;height:${p.u*UPX-1}px;background:${CAT[p.category]||CAT.other}"
-        title="${esc(p.name)} · U${p.position} · ${p.u}U (드래그=이동 · Alt+드래그=복사 · ⧉=팔레트에 담기)">
-        <span class="bnm">${esc(p.name)}</span>
-        <span class="cp" data-copy="${ri}:${p._id}" title="이 장비를 팔레트에 담기(다른 랙에 복제)">⧉</span>
-        <span class="x" data-del="${ri}:${p._id}">✕</span></div>`;
+        title="${esc(p.name)} · U${p.position} · ${p.u}U${editMode?' (드래그=이동 · Alt+드래그=복사 · ⧉=팔레트에 담기)':''}">
+        <span class="bnm">${esc(p.name)}</span>${ctl}</div>`;
     }).join('');
     return `<div class="rackcol"><div class="rhead">▣ ${esc(rk.id)} <small>${esc(rk.rack_type)} · ${rk.rack_u}U</small></div>
       <div class="rackbody" style="height:${rk.rack_u*UPX}px" data-rackbody="${ri}">${slots}${blks}</div></div>`;
@@ -248,9 +254,24 @@ function arm(dev){
 function addPal(dev){ palette.push({_pid:uid++, ...dev}); renderPalette(); toast('팔레트에 담음: '+dev.name); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') arm(null); });
 
+// ── view / edit toggle ──────────────────────────────────────────────────────
+function applyMode(){
+  document.body.classList.toggle('editing', editMode);
+  const t=document.getElementById('editToggle');
+  t.textContent = editMode ? '✓ 보기로' : '✏ 편집';
+  t.classList.toggle('primary', editMode);
+  document.querySelector('.hint').innerHTML = editMode
+    ? '팔레트 칩 클릭→빈칸 클릭 = 배치 · 블록 드래그 = 이동 · ⧉ = 팔레트에 담기(복제) · Alt+드래그 = 복사 · ✕ = 제거'
+    : '보기 모드 — 휠=줌 · 빈 곳 드래그=이동 · 수정하려면 상단 <b>✏ 편집</b>을 켜세요';
+  if(!editMode) arm(null);
+  render(); renderPalette();
+}
+document.getElementById('editToggle').onclick=()=>{ editMode=!editMode; applyMode(); };
+
 // ── drag/drop + click-place ─────────────────────────────────────────────────
 let payload=null;   // {type:'new'|'copy',dev} | {type:'move',ri,id}
 function wireCanvas(){
+  if(!editMode) return;   // 보기 모드: 드래그/배치 비활성 (pan·zoom·접기는 그대로)
   scene.querySelectorAll('.blk').forEach(b=>{
     b.addEventListener('dragstart',e=>{ const [ri,id]=b.dataset.move.split(':').map(Number);
       const p=RACKS[ri].placements.find(x=>x._id===id);
@@ -357,6 +378,6 @@ fetch('/api/layout?path='+encodeURIComponent(PATH)).then(r=>r.ok?r.json():{racks
         placements:(rkm.placements||[]).map(p=>({_id:uid++,device:p.device,name:p.name,category:p.category||'other',position:p.position,u:p.u||1,release:p.release,unit_cost:p.unit_cost||0,meta:p.meta||{}})),dirty:false});
     }catch(e){ /* skip a rack that fails to load */ }
   }
-  render(); renderPalette(); requestAnimationFrame(fit);
+  applyMode(); requestAnimationFrame(fit);
 }).catch(e=>{ scene.innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
 </script></body></html>

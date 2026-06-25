@@ -59,7 +59,7 @@ function eok(n){ const v=Number(n||0)/1e8; return v>=1 ? '약 '+v.toFixed(1)+'�
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function zoneCard(z){
-  return `<a class="zone" href="/zone?path=${encodeURIComponent(z.path)}">
+  return `<a class="zone" href="/place?path=${encodeURIComponent(z.path)}">
     <div class="zt"><b>${esc(z.zone)}</b><span class="go">열기 →</span></div>
     <div class="stats">
       <div class="stat"><span class="n">${z.racks}</span><span class="l">랙</span></div>
