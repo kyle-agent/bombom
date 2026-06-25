@@ -19,7 +19,7 @@
  .dirty{color:#d97706;font-size:12px;font-weight:600}
  .main{flex:1 1 auto;display:flex;min-height:0}
  /* left: 배치 목록 (live summary) */
- aside{flex:0 0 320px;border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
+ aside{flex:0 0 300px;border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
  aside .h{padding:9px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center}
  aside .h .cnt{color:#94a3b8;font-weight:400}
  .list{overflow:auto;flex:1 1 auto;padding:6px 0}
@@ -35,10 +35,11 @@
    background:linear-gradient(#e8edf3 1px,transparent 1px) 0 0/24px 24px,
      linear-gradient(90deg,#e8edf3 1px,transparent 1px) 0 0/24px 24px,#fbfdff}
  #viewport.grabbing{cursor:grabbing}
+ #viewport.arming{cursor:copy}
  .vtools{position:absolute;right:12px;top:12px;z-index:4;display:flex;gap:6px;align-items:center}
  .vtools button{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 9px;font-size:13px;cursor:pointer}
  #zl{color:var(--muted);font-size:12px;min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
- #scene{position:absolute;left:0;top:0;transform-origin:0 0;display:flex;gap:34px;padding:34px;align-items:flex-start}
+ #scene{position:absolute;left:0;top:0;transform-origin:0 0;display:flex;gap:34px;padding:34px 34px 96px;align-items:flex-start}
  .rackcol{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
  .rackcol .rhead{font-size:12px;color:#334155;text-align:center;margin-bottom:6px;white-space:nowrap}
  .rackcol .rhead small{color:#94a3b8}
@@ -51,25 +52,43 @@
  .blk .bnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
  .blk .x{cursor:pointer;opacity:.85}
  .blk.warn{outline:2px solid #f59e0b;outline-offset:-2px}
- .hint{position:absolute;left:12px;bottom:10px;color:#94a3b8;font-size:12px;z-index:4}
+ /* armed banner */
+ .armbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:12px;
+   padding:7px 13px;border-radius:9px;z-index:6;display:none;align-items:center;gap:10px;box-shadow:0 4px 14px rgba(15,23,42,.2)}
+ .armbar.on{display:flex}
+ .armbar b{font-weight:700}
+ .armbar button{background:#334155;color:#fff;border:0;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer}
+ /* palette (선반) */
+ .palette{position:absolute;left:0;right:0;bottom:0;min-height:54px;background:#fff;border-top:1px solid var(--line);
+   display:flex;gap:8px;align-items:center;padding:8px 12px;overflow-x:auto;z-index:5}
+ .palette .plabel{color:var(--muted);font-size:12px;flex:0 0 auto;white-space:nowrap}
+ .palette .plabel b{color:var(--accent)}
+ .chip{display:flex;align-items:center;gap:7px;border:1px solid #cbd5e1;border-radius:9px;padding:5px 10px;background:#fff;cursor:pointer;flex:0 0 auto;white-space:nowrap}
+ .chip:hover{border-color:#93c5fd}
+ .chip.armed{border-color:var(--accent);background:#eff6ff;box-shadow:0 0 0 2px rgba(37,99,235,.18)}
+ .chip .dot{width:9px;height:9px;border-radius:2px}
+ .chip .cn{font-size:12px;font-weight:600}.chip .cu{font-size:11px;color:var(--muted)}
+ .chip .cx{cursor:pointer;color:#94a3b8;margin-left:1px}
  /* add popup */
  .modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:flex-start;justify-content:center;z-index:20}
  .modal.on{display:flex}
- .modal .box{background:#fff;border-radius:12px;margin-top:64px;width:520px;max-width:92vw;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(15,23,42,.25)}
+ .modal .box{background:#fff;border-radius:12px;margin-top:60px;width:540px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(15,23,42,.25)}
  .modal .mh{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
  .modal .mh b{font-size:14px}.modal .mh .x{margin-left:auto;cursor:pointer;color:#94a3b8;font-size:20px}
- .modal .controls{padding:10px 16px;display:flex;gap:8px}
+ .modal .controls{padding:10px 16px 4px;display:flex;gap:8px}
  .modal input.s{flex:1;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px}
- .modal .res{overflow:auto;padding:6px 10px 14px}
- .mrow{display:flex;align-items:center;gap:9px;padding:8px 8px;border:1px solid var(--line);border-radius:9px;margin:6px 0;cursor:grab}
- .mrow:hover{border-color:#93c5fd;background:#f8fbff}
+ .modal .mhint{padding:0 16px 8px;color:var(--muted);font-size:12px}
+ .modal .res{overflow:auto;padding:6px 12px 14px}
+ .mrow{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--line);border-radius:9px;margin:6px 0}
  .mrow .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
  .mrow .info{flex:1;min-width:0}
  .mrow .info .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .mrow .info .m{font-size:11px;color:var(--muted)}
  .mrow .u{font-size:11px;color:#334155;font-variant-numeric:tabular-nums}
+ .mrow .add{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex:0 0 auto}
+ .mrow .add:hover{background:#1d4ed8}
  .empty{padding:30px;color:#94a3b8;text-align:center}
- #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
+ #toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
  #toast.on{opacity:.96}
 </style></head>
 <body>
@@ -91,13 +110,15 @@
    <div class="vtools"><span id="zl">100%</span>
      <button onclick="zoomBy(1/1.2)">−</button><button onclick="zoomBy(1.2)">+</button>
      <button onclick="fit()">맞춤</button></div>
+   <div class="armbar" id="armbar"></div>
    <div id="scene"><div class="empty">불러오는 중…</div></div>
-   <div class="hint">팝업 결과 또는 블록을 U칸으로 드래그=배치/이동 · ✕=제거 · 휠=줌 · 빈 곳 드래그=이동</div>
+   <div class="palette" id="palette"></div>
  </div>
 </div>
 <div class="modal" id="modal"><div class="box">
   <div class="mh"><b>＋ 장비 추가 (후보풀)</b><span class="x" id="mClose">×</span></div>
   <div class="controls"><input class="s" id="mSearch" placeholder="제조사/모델/슬러그 검색…"></div>
+  <div class="mhint">＋담기 → 아래 <b>팔레트</b>에 담깁니다. 닫고 팔레트에서 장비를 클릭한 뒤 랙의 빈 칸을 클릭하세요.</div>
   <div class="res" id="mRes"><div class="empty">불러오는 중…</div></div>
 </div></div>
 <div id="toast"></div>
@@ -112,6 +133,8 @@ document.getElementById('back').href='/zone?path='+encodeURIComponent(PATH);
 
 let RACKS=[];          // [{file,id,rack_type,rack_u,model_slug,placements:[{...,_id}],dirty}]
 let RELEASES=[], selRelease='', poolCache=[], uid=1;
+let palette=[];        // [{_pid,slug,name,category,u,unit_cost}]  — 담은 장비 선반
+let armed=null;        // palette item currently selected for click-to-place
 
 // ── pan/zoom ────────────────────────────────────────────────────────────
 const vp=document.getElementById('viewport'), scene=document.getElementById('scene'), zl=document.getElementById('zl');
@@ -120,11 +143,11 @@ function apply(){scene.style.transform=`translate(${tx}px,${ty}px) scale(${scale
 function zoomAt(cx,cy,f){const ns=Math.min(6,Math.max(.2,scale*f));tx=cx-(cx-tx)*(ns/scale);ty=cy-(cy-ty)*(ns/scale);scale=ns;apply();}
 function zoomBy(f){const r=vp.getBoundingClientRect();zoomAt(r.width/2,r.height/2,f);}
 function fit(){const r=vp.getBoundingClientRect(),b=scene.getBoundingClientRect();if(!b.width)return;
-  const cw=b.width/scale,ch=b.height/scale;scale=Math.min((r.width-36)/cw,(r.height-36)/ch,2.5);
+  const cw=b.width/scale,ch=b.height/scale;scale=Math.min((r.width-36)/cw,(r.height-130)/ch,2.5);
   tx=Math.max(18,(r.width-cw*scale)/2);ty=18;apply();}
 vp.addEventListener('wheel',e=>{e.preventDefault();const r=vp.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);},{passive:false});
 let pan=null;
-vp.addEventListener('pointerdown',e=>{ if(e.target.closest('.rackcol'))return;   // don't pan when grabbing a block
+vp.addEventListener('pointerdown',e=>{ if(e.target.closest('.rackcol')||e.target.closest('.palette')||e.target.closest('.armbar'))return;
   pan={x:e.clientX-tx,y:e.clientY-ty};vp.classList.add('grabbing');vp.setPointerCapture(e.pointerId);});
 vp.addEventListener('pointermove',e=>{if(!pan)return;tx=e.clientX-pan.x;ty=e.clientY-pan.y;apply();});
 vp.addEventListener('pointerup',()=>{pan=null;vp.classList.remove('grabbing');});
@@ -166,21 +189,51 @@ function renderList(){
   const order=['server','network','storage','other'];
   let total=0;
   const html=RACKS.map(rk=>{
-    const cats={}; rk.placements.forEach(p=>{ (cats[p.category]=cats[p.category]||{}); const m=cats[p.category];
-      m[p.name]=(m[p.name]||0)+1; });
+    const cats={}; rk.placements.forEach(p=>{ (cats[p.category]=cats[p.category]||{}); const m=cats[p.category]; m[p.name]=(m[p.name]||0)+1; });
     total+=rk.placements.length;
     const body=order.filter(c=>cats[c]).map(c=>{
       const items=Object.entries(cats[c]).sort((a,b)=>b[1]-a[1]);
       return `<div class="ch"><span class="dot" style="background:${CAT[c]||CAT.other}"></span>${esc(c)}</div>`
         + items.map(([nm,q])=>`<div class="devrow"><span class="nm">${esc(nm)}</span><span class="q">×${q}</span></div>`).join('');
     }).join('');
-    return `<div class="rackgrp"><div class="rh"><span>▣ ${esc(rk.id)}</span><span class="rm">${rk.placements.length}대${rk.dirty?' ·<span style="color:#d97706">미저장</span>':''}</span></div>${body||'<div class="devrow" style="color:#94a3b8">비어 있음</div>'}</div>`;
+    return `<div class="rackgrp"><div class="rh"><span>▣ ${esc(rk.id)}</span><span class="rm">${rk.placements.length}대${rk.dirty?' · <span style="color:#d97706">미저장</span>':''}</span></div>${body||'<div class="devrow" style="color:#94a3b8">비어 있음</div>'}</div>`;
   }).join('');
   document.getElementById('list').innerHTML=html;
   document.getElementById('cnt').textContent=RACKS.length+'랙 · '+total+'대';
 }
 
-// ── drag/drop ─────────────────────────────────────────────────────────────
+// ── palette (선반) + arm/click-to-place ─────────────────────────────────────
+function renderPalette(){
+  const el=document.getElementById('palette');
+  if(!palette.length){
+    el.innerHTML='<span class="plabel">팔레트가 비었습니다 — <b>＋ 장비 추가</b>로 장비를 담은 뒤, 칩을 클릭하고 랙의 빈 칸을 클릭하세요.</span>';
+    return;
+  }
+  el.innerHTML='<span class="plabel">팔레트 · 칩 클릭 → 랙 빈칸 클릭(또는 드래그)</span>'+
+    palette.map((d,i)=>`<div class="chip${armed&&armed._pid===d._pid?' armed':''}" draggable="true" data-pi="${i}" title="${esc(d.name)} · ${d.u}U">
+      <span class="dot" style="background:${CAT[d.category]||CAT.other}"></span>
+      <span class="cn">${esc(d.name)}</span><span class="cu">${d.u}U</span><span class="cx" data-px="${i}">✕</span></div>`).join('');
+  el.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click',e=>{ if(e.target.classList.contains('cx'))return; arm(palette[+c.dataset.pi]); });
+    c.addEventListener('dragstart',e=>{ const d=palette[+c.dataset.pi]; payload={type:'new',dev:d}; e.dataTransfer.setData('text/plain','new'); });
+  });
+  el.querySelectorAll('.cx').forEach(x=>x.addEventListener('click',e=>{
+    e.stopPropagation(); const d=palette[+x.dataset.px]; palette.splice(+x.dataset.px,1);
+    if(armed&&armed._pid===d._pid) arm(null); renderPalette();
+  }));
+}
+function arm(dev){
+  armed=(armed&&dev&&armed._pid===dev._pid)?null:dev;   // click again = cancel
+  const bar=document.getElementById('armbar');
+  vp.classList.toggle('arming',!!armed);
+  if(armed){ bar.classList.add('on'); bar.innerHTML=`<b>${esc(armed.name)}</b> 배치 중 — 랙의 빈 칸을 클릭하세요 <button id="armCancel">취소(ESC)</button>`;
+    document.getElementById('armCancel').onclick=()=>arm(null);
+  } else bar.classList.remove('on');
+  renderPalette();
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') arm(null); });
+
+// ── drag/drop + click-place ─────────────────────────────────────────────────
 let payload=null;   // {type:'new',dev} | {type:'move',ri,id}
 function wireCanvas(){
   scene.querySelectorAll('.blk').forEach(b=>{
@@ -191,41 +244,50 @@ function wireCanvas(){
     const rk=RACKS[ri]; rk.placements=rk.placements.filter(p=>p._id!==id); markDirty(rk); render();
   }));
   scene.querySelectorAll('.uslot').forEach(s=>{
-    s.addEventListener('dragover',e=>{ e.preventDefault(); const ri=+s.dataset.rack,u=+s.dataset.u;
-      const h=payload?(payload.type==='new'?payload.dev.u:findP(payload).u):1;
-      const ex=payload&&payload.type==='move'?payload.id:null;
+    const ri=+s.dataset.rack,u=+s.dataset.u;
+    const previewH=()=> armed?armed.u : (payload?(payload.type==='new'?payload.dev.u:findP(payload).u):1);
+    function highlight(){ const h=previewH(); const ex=payload&&payload.type==='move'?payload.id:null;
       s.parentElement.querySelectorAll('.uslot').forEach(x=>x.classList.remove('over','bad'));
       const ok=fits(RACKS[ri],u,h,ex);
-      for(let k=0;k<h;k++){ const cell=s.parentElement.querySelector(`.uslot[data-u="${u+k}"]`); if(cell) cell.classList.add(ok?'over':'bad'); }
-    });
+      for(let k=0;k<h;k++){ const cell=s.parentElement.querySelector(`.uslot[data-u="${u+k}"]`); if(cell) cell.classList.add(ok?'over':'bad'); } }
+    s.addEventListener('dragover',e=>{ e.preventDefault(); highlight(); });
     s.addEventListener('dragleave',()=>s.classList.remove('over','bad'));
-    s.addEventListener('drop',e=>{ e.preventDefault(); const ri=+s.dataset.rack,u=+s.dataset.u; drop(ri,u); render(); });
+    s.addEventListener('drop',e=>{ e.preventDefault(); drop(ri,u); render(); });
+    // click-to-place from an armed palette chip
+    s.addEventListener('mousemove',()=>{ if(armed) highlight(); });
+    s.addEventListener('click',()=>{ if(!armed) return;
+      if(placeNew(RACKS[ri],u,armed)) render(); });
   });
 }
 function findP(pl){ const rk=RACKS[pl.ri]; return rk.placements.find(p=>p._id===pl.id); }
+function placeNew(rk,u,d){
+  if(!fits(rk,u,d.u,null)){ toast('그 위치에는 맞지 않습니다 (겹침/범위 초과)'); return false; }
+  rk.placements.push({_id:uid++,device:d.slug,name:d.name,category:d.category,position:u,u:d.u,release:selRelease,unit_cost:d.unit_cost,meta:{}});
+  markDirty(rk); return true;
+}
 function drop(ri,u){
   const rk=RACKS[ri]; if(!payload) return;
-  if(payload.type==='new'){
-    const d=payload.dev;
-    if(!fits(rk,u,d.u,null)){ toast('그 위치에는 맞지 않습니다(겹침/범위)'); return; }
-    rk.placements.push({_id:uid++,device:d.slug,name:d.name,category:d.category,position:u,u:d.u,release:selRelease,unit_cost:d.unit_cost,meta:{}});
-    markDirty(rk);
-  } else {
+  if(payload.type==='new'){ placeNew(rk,u,payload.dev); }
+  else {
     const src=RACKS[payload.ri], p=src.placements.find(x=>x._id===payload.id); if(!p) return;
-    if(!fits(rk,u,p.u,payload.ri===ri?p._id:null)){ toast('그 위치에는 맞지 않습니다'); return; }
+    if(!fits(rk,u,p.u,payload.ri===ri?p._id:null)){ toast('그 위치에는 맞지 않습니다'); payload=null; return; }
     src.placements=src.placements.filter(x=>x._id!==p._id);
     p.position=u; rk.placements.push(p); markDirty(rk); if(src!==rk) markDirty(src);
   }
   payload=null;
 }
 
-// ── add popup ──────────────────────────────────────────────────────────────
+// ── add popup (담기 → 팔레트) ────────────────────────────────────────────────
 const modal=document.getElementById('modal');
 document.getElementById('addBtn').onclick=()=>{ modal.classList.add('on'); document.getElementById('mSearch').focus(); poolSearch(); };
 document.getElementById('mClose').onclick=()=>modal.classList.remove('on');
 modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('on'); });
 let st=null;
 document.getElementById('mSearch').addEventListener('input',()=>{ clearTimeout(st); st=setTimeout(poolSearch,200); });
+function addToPalette(r){
+  palette.push({_pid:uid++,slug:r.slug,name:(r.model||r.slug),category:r.category||'other',u:(r.u_height|0)||1,unit_cost:r.unit_cost||0});
+  renderPalette(); toast('팔레트에 담음: '+(r.model||r.slug));
+}
 function poolSearch(){
   const q=document.getElementById('mSearch').value.trim();
   const box=document.getElementById('mRes'); box.innerHTML='<div class="empty">불러오는 중…</div>';
@@ -235,16 +297,12 @@ function poolSearch(){
     box.innerHTML=poolCache.map((r,i)=>{
       const cat=r.category||'other', uh=(r.u_height|0)||1;
       const price=r.priced?cur+(r.unit_cost||0).toLocaleString():'<span style="color:#d97706">가격 미정</span>';
-      return `<div class="mrow" draggable="true" data-i="${i}">
+      return `<div class="mrow">
         <span class="dot" style="background:${CAT[cat]||CAT.other}"></span>
-        <span class="info"><span class="n">${esc(r.model||r.slug)}</span><span class="m">${esc(r.manufacturer||'')} · ${esc(cat)} · ${price}</span></span>
-        <span class="u">${uh}U</span></div>`;
+        <span class="info"><span class="n">${esc(r.model||r.slug)}</span><span class="m">${esc(r.manufacturer||'')} · ${esc(cat)} · ${uh}U · ${price}</span></span>
+        <button class="add" data-i="${i}">＋ 담기</button></div>`;
     }).join('');
-    box.querySelectorAll('.mrow').forEach(row=>{
-      row.addEventListener('dragstart',e=>{ const r=poolCache[+row.dataset.i];
-        payload={type:'new',dev:{slug:r.slug,name:(r.model||r.slug),category:r.category||'other',u:(r.u_height|0)||1,unit_cost:r.unit_cost||0}};
-        e.dataTransfer.setData('text/plain','new'); modal.classList.remove('on'); });
-    });
+    box.querySelectorAll('.add').forEach(btn=>btn.addEventListener('click',()=>addToPalette(poolCache[+btn.dataset.i])));
   }).catch(e=>{ box.innerHTML='<div class="empty">검색 실패: '+esc(e.message)+'</div>'; });
 }
 
@@ -267,10 +325,9 @@ document.getElementById('saveBtn').onclick=async()=>{
 };
 
 // ── load ────────────────────────────────────────────────────────────────
-const off=PATH.split('/regions/')[0];
 fetch('/api/layout?path='+encodeURIComponent(PATH)).then(r=>r.ok?r.json():{racks:[]}).then(async lay=>{
   const racks=lay.racks||[];
-  if(!racks.length){ scene.innerHTML='<div class="empty">이 존에 랙이 없습니다.</div>'; return; }
+  if(!racks.length){ scene.innerHTML='<div class="empty">이 존에 랙이 없습니다.</div>'; renderPalette(); return; }
   const zr=(racks[0].hierarchy)||{};
   document.getElementById('crumb').innerHTML=`${esc(zr.region||'')} / <b>${esc(zr.zone||PATH.split('/').pop())}</b> — 배치`;
   for(const rk of racks){
@@ -285,6 +342,6 @@ fetch('/api/layout?path='+encodeURIComponent(PATH)).then(r=>r.ok?r.json():{racks
         placements:(rkm.placements||[]).map(p=>({_id:uid++,device:p.device,name:p.name,category:p.category||'other',position:p.position,u:p.u||1,release:p.release,unit_cost:p.unit_cost||0,meta:p.meta||{}})),dirty:false});
     }catch(e){ /* skip a rack that fails to load */ }
   }
-  render(); requestAnimationFrame(fit);
+  render(); renderPalette(); requestAnimationFrame(fit);
 }).catch(e=>{ scene.innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
 </script></body></html>
