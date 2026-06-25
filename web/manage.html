@@ -73,12 +73,21 @@
   @keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   @media(max-width:720px){ .addform input.id,.addform input.nm{width:100%} }
 </style>
+<style id="cxbar">
+header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
+header .logo,header .ab-logo{color:#2563eb!important}
+header .crumb{color:#64748b!important}
+header nav a,header .topnav a,header .links a{color:#475569!important;background:transparent!important;border:1px solid transparent!important;font-weight:500!important;border-radius:7px!important;padding:5px 9px!important;text-decoration:none!important}
+header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5f9!important;color:#0f172a!important}
+header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
+</style>
+<script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
 </head>
 <body>
 <header>
   <span class="logo">bombom</span>
   <span class="crumb">— 기준정보 관리</span>
-  <span class="links"><a href="/">메인</a><a href="/summary">투자 리포트</a><a href="/placed">배치 목록</a><a href="/candidates">후보풀</a><a href="/edit">랙관리</a></span>
+  <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/diff">변경비교</a><a href="/health">검증</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a><a href="/search">검색</a></nav>
 </header>
 
 <div class="wrap">
@@ -198,8 +207,8 @@ function drawioLink(ctx){
 
 // open-this-scope-in the interactive rack-layout view (zoom/pan/click-detail)
 function layoutLink(ctx){
-  const url = '/layout?path=' + encodeURIComponent(nodePath(ctx));
-  return '<a class="clonebtn" href="' + url + '" title="이 범위의 랙구성도를 줌/이동으로 보기">🗺 구성도</a>';
+  const url = '/place?path=' + encodeURIComponent(nodePath(ctx));
+  return '<a class="clonebtn" href="' + url + '" title="이 범위의 랙 배치 화면(보기/편집)">🗺 배치 화면</a>';
 }
 
 function nameAndId(name, id){

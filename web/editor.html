@@ -205,13 +205,22 @@
   #toast.show{opacity:1}
   #toast.err{background:var(--bad)}
 </style>
+<style id="cxbar">
+header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
+header .logo,header .ab-logo{color:#2563eb!important}
+header .crumb{color:#64748b!important}
+header nav a,header .topnav a,header .links a{color:#475569!important;background:transparent!important;border:1px solid transparent!important;font-weight:500!important;border-radius:7px!important;padding:5px 9px!important;text-decoration:none!important}
+header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5f9!important;color:#0f172a!important}
+header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
+</style>
+<script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
 </head>
 <body>
 <header>
   <span class="logo">bombom — 랙관리</span>
   <span class="relchip" id="relchip">● 현재 작업 릴리즈 —</span>
   <span class="rackchip" id="rackchip" style="display:none"></span>
-  <nav class="topnav"><a href="/">메인</a><a href="/summary">투자 리포트</a><a href="/placed">배치 목록</a><a href="/manage">기준정보</a><a href="/candidates">후보풀</a><a href="/diff">변경비교</a><a href="/search">검색</a><a href="/health">검증</a></nav>
+  <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/diff">변경비교</a><a href="/health">검증</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a><a href="/search">검색</a></nav>
   <button class="confirmbtn" id="confirmBtn" title="확정 워크플로우">✅ 확정</button>
   <button class="clonebtn" id="cloneBtn" title="이 랙을 같은 Rack-Type에 복제" disabled>⧉ 복제</button>
   <button class="clonebtn" id="cloneBulkBtn" title="이 랙을 여러 ID로 한 번에 복제" disabled>⧉ 여러 개</button>

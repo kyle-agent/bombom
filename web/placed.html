@@ -45,7 +45,16 @@
  .empty{padding:50px;text-align:center;color:#94a3b8}
  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
  #toast.on{opacity:.96}
-</style></head>
+</style><style id="cxbar">
+header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
+header .logo,header .ab-logo{color:#2563eb!important}
+header .crumb{color:#64748b!important}
+header nav a,header .topnav a,header .links a{color:#475569!important;background:transparent!important;border:1px solid transparent!important;font-weight:500!important;border-radius:7px!important;padding:5px 9px!important;text-decoration:none!important}
+header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5f9!important;color:#0f172a!important}
+header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
+</style>
+<script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
+</head>
 <body>
 <header>
  <span class="logo">bombom</span><span class="crumb" id="crumb">— 배치 목록 · 릴리즈 태깅</span>
