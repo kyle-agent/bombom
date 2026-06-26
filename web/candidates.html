@@ -2,76 +2,98 @@
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>bombom — 후보풀</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
- :root{--accent:#2563eb;--line:#e7ebf0;--muted:#64748b;font-family:system-ui,-apple-system,sans-serif}
+ :root{font-family:"Pretendard",system-ui,-apple-system,sans-serif}
  *{box-sizing:border-box}
- body{margin:0;background:#f4f6f9;color:#0f172a}
- header{display:flex;gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:6}
- .logo{font-weight:800;font-size:16px;color:var(--accent)}
- .crumb{color:var(--muted);font-size:13px}
- nav{margin-left:auto;display:flex;gap:2px}
- nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
- .wrap{max-width:1080px;margin:20px auto;padding:0 18px 50px}
- .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
- .toolbar .t{font-size:14px;color:var(--muted)}
- .btn{font-size:13px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:7px 12px;cursor:pointer}
- .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
- .btn.primary:hover{background:#1d4ed8}
- .spacer{margin-left:auto}
- .cat{margin-bottom:18px}
+ body{margin:0;background:#f4f6f9;color:#0f172a;-webkit-font-smoothing:antialiased}
+ @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+ .sk{background:#e9edf2;background-image:linear-gradient(90deg,#e9edf2 0,#f3f6fa 200px,#e9edf2 400px);background-size:800px 100%;animation:shimmer 1.2s linear infinite;border-radius:8px}
+ header.top{display:flex;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid #e7ebf0;background:#fff;position:sticky;top:0;z-index:7;flex-wrap:wrap}
+ header.top .logo{font-weight:800;font-size:17px;color:#2563eb;letter-spacing:-.2px}
+ header.top .crumb{color:#64748b;font-size:13px}
+ header.top nav{margin-left:auto;display:flex;gap:2px;align-items:center}
+ header.top nav a{color:#475569;text-decoration:none;font-size:13px;padding:6px 11px;border-radius:7px}
+ header.top nav a:hover{background:#f1f5f9}
+ header.top nav a.on{color:#2563eb;background:#eff6ff;font-weight:700}
+
+ .wrap{max-width:1040px;margin:0 auto;padding:18px 22px 60px}
+ .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+ .toolbar .t{font-size:14px;color:#475569}
+ .toolbar .t b{font-weight:700}
+ .toolbar .t .amber{color:#b45309;font-weight:600}
+ .addBtn{margin-left:auto;font-size:13px;border:1px solid #2563eb;border-radius:8px;background:#2563eb;color:#fff;padding:8px 14px;cursor:pointer;font-weight:600;font-family:inherit}
+ .addBtn:hover{background:#1d4ed8;border-color:#1d4ed8}
+
+ .cat{margin-bottom:20px}
  .cat .ch{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin:0 0 8px}
  .cat .ch .dot{width:11px;height:11px;border-radius:3px}
- .cat .ch .cnt{color:var(--muted);font-weight:400;font-size:12px}
- table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
- th,td{padding:9px 12px;border-bottom:1px solid #f4f6f9;font-size:13px;text-align:left;vertical-align:middle}
- th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:11px}
+ .cat .ch .cnt{color:#64748b;font-weight:400;font-size:12px}
+ .card{background:#fff;border:1px solid #e7ebf0;border-radius:12px;overflow:hidden}
+ table{width:100%;border-collapse:collapse}
+ th{text-align:left;padding:9px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;border-bottom:1px solid #f1f5f9}
+ th.req::after{content:" *";color:#dc2626}
+ td{padding:9px 14px;border-bottom:1px solid #f4f6f9;font-size:13px;vertical-align:middle}
  tr:last-child td{border-bottom:0}
  td.dev b{font-weight:700}td.dev .slug{color:#94a3b8;font-size:11px;margin-left:6px}
  .pricewrap{display:inline-flex;align-items:center;gap:4px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 8px;background:#fff}
- .pricewrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(37,99,235,.15)}
+ .pricewrap:focus-within{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.15)}
  .pricewrap .w{color:#94a3b8}
- .pricewrap input{border:0;outline:0;width:120px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;background:transparent}
- td.price .none{color:#d97706;font-size:11px;margin-left:6px}
- input.note,input.meta{border:1px solid #e2e8f0;border-radius:7px;padding:5px 8px;font-size:12px;width:100%}
- input.note:focus,input.meta:focus{border-color:var(--accent);outline:0}
- .req::after{content:" *";color:#dc2626}
+ .pricewrap input{border:0;outline:0;width:120px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;background:transparent;font-family:inherit}
+ td.price .none{color:#b45309;font-size:11px;margin-left:6px;font-weight:600}
+ input.note,input.meta{border:1px solid #e2e8f0;border-radius:7px;padding:5px 8px;font-size:12px;width:100%;font-family:inherit}
+ input.note:focus,input.meta:focus{border-color:#2563eb;outline:0}
  td.rm{text-align:right}
- .delbtn{border:none;background:none;color:#94a3b8;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:6px}
+ .delbtn{border:none;background:none;color:#94a3b8;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:6px;font-family:inherit;white-space:nowrap}
  .delbtn:hover{color:#dc2626;background:#fef2f2}
  .empty{padding:50px;text-align:center;color:#94a3b8}
+
  .modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:flex-start;justify-content:center;z-index:30}
  .modal.on{display:flex}
  .modal .box{background:#fff;border-radius:12px;margin-top:60px;width:560px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(15,23,42,.25)}
- .modal .mh{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+ .modal .mh{padding:12px 16px;border-bottom:1px solid #e7ebf0;display:flex;align-items:center;gap:10px}
  .modal .mh b{font-size:14px}.modal .mh .x{margin-left:auto;cursor:pointer;color:#94a3b8;font-size:20px}
- .modal .controls{padding:10px 16px 4px}.modal input.s{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px}
- .modal .mhint{padding:2px 16px 8px;color:var(--muted);font-size:12px}
+ .modal .controls{padding:10px 16px 4px}.modal input.s{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit}
+ .modal .mhint{padding:2px 16px 8px;color:#64748b;font-size:12px}
  .modal .res{overflow:auto;padding:6px 12px 14px}
- .mrow{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--line);border-radius:9px;margin:6px 0}
+ .mrow{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid #e7ebf0;border-radius:9px;margin:6px 0}
  .mrow .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
  .mrow .info{flex:1;min-width:0}.mrow .info .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .mrow .info .m{font-size:11px;color:var(--muted)}
- .mrow .add{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+ .mrow .info .m{font-size:11px;color:#64748b}
+ .mrow .add{background:#2563eb;color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
  .mrow .add.in{background:#e2e8f0;color:#64748b;cursor:default}
+
  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
  #toast.on{opacity:.96}
 </style></head>
 <body>
-<header>
- <span class="logo">bombom</span><span class="crumb">— 후보풀 (1차 후보)</span>
- <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a></nav>
+<header class="top">
+ <span class="logo">bombom</span><span class="crumb">— 후보풀</span>
+ <nav>
+  <a href="/">메인</a>
+  <a href="/candidates" class="on">후보풀</a>
+  <a href="/placed">배치 목록</a>
+  <a href="/summary">투자 리포트</a>
+  <a href="/manage">기준정보</a>
+  <a href="/edit">랙관리</a>
+ </nav>
 </header>
 <div class="wrap">
  <div class="toolbar">
-   <span class="t" id="summary">불러오는 중…</span>
-   <span class="spacer"></span>
-   <button class="btn primary" id="addBtn">＋ 후보 추가</button>
+   <span class="t" id="summary"><span class="sk" style="display:inline-block;height:16px;width:160px;vertical-align:middle;"></span></span>
+   <button class="addBtn" id="addBtn">＋ 후보 추가</button>
  </div>
- <div id="list"><div class="empty">불러오는 중…</div></div>
+ <div id="list">
+   <div class="sk" style="height:30px;width:120px;margin:18px 0 10px;"></div>
+   <div class="sk" style="height:130px;margin-bottom:18px;"></div>
+   <div class="sk" style="height:30px;width:120px;margin:18px 0 10px;"></div>
+   <div class="sk" style="height:90px;"></div>
+ </div>
 </div>
 <div class="modal" id="modal"><div class="box">
   <div class="mh"><b>＋ 후보 추가 (카탈로그에서 선택)</b><span class="x" id="mClose">×</span></div>
-  <div class="controls"><input class="s" id="mSearch" placeholder="제조사 / 모델 검색…"></div>
+  <div class="controls"><input class="s" id="mSearch" placeholder="장비 검색…"></div>
   <div class="mhint">검색해서 <b>＋추가</b>하면 후보풀에 반영됩니다. 가격·비고는 목록에서 바로 입력하세요.</div>
   <div class="res" id="mRes"><div class="empty">검색어를 입력하세요.</div></div>
 </div></div>
@@ -81,7 +103,7 @@ const CAT={server:"#2563eb",network:"#16a34a",storage:"#9333ea",other:"#64748b"}
 const CATLABEL={server:"서버",network:"네트워크",storage:"스토리지",other:"기타"};
 const ORDER=["server","network","storage","other"];
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2000);}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1700);}
 
 let POOL=[], FIELDS=[];
 const myFields=()=>FIELDS.filter(f=>f.applies_to==='candidate');
@@ -91,14 +113,18 @@ async function apiPut(slug, body){
   if(!r.ok){const d=await r.json().catch(()=>null);throw new Error((d&&d.detail)||('HTTP '+r.status));}
   return r.json();
 }
+function updateSummary(){
+  const total=POOL.length, unpriced=POOL.filter(c=>!c.priced).length;
+  document.getElementById('summary').innerHTML=`후보 <b>${total}</b>종 · ${unpriced>0?`<span class="amber">미가격 ${unpriced}</span>`:`미가격 ${unpriced}`}`;
+}
 function render(){
   const byCat={}; POOL.forEach(c=>{(byCat[c.category]=byCat[c.category]||[]).push(c);});
-  document.getElementById('summary').textContent=`후보 ${POOL.length}종 · 미가격 ${POOL.filter(c=>!c.priced).length}`;
+  updateSummary();
   const cats=ORDER.filter(c=>byCat[c]);
   if(!cats.length){ document.getElementById('list').innerHTML='<div class="empty">후보가 없습니다 — <b>＋ 후보 추가</b>로 카탈로그에서 선택하세요.</div>'; return; }
   const fcols=myFields();
   document.getElementById('list').innerHTML=cats.map(cat=>{
-    const rows=byCat[cat].sort((a,b)=>(a.model||a.slug).localeCompare(b.model||b.slug)).map(c=>{
+    const rows=byCat[cat].slice().sort((a,b)=>(a.model||a.slug).localeCompare(b.model||b.slug)).map(c=>{
       const price=`<div class="pricewrap"><span class="w">₩</span><input type="number" min="0" step="100000" value="${c.unit_cost!=null?c.unit_cost:''}" data-slug="${esc(c.slug)}" data-k="price" placeholder="0"></div>${c.priced?'':'<span class="none">미입력</span>'}`;
       const metas=fcols.map(f=>`<td><input class="meta" value="${esc((c.meta&&c.meta[f.key])!=null?c.meta[f.key]:'')}" data-slug="${esc(c.slug)}" data-k="meta" data-field="${esc(f.key)}" placeholder="${esc(f.label)}"></td>`).join('');
       return `<tr><td class="dev"><b>${esc(c.model||c.slug)}</b><span class="slug">${esc(c.slug)}</span></td>
@@ -107,19 +133,19 @@ function render(){
         <td class="rm"><button class="delbtn" data-del="${esc(c.slug)}">✕ 제거</button></td></tr>`;
     }).join('');
     return `<div class="cat"><div class="ch"><span class="dot" style="background:${CAT[cat]||CAT.other}"></span>${CATLABEL[cat]||cat}<span class="cnt">· ${byCat[cat].length}종</span></div>
-      <table><thead><tr><th>장비</th><th>단가</th>${fcols.map(f=>`<th class="${f.required?'req':''}">${esc(f.label)}</th>`).join('')}<th>비고</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
+      <div class="card"><table><thead><tr><th>장비</th><th style="width:230px">단가</th>${fcols.map(f=>`<th class="${f.required?'req':''}">${esc(f.label)}</th>`).join('')}<th>비고</th><th style="width:70px"></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`;
   }).join('');
   wire();
 }
 function wire(){
   document.querySelectorAll('input[data-k="price"]').forEach(el=>el.addEventListener('change',async()=>{
     const v=el.value.trim(); if(v==='')return;
-    try{ await apiPut(el.dataset.slug,{unit_cost:Math.max(0,Math.round(+v))}); const c=POOL.find(x=>x.slug===el.dataset.slug); if(c){c.unit_cost=+v;c.priced=true;} toast('가격 저장: '+el.dataset.slug); }
+    try{ await apiPut(el.dataset.slug,{unit_cost:Math.max(0,Math.round(+v))}); const c=POOL.find(x=>x.slug===el.dataset.slug); if(c){c.unit_cost=+v;c.priced=(+v)>0;} updateSummary(); toast('가격 저장: '+el.dataset.slug); }
     catch(e){ toast('저장 실패: '+e.message); }
   }));
   document.querySelectorAll('input[data-k="note"]').forEach(el=>el.addEventListener('change',async()=>{
-    try{ await apiPut(el.dataset.slug,{note:el.value}); toast('비고 저장됨'); }catch(e){ toast('저장 실패: '+e.message); }
+    try{ await apiPut(el.dataset.slug,{note:el.value}); const c=POOL.find(x=>x.slug===el.dataset.slug); if(c)c.note=el.value; toast('비고 저장됨'); }catch(e){ toast('저장 실패: '+e.message); }
   }));
   document.querySelectorAll('input[data-k="meta"]').forEach(el=>el.addEventListener('change',async()=>{
     const c=POOL.find(x=>x.slug===el.dataset.slug); const meta=Object.assign({},c&&c.meta); meta[el.dataset.field]=el.value;
@@ -164,13 +190,4 @@ Promise.all([
 ]).then(([pool,fields])=>{ POOL=pool||[]; FIELDS=fields||[]; render(); })
   .catch(e=>{ document.getElementById('list').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
 </script>
-<style id="cxbar">
-header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
-header .logo,header .ab-logo{color:#2563eb!important}
-header .crumb{color:#64748b!important}
-header nav a,header .topnav a,header .links a{color:#475569!important;background:transparent!important;border:1px solid transparent!important;font-weight:500!important;border-radius:7px!important;padding:5px 9px!important;text-decoration:none!important}
-header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5f9!important;color:#0f172a!important}
-header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
-</style>
-<script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
 </body></html>

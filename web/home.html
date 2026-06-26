@@ -2,17 +2,28 @@
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>bombom — 메인 대시보드</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
- :root{--accent:#2563eb;--ink:#0f172a;--muted:#64748b;--line:#e7ebf0;font-family:system-ui,-apple-system,sans-serif}
+ :root{--accent:#2563eb;--ink:#0f172a;--muted:#64748b;--line:#e7ebf0;font-family:"Pretendard",system-ui,-apple-system,sans-serif}
  *{box-sizing:border-box}
- body{margin:0;background:#f4f6f9;color:var(--ink)}
- header{display:flex;gap:10px;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
- .logo{font-weight:800;font-size:17px;color:var(--accent);letter-spacing:-.2px}
- .crumb{color:var(--muted);font-size:13px}
- nav{margin-left:auto;display:flex;gap:2px}
- nav a{color:#475569;text-decoration:none;font-size:13px;padding:6px 10px;border-radius:7px}
- nav a:hover{background:#f1f5f9}
- .wrap{max-width:1200px;margin:22px auto;padding:0 22px 40px}
+ body{margin:0;background:#f4f6f9;color:var(--ink);-webkit-font-smoothing:antialiased}
+ @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+ .sk{background:#e9edf2;background-image:linear-gradient(90deg,#e9edf2 0,#f3f6fa 200px,#e9edf2 400px);background-size:800px 100%;animation:shimmer 1.2s linear infinite;border-radius:8px}
+ header.top{display:flex;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:7;flex-wrap:wrap}
+ header.top .logo{font-weight:800;font-size:17px;color:var(--accent);letter-spacing:-.2px}
+ header.top .crumb{color:var(--muted);font-size:13px}
+ header.top nav{margin-left:auto;display:flex;gap:2px;align-items:center}
+ header.top nav a{color:#475569;text-decoration:none;font-size:13px;padding:6px 11px;border-radius:7px}
+ header.top nav a:hover{background:#f1f5f9}
+ header.top nav a.on{color:var(--accent);background:#eff6ff;font-weight:700}
+ /* read-only sub-bar */
+ .subbar{max-width:1200px;margin:0 auto;padding:14px 22px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+ .ro-pill{display:inline-flex;align-items:center;gap:6px;background:#eff1f5;color:#475569;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px}
+ .ro-pill .dot{width:7px;height:7px;border-radius:50%;background:#94a3b8}
+ .subbar .sync{color:#94a3b8;font-size:12px}
+ .subbar .ro-note{margin-left:auto;color:#94a3b8;font-size:12px}
+ .wrap{max-width:1200px;margin:16px auto 0;padding:0 22px 48px}
  /* KPI strip */
  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
  .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
@@ -20,7 +31,7 @@
  .kpi .l{color:var(--muted);font-size:12px;margin-top:5px}
  /* section title */
  .sect{margin:4px 0 12px;display:flex;align-items:baseline;gap:10px}
- .sect b{font-size:16px}.sect span{color:var(--muted);font-size:13px}
+ .sect b{font-size:16px;font-weight:700}.sect span{color:var(--muted);font-size:13px}
  /* structure */
  .off{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
  .off .oh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
@@ -51,25 +62,44 @@
  .bar{height:8px;border-radius:5px;background:#eef2f7;overflow:hidden}
  .bar i{display:block;height:100%;border-radius:5px}
  .empty{padding:50px;text-align:center;color:#94a3b8}
- @media(max-width:880px){.grid3{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+ /* skeleton layout */
+ .sk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+ .sk-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+ /* replay button */
+ .replay{position:fixed;right:22px;bottom:22px;z-index:20;background:#0f172a;color:#fff;border:0;border-radius:8px;
+   padding:9px 14px;font-size:12.5px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(15,23,42,.25);font-family:inherit}
+ @media(max-width:880px){.grid3,.sk-grid3{grid-template-columns:1fr}.kpis,.sk-kpis{grid-template-columns:1fr 1fr}}
 </style></head>
 <body>
-<header>
+<header class="top">
  <span class="logo">bombom</span><span class="crumb">— 메인 대시보드</span>
- <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a></nav>
+ <nav>
+  <a href="/" class="on">메인</a>
+  <a href="/candidates">후보풀</a>
+  <a href="/placed">배치 목록</a>
+  <a href="/summary">투자 리포트</a>
+  <a href="/manage">기준정보</a>
+  <a href="/edit">랙관리</a>
+ </nav>
 </header>
-<div class="wrap" id="root"><div class="empty">불러오는 중…</div></div>
+<div class="subbar">
+ <span class="ro-pill"><span class="dot"></span>읽기 전용</span>
+ <span class="sync">동기화 방금 전</span>
+ <span class="ro-note">편집은 랙관리 · PR에서 진행됩니다</span>
+</div>
+<div class="wrap" id="root"></div>
+<button class="replay" id="replay" type="button">↻ 로딩 다시 보기</button>
 <script>
-const CAT={server:"#2563eb",network:"#16a34a",storage:"#9333ea",other:"#64748b"};
-const RTC={compute:"#2563eb",gpu:"#7c3aed",storage:"#9333ea",network:"#16a34a"};
+const CAT={server:"#2563eb",compute:"#2563eb",gpu:"#7c3aed",storage:"#9333ea",network:"#16a34a",other:"#64748b"};
+const RTC={compute:"#2563eb",server:"#2563eb",gpu:"#7c3aed",storage:"#9333ea",network:"#16a34a"};
 const cur='₩';
 function won(n){return cur+Number(n||0).toLocaleString();}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 function bars(rows,colorOf){
+  if(!rows.length) return '<div class="znone">데이터 없음</div>';
   const total=Math.max(1,rows.reduce((s,r)=>s+r.capex,0));
   const max=Math.max(1,...rows.map(r=>r.capex));
-  if(!rows.length) return '<div class="znone">데이터 없음</div>';
   return rows.map(r=>{
     const pct=Math.round(r.capex/total*100);
     return `<div class="brow"><div class="top">
@@ -79,28 +109,40 @@ function bars(rows,colorOf){
   }).join('');
 }
 function zchip(z){
-  return `<a class="zchip" href="/place?path=${encodeURIComponent(z.path)}">
+  return `<a class="zchip" href="/placed?path=${encodeURIComponent(z.path)}">
     <span class="zt">${esc(z.zone)}<span class="go">열기 →</span></span>
     <span class="zm">랙 ${z.racks} · 서버 ${z.servers}</span></a>`;
 }
 
-fetch('/api/overview?path=offerings').then(r=>r.json()).then(d=>{
-  const t=d.totals;
+function skeleton(){
+  return `<div class="sk" style="height:84px;margin-bottom:18px"></div>
+    <div class="sk-kpis">
+      <div class="sk" style="height:84px"></div><div class="sk" style="height:84px"></div>
+      <div class="sk" style="height:84px"></div><div class="sk" style="height:84px"></div>
+    </div>
+    <div class="sk" style="height:150px;margin-bottom:12px"></div>
+    <div class="sk-grid3">
+      <div class="sk" style="height:180px"></div><div class="sk" style="height:180px"></div><div class="sk" style="height:180px"></div>
+    </div>`;
+}
+
+function render(d){
+  const t=d.totals||{};
   let html=`<div class="kpis">
-    <div class="kpi"><div class="n">${t.racks}</div><div class="l">전체 랙</div></div>
-    <div class="kpi"><div class="n">${t.servers}</div><div class="l">전체 서버</div></div>
-    <div class="kpi"><div class="n">${t.regions}</div><div class="l">리전</div></div>
-    <div class="kpi"><div class="n">${t.zones}</div><div class="l">존</div></div>
+    <div class="kpi"><div class="n">${esc(t.racks)}</div><div class="l">전체 랙</div></div>
+    <div class="kpi"><div class="n">${esc(t.servers)}</div><div class="l">전체 서버</div></div>
+    <div class="kpi"><div class="n">${esc(t.regions)}</div><div class="l">리전</div></div>
+    <div class="kpi"><div class="n">${esc(t.zones)}</div><div class="l">존</div></div>
   </div>`;
 
   // structure: offering → region → zone
   html+=`<div class="sect"><b>오퍼링 · 리전 · 존 구조</b><span>존을 클릭하면 배치 화면으로 들어갑니다.</span></div>`;
-  for(const o of d.tree){
+  for(const o of (d.tree||[])){
     const hasData=o.racks>0;
     html+=`<div class="off"><div class="oh"><b>${esc(o.offering)}</b>`
       + (hasData?`<span class="ometa">랙 ${o.racks} · 서버 ${o.servers}</span>`:'')
       + (hasData?'':`<span class="empty-tag">아직 배치 없음</span>`)+`</div>`;
-    for(const rg of o.regions){
+    for(const rg of (o.regions||[])){
       const has=rg.zones.length>0;
       html+=`<div class="reg"><div class="rn${has?' has':''}"><span class="rdot"></span>${esc(rg.region)}</div>
         <div class="zones">${has?rg.zones.map(zchip).join(''):'<span class="znone">존 없음</span>'}</div></div>`;
@@ -109,26 +151,27 @@ fetch('/api/overview?path=offerings').then(r=>r.json()).then(d=>{
   }
 
   // investment bars
-  const rt=(d.groups.rack_type||[]);
-  const rg=(d.groups.region||[]).filter(x=>x.capex>0).concat((d.groups.region||[]).filter(x=>x.capex===0)).slice(0,8);
-  const og=(d.groups.offering||[]);
+  const groups=d.groups||{};
+  const rt=(groups.rack_type||[]);
+  const rg=(groups.region||[]).filter(x=>x.capex>0).concat((groups.region||[]).filter(x=>x.capex===0)).slice(0,8);
+  const og=(groups.offering||[]);
   html+=`<div class="sect" style="margin-top:24px"><b>투자 비중</b><span>가격이 입력된 배치 기준(CAPEX)</span></div>
     <div class="grid3">
       <div class="panel"><h3>랙타입별 투자</h3>${bars(rt,r=>RTC[r.label]||CAT.other)}</div>
-      <div class="panel"><h3>리전별 투자</h3>${bars(rg,()=>CAT.server)}</div>
+      <div class="panel"><h3>리전별 투자</h3>${bars(rg,()=>'#2563eb')}</div>
       <div class="panel"><h3>오퍼링별 투자</h3>${bars(og,()=>'#0ea5e9')}</div>
     </div>`;
 
   document.getElementById('root').innerHTML=html;
-}).catch(e=>{document.getElementById('root').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>';});
+}
+
+function load(){
+  document.getElementById('root').innerHTML=skeleton();
+  fetch('/api/overview?path=offerings').then(r=>r.json()).then(render)
+    .catch(e=>{document.getElementById('root').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>';});
+}
+
+document.getElementById('replay').addEventListener('click',load);
+load();
 </script>
-<style id="cxbar">
-header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
-header .logo,header .ab-logo{color:#2563eb!important}
-header .crumb{color:#64748b!important}
-header nav a,header .topnav a,header .links a{color:#475569!important;background:transparent!important;border:1px solid transparent!important;font-weight:500!important;border-radius:7px!important;padding:5px 9px!important;text-decoration:none!important}
-header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5f9!important;color:#0f172a!important}
-header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
-</style>
-<script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
 </body></html>

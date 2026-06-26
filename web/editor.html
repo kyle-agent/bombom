@@ -2,279 +2,255 @@
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>bombom — 랙관리</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
- :root{--accent:#2563eb;--accent2:#0ea5e9;--ink:#0f172a;--muted:#64748b;--line:#e7ebf0;
-   --ok:#16a34a;--bad:#dc2626;font-family:system-ui,-apple-system,'Noto Sans KR',sans-serif}
+ :root{font-family:"Pretendard",system-ui,-apple-system,sans-serif}
  *{box-sizing:border-box}
- body{margin:0;background:#f4f6f9;color:var(--ink)}
- header{display:flex;gap:10px;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
- .logo{font-weight:800;font-size:17px;color:var(--accent);letter-spacing:-.2px}
- .crumb{color:var(--muted);font-size:13px}
- nav{margin-left:auto;display:flex;gap:2px}
- nav a{color:#475569;text-decoration:none;font-size:13px;padding:6px 10px;border-radius:7px}
- nav a:hover{background:#f1f5f9}
- .app{display:grid;grid-template-columns:280px 1fr;gap:0;height:calc(100vh - 53px)}
- /* sidebar tree */
- .side{background:#fff;border-right:1px solid var(--line);overflow:auto;padding:10px 0}
- .side .sh{padding:6px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
- .tnode{user-select:none}
- .toff{padding:7px 14px;font-weight:700;font-size:13px;color:#0f172a}
- .treg{padding:4px 14px 4px 26px;font-weight:600;font-size:12px;color:#334155}
- .tzone{padding:3px 14px 3px 38px;font-size:12px;color:#475569;display:flex;align-items:center;gap:6px}
- .tzone .zdot{width:7px;height:7px;border-radius:50%;background:#cbd5e1}
- .trt{margin:1px 14px 1px 50px;padding:4px 10px;font-size:12px;border-radius:7px;cursor:pointer;
-   display:flex;align-items:center;gap:7px;color:#475569}
- .trt:hover{background:#f1f5f9;color:#0f172a}
- .trt.on{background:#eff6ff;color:var(--accent);font-weight:700}
- .trt .cnt{margin-left:auto;font-size:11px;color:#94a3b8;font-variant-numeric:tabular-nums}
- .trt.on .cnt{color:var(--accent)}
- .empty{color:#94a3b8;font-size:12px;padding:10px 16px}
- /* main */
- .main{overflow:auto;padding:18px 22px 60px}
- .mbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
- .mbar .path{font-size:15px;font-weight:700}
- .mbar .path .sep{color:#cbd5e1;margin:0 5px;font-weight:400}
- .mbar .sub{color:var(--muted);font-size:12px}
- .mbar .spacer{flex:1}
- .addbtn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+ body{margin:0;background:#f4f6f9;color:#0f172a;-webkit-font-smoothing:antialiased}
+ @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+ .sk{background:#e9edf2;background-image:linear-gradient(90deg,#e9edf2 0,#f3f6fa 200px,#e9edf2 400px);background-size:800px 100%;animation:shimmer 1.2s linear infinite;border-radius:8px}
+ header.top{display:flex;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid #e7ebf0;background:#fff;position:sticky;top:0;z-index:7;flex-wrap:wrap}
+ header.top .logo{font-weight:800;font-size:17px;color:#2563eb;letter-spacing:-.2px}
+ header.top .crumb{color:#64748b;font-size:13px}
+ header.top nav{margin-left:auto;display:flex;gap:2px;align-items:center}
+ header.top nav a{color:#475569;text-decoration:none;font-size:13px;padding:6px 11px;border-radius:7px}
+ header.top nav a:hover{background:#f1f5f9}
+ header.top nav a.on{color:#2563eb;background:#eff6ff;font-weight:700}
+ .wrap{max-width:1080px;margin:0 auto;padding:18px 22px 60px}
+ .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+ .toolbar .lead{font-size:14px;color:#475569}
+ .toolbar .lead b{color:#0f172a}
+ .toolbar .uncl{color:#b45309;font-weight:600}
+ .addbtn{margin-left:auto;font-size:13px;border:1px solid #2563eb;border-radius:8px;background:#2563eb;color:#fff;padding:8px 14px;cursor:pointer;font-weight:600;font-family:inherit}
  .addbtn:hover{filter:brightness(1.06)}
- .addbtn:disabled{opacity:.4;cursor:not-allowed}
- .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
- .rack{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 1px 3px rgba(15,23,42,.04);display:flex;flex-direction:column;gap:8px}
- .rack .rh{display:flex;align-items:baseline;gap:8px}
- .rack .rh b{font-size:15px}
- .rack .rh .rt{font-size:11px;color:#fff;background:var(--accent);border-radius:5px;padding:1px 6px;font-weight:600}
- .rack .rh .rt.gpu{background:#7c3aed}.rack .rh .rt.storage{background:#9333ea}.rack .rh .rt.network{background:#16a34a}
- .rack .meta{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
- .rack .elev{display:flex;justify-content:center;background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:6px;min-height:90px;overflow:hidden}
- .rack .elev svg{max-height:220px;height:auto;width:auto}
- .rack .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
- .rack .btns a,.rack .btns button{flex:1;text-align:center;border:1px solid var(--line);background:#fff;color:#334155;
-   border-radius:8px;padding:6px 4px;font-size:11.5px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
- .rack .btns a.place{border-color:#bfdbfe;background:#eff6ff;color:var(--accent)}
- .rack .btns a:hover,.rack .btns button:hover{filter:brightness(.98);border-color:#cbd5e1}
- .hint{color:#94a3b8;font-size:13px;text-align:center;padding:60px 20px}
+ .intro{font-size:12.5px;color:#94a3b8;margin:0 0 16px}
+ .grp{margin-bottom:20px}
+ .grp .gh{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin:0 0 8px}
+ .grp .gh .sq{width:11px;height:11px;border-radius:3px}
+ .grp .gh .gc{color:#64748b;font-weight:400;font-size:12px}
+ .grp .gh .need{color:#b45309;font-size:11px;background:#fffbeb;border:1px solid #fde68a;border-radius:20px;padding:1px 8px;font-weight:600}
+ .gtable{background:#fff;border:1px solid #e7ebf0;border-radius:12px;overflow:hidden}
+ table{width:100%;border-collapse:collapse}
+ th{text-align:left;padding:9px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;border-bottom:1px solid #f1f5f9}
+ td{padding:9px 14px;border-bottom:1px solid #f4f6f9;font-size:13px;vertical-align:middle}
+ tr:last-child td{border-bottom:0}
+ td .rid{font-weight:700}
+ td .rmodel{color:#94a3b8;font-size:11px;margin-left:6px}
+ td.loc{color:#64748b;font-size:12.5px}
+ select.rt{font-size:13px;padding:5px 8px;border-radius:7px;font-family:inherit;font-weight:600;cursor:pointer}
+ .actlink{border:1px solid #e2e8f0;background:#fff;color:#334155;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer;font-family:inherit}
+ .actlink.place{border-color:#bfdbfe;background:#eff6ff;color:#2563eb}
+ .actlink:hover{border-color:#cbd5e1}
+ .acts{display:flex;gap:6px;justify-content:flex-end}
+ .empty{padding:50px;text-align:center;color:#94a3b8}
  /* modal */
- .back{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:30}
+ .back{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:flex-start;justify-content:center;z-index:30}
  .back.show{display:flex}
- .modal{background:#fff;border-radius:16px;padding:20px 22px;width:min(440px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
- .modal h3{margin:0 0 14px;font-size:16px}
- .modal label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
- .modal input,.modal select{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px}
- .mres{max-height:170px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:6px}
- .mres .it{padding:7px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f4f6f9;display:flex;justify-content:space-between;gap:8px}
- .mres .it:hover{background:#f1f5f9}.mres .it.on{background:#eff6ff;color:var(--accent);font-weight:600}
- .mres .it .u{color:#94a3b8;font-variant-numeric:tabular-nums}
- .modal .act{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
- .modal .act button{border-radius:9px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff;color:#334155}
- .modal .act button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
- .modal .err{color:var(--bad);font-size:12px;margin-top:8px;min-height:16px}
- /* toast */
- #toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
- #toast .t{background:#0f172a;color:#e2e8f0;border-radius:9px;padding:9px 15px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
- #toast .t.ok{background:#166534}#toast .t.bad{background:#7f1d1d}
- @media(max-width:780px){.app{grid-template-columns:1fr;height:auto}.side{height:auto;max-height:260px}}
+ .modal{background:#fff;border-radius:12px;margin-top:60px;width:560px;max-width:92vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(15,23,42,.25)}
+ .modal .mh{padding:12px 16px;border-bottom:1px solid #e7ebf0;display:flex;align-items:center;gap:10px}
+ .modal .mh b{font-size:14px}.modal .mh .x{margin-left:auto;cursor:pointer;color:#94a3b8;font-size:20px}
+ .modal .mb{padding:12px 16px;overflow:auto}
+ .modal label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin:10px 0 4px}
+ .modal input,.modal select{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit}
+ .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .mres{margin-top:6px;border:1px solid #e7ebf0;border-radius:9px;max-height:200px;overflow:auto}
+ .mres .it{display:flex;align-items:center;gap:9px;padding:8px 10px;border-bottom:1px solid #f4f6f9;cursor:pointer}
+ .mres .it:last-child{border-bottom:0}
+ .mres .it:hover{background:#f1f5f9}
+ .mres .it.on{background:#eff6ff}
+ .mres .it .ico{width:26px;height:26px;border-radius:6px;background:#eef2ff;color:#4338ca;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto}
+ .mres .it .mt{flex:1;min-width:0}
+ .mres .it .mt .m{font-size:13px;font-weight:600}.mres .it .mt .s{font-size:11px;color:#64748b}
+ .mres .it .u{font-size:11px;color:#94a3b8;font-variant-numeric:tabular-nums}
+ .mfoot{padding:12px 16px;border-top:1px solid #e7ebf0;display:flex;gap:8px;justify-content:flex-end}
+ .mfoot .err{margin-right:auto;color:#b91c1c;font-size:12px;align-self:center}
+ .mfoot button{border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #e2e8f0;background:#fff;color:#334155;font-family:inherit}
+ .mfoot button.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+ #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
+ #toast.on{opacity:.97}
 </style>
-<style id="cxbar">
-header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
-header .logo,header .ab-logo{color:#2563eb!important}
-header .crumb{color:#64748b!important}
-header nav a,header .topnav a,header .links a{color:#475569!important;background:transparent!important;border:1px solid transparent!important;font-weight:500!important;border-radius:7px!important;padding:5px 9px!important;text-decoration:none!important}
-header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5f9!important;color:#0f172a!important}
-header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
-</style>
-<script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
 </head>
 <body>
-<header>
- <span class="logo">bombom</span><span class="crumb">— 랙관리</span>
- <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a></nav>
+<header class="top">
+ <span class="logo">bombom</span><span class="crumb">— 랙관리 · 랙타입 분류</span>
+ <nav>
+  <a href="/">메인</a>
+  <a href="/candidates">후보풀</a>
+  <a href="/placed">배치 목록</a>
+  <a href="/summary">투자 리포트</a>
+  <a href="/manage">기준정보</a>
+  <a href="/edit" class="on">랙관리</a>
+ </nav>
 </header>
-<div class="app">
- <aside class="side">
-   <div class="sh">랙타입 선택</div>
-   <div id="tree"><div class="empty">불러오는 중…</div></div>
- </aside>
- <section class="main">
-   <div class="mbar">
-     <div>
-       <div class="path" id="crumb">랙타입을 선택하세요</div>
-       <div class="sub" id="subcrumb">좌측에서 오퍼링 · 리전 · 존 아래 랙타입을 고르면 해당 랙 목록이 보입니다.</div>
-     </div>
-     <span class="spacer"></span>
-     <button class="addbtn" id="addBtn" disabled>＋ 랙 추가</button>
-   </div>
-   <div id="racks"><div class="hint">랙타입을 선택하면 그 안의 랙들을 관리할 수 있습니다.<br>서버·장비 배치는 각 랙의 <b>🗺 배치</b>에서 진행합니다.</div></div>
- </section>
+<div class="wrap">
+ <div class="toolbar">
+   <span class="lead">랙 <b id="total">—</b>개<span id="unclWrap" style="display:none"> · <span class="uncl">미분류 <span id="uncl">0</span></span></span></span>
+   <button class="addbtn" id="addBtn">＋ 랙 추가</button>
+ </div>
+ <p class="intro">카탈로그에서 랙을 골라 담고, 각 랙의 <b>랙타입</b>을 지정하세요. 랙타입을 바꾸면 해당 그룹으로 이동합니다.</p>
+ <div id="body"><div class="sk" style="height:30px;width:120px;margin:8px 0 10px"></div><div class="sk" style="height:130px;margin-bottom:18px"></div><div class="sk" style="height:90px"></div></div>
 </div>
 
 <!-- add rack modal -->
 <div class="back" id="addModal">
  <div class="modal">
-   <h3>랙 추가</h3>
-   <div class="sub" id="amTarget" style="font-size:12px;color:#64748b"></div>
-   <label>랙 ID (영문/숫자/.-_)</label>
-   <input id="amRack" placeholder="예: R04, web-01">
-   <label>랙 모델 (Rack-Type 인클로저)</label>
-   <input id="amModelQ" placeholder="제조사/모델 검색… 예: vertiv, apc">
-   <div class="mres" id="amModelRes"></div>
-   <div class="err" id="amErr"></div>
-   <div class="act"><button id="amCancel">취소</button><button class="primary" id="amSave">추가</button></div>
+   <div class="mh"><b>＋ 랙 추가 (카탈로그에서 선택)</b><span class="x" id="amX">×</span></div>
+   <div class="mb">
+     <div class="grid2">
+       <div><label>존 (위치)</label><select id="amZone"></select></div>
+       <div><label>랙타입</label><select id="amType">
+         <option value="compute">컴퓨트</option><option value="gpu">GPU</option>
+         <option value="storage">스토리지</option><option value="network">네트워크</option></select></div>
+     </div>
+     <label>랙 ID</label><input id="amRack" placeholder="예: rk-ane2-c-01">
+     <label>랙 모델 (카탈로그)</label>
+     <input id="amQ" placeholder="랙 모델 검색… 예: vertiv, apc, 42U">
+     <div class="mres" id="amRes"></div>
+   </div>
+   <div class="mfoot"><span class="err" id="amErr"></span>
+     <button id="amCancel">취소</button><button class="primary" id="amSave">＋ 담기</button></div>
  </div>
 </div>
-
 <div id="toast"></div>
 <script>
 "use strict";
+const TYPES=[
+  {id:'',label:'미분류',color:'#b45309'},
+  {id:'compute',label:'컴퓨트',color:'#2563eb'},
+  {id:'gpu',label:'GPU',color:'#7c3aed'},
+  {id:'storage',label:'스토리지',color:'#9333ea'},
+  {id:'network',label:'네트워크',color:'#16a34a'},
+];
+const KNOWN=new Set(TYPES.map(t=>t.id));
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function toast(m,k){const w=document.getElementById('toast');const e=document.createElement('div');e.className='t'+(k?' '+k:'');e.textContent=m;w.appendChild(e);setTimeout(()=>e.remove(),3000);}
-async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
-async function postJSON(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});let d=null;try{d=await r.json();}catch(e){}if(!r.ok){const det=(d&&d.detail)?(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail)):'HTTP '+r.status;const e=new Error(det);e.status=r.status;throw e;}return d;}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1800);}
+function labelOf(t){const x=TYPES.find(v=>v.id===(t||''));return x?x.label:t;}
+function colorOf(t){const x=TYPES.find(v=>v.id===(t||''));return x?x.color:'#64748b';}
+function fileOf(r){const h=r.hierarchy;return `offerings/${h.offering}/regions/${h.region}/zones/${h.zone}/rack-types/${h.rack_type}/racks/${r.rack_id}.yaml`;}
 
-const RTC={compute:'',gpu:'gpu',storage:'storage',network:'network'};
-let HIER=[], SEL=null;   // SEL = {key,offering,region,zone,rack_type,zlabel}
+let RACKS=[], HIER=[];
 
-function nodePath(s){return `offerings/${s.offering}/regions/${s.region}/zones/${s.zone}/rack-types/${s.rack_type}`;}
-
-// ── sidebar tree ────────────────────────────────────────────────────────
-function renderTree(){
-  const box=document.getElementById('tree');
-  if(!HIER.length){box.innerHTML='<div class="empty">등록된 오퍼링이 없습니다. 기준정보에서 추가하세요.</div>';return;}
+function render(){
+  const total=RACKS.length, uncl=RACKS.filter(r=>!KNOWN.has(r.hierarchy.rack_type)||r.hierarchy.rack_type==='').length;
+  document.getElementById('total').textContent=total;
+  document.getElementById('uncl').textContent=uncl;
+  document.getElementById('unclWrap').style.display=uncl?'inline':'none';
+  // group order: any unknown/'' types first (지정 필요), then the standard order, then leftovers
+  const present=[...new Set(RACKS.map(r=>r.hierarchy.rack_type))];
+  const ordered=[...present.filter(t=>!KNOWN.has(t)),'compute','gpu','storage','network'].filter((t,i,a)=>present.includes(t)&&a.indexOf(t)===i);
   let h='';
-  for(const o of HIER){
-    h+=`<div class="tnode"><div class="toff">${esc(o.name||o.offering)}</div>`;
-    for(const rg of (o.regions||[])){
-      h+=`<div class="treg">${esc(rg.name||rg.region)}</div>`;
-      const zs=rg.zones||[];
-      if(!zs.length){h+=`<div class="empty" style="padding:2px 14px 2px 38px">존 없음</div>`;}
-      for(const z of zs){
-        h+=`<div class="tzone"><span class="zdot"></span>${esc(z.name||z.zone)}</div>`;
-        const rts=z.rack_types||[];
-        if(!rts.length){h+=`<div class="empty" style="padding:2px 14px 2px 50px">랙타입 없음</div>`;}
-        for(const rt of rts){
-          const cnt=(rt.racks||[]).length;
-          const key=`${o.offering}|${rg.region}|${z.zone}|${rt.rack_type}`;
-          const on=SEL&&SEL.key===key?' on':'';
-          h+=`<div class="trt${on}" data-key="${esc(key)}" data-off="${esc(o.offering)}" data-reg="${esc(rg.region)}" data-zone="${esc(z.zone)}" data-rt="${esc(rt.rack_type)}" data-zlabel="${esc(z.name||z.zone)}">`
-            +`▦ ${esc(rt.name&&rt.name!==rt.rack_type?rt.name:rt.rack_type)}<span class="cnt">${cnt}</span></div>`;
-        }
-      }
+  for(const t of ordered){
+    const items=RACKS.filter(r=>r.hierarchy.rack_type===t);
+    if(!items.length) continue;
+    const unknown=!KNOWN.has(t);
+    h+=`<div class="grp"><div class="gh"><span class="sq" style="background:${unknown?'#b45309':colorOf(t)}"></span>${esc(unknown?t:labelOf(t))}<span class="gc">· ${items.length}개</span>${unknown?'<span class="need">랙타입 확인</span>':''}</div>
+      <div class="gtable"><table><thead><tr><th>랙</th><th>위치</th><th style="width:150px">랙타입</th><th style="width:150px"></th></tr></thead><tbody>`;
+    for(const r of items){
+      const h2=r.hierarchy, cur=h2.rack_type, amber=unknown;
+      const opts=[...KNOWN, ...(KNOWN.has(cur)?[]:[cur])].filter(Boolean);
+      const sel=opts.map(o=>`<option value="${esc(o)}" ${o===cur?'selected':''}>${esc(labelOf(o))}</option>`).join('');
+      const placePath=`offerings/${h2.offering}/regions/${h2.region}/zones/${h2.zone}`;
+      h+=`<tr>
+        <td><span class="rid">${esc(r.rack_id)}</span><span class="rmodel">${esc(r.rack_model||'')}${r.rack_u?' · '+r.rack_u+'U':''}</span></td>
+        <td class="loc">${esc(h2.offering)} / ${esc(h2.region)} / ${esc(h2.zone)}</td>
+        <td><select class="rt" data-file="${esc(fileOf(r))}" data-cur="${esc(cur)}" style="border:1px solid ${amber?'#fcd34d':'#cbd5e1'};background:${amber?'#fffbeb':'#fff'};color:${amber?'#b45309':colorOf(cur)}">${sel}</select></td>
+        <td><div class="acts"><a class="actlink place" href="/place?path=${encodeURIComponent(placePath)}" title="이 존 배치 화면">🗺 배치</a>
+          <button class="actlink" data-clone="${esc(fileOf(r))}" data-id="${esc(r.rack_id)}">⧉ 복제</button></div></td></tr>`;
     }
-    h+=`</div>`;
+    h+=`</tbody></table></div></div>`;
   }
-  box.innerHTML=h;
+  if(!ordered.length) h=`<div class="empty">랙이 없습니다 — <b>＋ 랙 추가</b>로 카탈로그에서 담으세요.</div>`;
+  document.getElementById('body').innerHTML=h;
 }
 
-document.getElementById('tree').addEventListener('click',e=>{
-  const n=e.target.closest('.trt');if(!n)return;
-  SEL={key:n.dataset.key,offering:n.dataset.off,region:n.dataset.reg,zone:n.dataset.zone,
-       rack_type:n.dataset.rt,zlabel:n.dataset.zlabel};
-  renderTree();
-  loadRacks();
-});
-
-// ── rack list for selected rack-type ────────────────────────────────────
-async function loadRacks(){
-  if(!SEL)return;
-  document.getElementById('crumb').innerHTML=
-    `${esc(SEL.offering)}<span class="sep">›</span>${esc(SEL.region)}<span class="sep">›</span>${esc(SEL.zlabel)}<span class="sep">›</span><span style="color:var(--accent)">▦ ${esc(SEL.rack_type)}</span>`;
-  document.getElementById('subcrumb').textContent='이 랙타입의 랙을 추가·복제하고, 각 랙에서 장비를 배치합니다.';
-  document.getElementById('addBtn').disabled=false;
-  const box=document.getElementById('racks');
-  box.innerHTML='<div class="hint">불러오는 중…</div>';
+// reclassify (move) on select change
+document.getElementById('body').addEventListener('change',async e=>{
+  const s=e.target.closest('select.rt'); if(!s) return;
+  const file=s.dataset.file, cur=s.dataset.cur, next=s.value;
+  if(next===cur) return;
+  s.disabled=true;
   try{
-    const d=await getJSON('/api/layout?path='+encodeURIComponent(nodePath(SEL)));
-    const racks=(d.racks||[]).filter(r=>(r.hierarchy||{}).rack_type===SEL.rack_type);
-    if(!racks.length){box.innerHTML='<div class="hint">아직 랙이 없습니다. <b>＋ 랙 추가</b>로 첫 랙을 만드세요.</div>';return;}
-    box.innerHTML='<div class="grid">'+racks.map(rackCard).join('')+'</div>';
-  }catch(err){box.innerHTML='<div class="hint">불러오기 실패: '+esc(err.message)+'</div>';}
-}
-
-function rackCard(r){
-  const rt=r.hierarchy.rack_type;
-  const file=nodePath(SEL)+'/racks/'+r.rack_id+'.yaml';
-  const placePath=`offerings/${SEL.offering}/regions/${SEL.region}/zones/${SEL.zone}`;
-  return `<div class="rack">
-    <div class="rh"><b>${esc(r.rack_id)}</b><span class="rt ${RTC[rt]||''}">${esc(rt)}</span></div>
-    <div class="meta">${esc(r.rack_model||'—')} · ${r.rack_u||'?'}U</div>
-    <div class="elev">${r.svg||''}</div>
-    <div class="btns">
-      <a class="place" href="/place?path=${encodeURIComponent(placePath)}" title="이 존의 배치 화면 열기">🗺 배치</a>
-      <button data-clone="${esc(file)}" data-id="${esc(r.rack_id)}">⧉ 복제</button>
-      <button data-bulk="${esc(file)}" data-id="${esc(r.rack_id)}">⧉ 여러 개</button>
-    </div></div>`;
-}
-
-// ── clone / bulk clone ──────────────────────────────────────────────────
-function expandIds(spec){
-  // "R10,R11" or "web-02..05" → list. Range token "A..B": share alpha prefix, numeric span, zero-pad.
-  const out=[];
-  spec.split(',').map(s=>s.trim()).filter(Boolean).forEach(tok=>{
-    const m=tok.match(/^(.*?)(\d+)\.\.(\d+)$/);
-    if(m){const pre=m[1],a=m[2],b=parseInt(m[3],10),pad=a.length;
-      for(let i=parseInt(a,10);i<=b;i++)out.push(pre+String(i).padStart(pad,'0'));}
-    else out.push(tok);
-  });
-  return [...new Set(out)];
-}
-document.getElementById('racks').addEventListener('click',async e=>{
-  const cb=e.target.closest('[data-clone]');
-  if(cb){const nid=prompt('복제본 랙 ID (배치 그대로 복사)','');if(nid==null)return;const rack=nid.trim();if(!rack)return;
-    try{await postJSON('/api/rack/clone',{source_path:cb.dataset.clone,rack});toast('복제됨 → '+rack,'ok');loadRacks();refreshHier();}
-    catch(err){toast(err.status===409?'이미 존재하는 랙입니다':err.message,'bad');}return;}
-  const bb=e.target.closest('[data-bulk]');
-  if(bb){const spec=prompt('여러 랙 ID (쉼표 또는 범위). 예: R10,R11  또는  web-02..05','');if(spec==null)return;
-    const racks=expandIds(spec);if(!racks.length){toast('ID를 입력하세요','bad');return;}
-    try{const d=await postJSON('/api/rack/clone-bulk',{source_path:bb.dataset.bulk,racks});toast((d.count||racks.length)+'개 복제됨','ok');loadRacks();refreshHier();}
-    catch(err){toast(err.status===409?'이미 존재하는 랙이 있습니다':err.message,'bad');}return;}
+    const r=await fetch('/api/rack/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_path:file,rack_type:next})});
+    if(!r.ok){ const d=await r.json().catch(()=>null); throw new Error((d&&d.detail&&(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail)))||('HTTP '+r.status)); }
+    toast('이동: → '+labelOf(next));
+    await load(true);
+  }catch(err){ toast('이동 실패: '+err.message); s.value=cur; s.disabled=false; }
+});
+// clone
+document.getElementById('body').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-clone]'); if(!b) return;
+  const nid=prompt('복제본 랙 ID (배치 그대로 복사)',''); if(nid==null) return; const rack=nid.trim(); if(!rack) return;
+  try{
+    const r=await fetch('/api/rack/clone',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_path:b.dataset.clone,rack})});
+    if(!r.ok){ const d=await r.json().catch(()=>null); throw new Error((d&&d.detail)||('HTTP '+r.status)); }
+    toast('복제됨 → '+rack); await load(true);
+  }catch(err){ toast('복제 실패: '+(err.message||err)); }
 });
 
-// ── add rack ────────────────────────────────────────────────────────────
+// ── add modal ─────────────────────────────────────────────────────────────
 let amModel=null, amTimer=null;
 const addModal=document.getElementById('addModal');
-document.getElementById('addBtn').addEventListener('click',()=>{
-  if(!SEL)return;
-  amModel=null;
-  document.getElementById('amTarget').textContent=`${SEL.offering} › ${SEL.region} › ${SEL.zlabel} › ${SEL.rack_type}`;
-  document.getElementById('amRack').value='';
-  document.getElementById('amModelQ').value='';
-  document.getElementById('amErr').textContent='';
-  document.getElementById('amModelRes').innerHTML='';
-  addModal.classList.add('show');
-  searchModels('');
-});
-document.getElementById('amCancel').addEventListener('click',()=>addModal.classList.remove('show'));
-addModal.addEventListener('click',e=>{if(e.target===addModal)addModal.classList.remove('show');});
-document.getElementById('amModelQ').addEventListener('input',e=>{clearTimeout(amTimer);const q=e.target.value;amTimer=setTimeout(()=>searchModels(q),180);});
-async function searchModels(q){
-  const box=document.getElementById('amModelRes');
-  try{
-    const rows=await getJSON('/api/catalog/search?kind=rack&limit=30&q='+encodeURIComponent(q));
-    if(!rows.length){box.innerHTML='<div class="it" style="color:#94a3b8;cursor:default">결과 없음</div>';return;}
-    box.innerHTML=rows.map(r=>`<div class="it${amModel&&amModel.slug===r.slug?' on':''}" data-slug="${esc(r.slug)}" data-u="${r.u_height||0}">`
-      +`<span>${esc(r.manufacturer||'')} ${esc(r.model||r.slug)}</span><span class="u">${r.u_height||'?'}U</span></div>`).join('');
-  }catch(err){box.innerHTML='<div class="it" style="color:#94a3b8;cursor:default">모델 검색 불가 (데모에서는 비활성)</div>';}
+function zoneOptions(){
+  const out=[];
+  for(const o of HIER) for(const rg of (o.regions||[])) for(const z of (rg.zones||[]))
+    out.push({path:`${o.offering} / ${rg.region} / ${z.zone}`,offering:o.offering,region:rg.region,zone:z.zone});
+  return out;
 }
-document.getElementById('amModelRes').addEventListener('click',e=>{
-  const it=e.target.closest('.it[data-slug]');if(!it)return;
+document.getElementById('addBtn').addEventListener('click',()=>{
+  amModel=null;
+  const zs=zoneOptions();
+  document.getElementById('amZone').innerHTML=zs.length?zs.map((z,i)=>`<option value="${i}">${esc(z.path)}</option>`).join(''):'<option value="">존 없음 — 기준정보에서 먼저 생성</option>';
+  addModal._zones=zs;
+  document.getElementById('amType').value='compute';
+  document.getElementById('amRack').value=''; document.getElementById('amQ').value='';
+  document.getElementById('amErr').textContent=''; document.getElementById('amRes').innerHTML='';
+  addModal.classList.add('show'); searchModels('');
+});
+document.getElementById('amX').addEventListener('click',()=>addModal.classList.remove('show'));
+document.getElementById('amCancel').addEventListener('click',()=>addModal.classList.remove('show'));
+addModal.addEventListener('click',e=>{ if(e.target===addModal) addModal.classList.remove('show'); });
+document.getElementById('amQ').addEventListener('input',e=>{ clearTimeout(amTimer); const q=e.target.value; amTimer=setTimeout(()=>searchModels(q),180); });
+async function searchModels(q){
+  const box=document.getElementById('amRes');
+  try{
+    const rows=await fetch('/api/catalog/search?kind=rack&limit=30&q='+encodeURIComponent(q)).then(r=>r.json());
+    if(!rows.length){ box.innerHTML='<div class="it" style="color:#94a3b8;cursor:default">검색 결과가 없습니다.</div>'; return; }
+    box.innerHTML=rows.map(r=>`<div class="it ${amModel&&amModel.slug===r.slug?'on':''}" data-slug="${esc(r.slug)}" data-u="${r.u_height||0}">
+      <span class="ico">▣</span><span class="mt"><span class="m">${esc(r.manufacturer||'')} ${esc(r.model||r.slug)}</span><span class="s">${esc(r.slug)}</span></span><span class="u">${r.u_height||'?'}U</span></div>`).join('');
+  }catch(e){ box.innerHTML='<div class="it" style="color:#94a3b8;cursor:default">모델 검색 불가</div>'; }
+}
+document.getElementById('amRes').addEventListener('click',e=>{
+  const it=e.target.closest('.it[data-slug]'); if(!it) return;
   amModel={slug:it.dataset.slug,u_height:+it.dataset.u};
-  [...document.querySelectorAll('#amModelRes .it')].forEach(x=>x.classList.toggle('on',x===it));
+  [...document.querySelectorAll('#amRes .it')].forEach(x=>x.classList.toggle('on',x===it));
 });
 document.getElementById('amSave').addEventListener('click',async ()=>{
-  const rack=document.getElementById('amRack').value.trim();
-  const err=document.getElementById('amErr');err.textContent='';
-  if(!rack){err.textContent='랙 ID를 입력하세요';return;}
-  if(!amModel){err.textContent='랙 모델을 선택하세요';return;}
+  const err=document.getElementById('amErr'); err.textContent='';
+  const zs=addModal._zones||[]; const zi=document.getElementById('amZone').value;
+  const z=zs[zi]; const rack=document.getElementById('amRack').value.trim(); const rack_type=document.getElementById('amType').value;
+  if(!z){ err.textContent='존을 먼저 만들어 주세요'; return; }
+  if(!rack){ err.textContent='랙 ID를 입력하세요'; return; }
+  if(!amModel){ err.textContent='랙 모델을 선택하세요'; return; }
   try{
-    await postJSON('/api/rack/new',{offering:SEL.offering,region:SEL.region,zone:SEL.zone,
-      rack_type:SEL.rack_type,rack,rack_model:amModel.slug});
-    addModal.classList.remove('show');toast('랙 "'+rack+'" 추가됨','ok');loadRacks();refreshHier();
-  }catch(e2){err.textContent=e2.status===409?'이미 존재하는 랙입니다':e2.message;}
+    const r=await fetch('/api/rack/new',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:z.offering,region:z.region,zone:z.zone,rack_type,rack,rack_model:amModel.slug})});
+    if(!r.ok){ const d=await r.json().catch(()=>null); throw new Error(r.status===409?'이미 존재하는 랙입니다':((d&&d.detail)||('HTTP '+r.status))); }
+    addModal.classList.remove('show'); toast('담음: '+rack); await load(true);
+  }catch(e2){ err.textContent=e2.message||String(e2); }
 });
 
-// ── load ────────────────────────────────────────────────────────────────
-async function refreshHier(){try{HIER=await getJSON('/api/hierarchy');renderTree();}catch(e){}}
-getJSON('/api/hierarchy').then(d=>{HIER=Array.isArray(d)?d:[];renderTree();})
-  .catch(e=>{document.getElementById('tree').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>';});
+// ── load ──────────────────────────────────────────────────────────────────
+async function load(silent){
+  try{
+    const [lay,hier]=await Promise.all([
+      fetch('/api/layout?path=offerings').then(r=>r.ok?r.json():{racks:[]}),
+      fetch('/api/hierarchy').then(r=>r.ok?r.json():[]),
+    ]);
+    RACKS=(lay.racks||[]).slice().sort((a,b)=>String(a.rack_id).localeCompare(String(b.rack_id)));
+    HIER=Array.isArray(hier)?hier:[];
+    render();
+  }catch(e){ if(!silent) document.getElementById('body').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; }
+}
+load(false);
 </script>
 </body></html>

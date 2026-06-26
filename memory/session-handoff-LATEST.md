@@ -17,7 +17,9 @@
 ## Where things are (2026-06-26)
 
 화면 IA가 **계층 한 단계씩** 정리됨 (ADR `2026-06-26-screen-responsibility-split.md`).
-캐노니컬 내비: `메인 · 후보풀 · 배치 목록 · 투자 리포트 · 기준정보 · 랙관리`.
+**hi-fi 디자인 핸드오프 반영 완료** (ADR `2026-06-26-ux-design-handoff.md`): 전 화면 Pretendard
+폰트 + 캐노니컬 흰 헤더(`class="on"` 활성, `#cxbar`/active-script 제거됨) + 스켈레톤 로딩 +
+상태색 토큰 통일. 캐노니컬 내비: `메인 · 후보풀 · 배치 목록 · 투자 리포트 · 기준정보 · 랙관리`.
 Run `bombom serve` then:
 
 - `/` (home.html) — **메인 대시보드**. ① 오퍼링→리전→존 구조(빈 노드 포함, 존 칩→`/place`),
@@ -26,14 +28,16 @@ Run `bombom serve` then:
 - `/candidates` — **후보풀**: 등록된 후보를 카테고리(server/network/storage/other)별 목록으로
   보여주고 **인라인 가격 입력** + 비고/메타 필드. `＋ 후보 추가`는 카탈로그 검색 팝업(85+ 결과).
   후보=`candidates/pool.yaml`, 가격=`pricing/`. `GET /api/candidate-fields`.
-- `/edit` — **랙관리**(rack 단위 전용). 좌측 트리에서 랙타입 선택 → 그 안의 랙 카드(미니 실장도+
-  모델+U). `＋ 랙 추가`(모델 검색 `kind=rack`), `⧉ 복제`/`⧉ 여러 개`(`R10..12` 범위), 각 랙
-  `🗺 배치`→`/place`. **장비 배치 캔버스·팔레트·확정 모달은 제거됨**(`/place`로 일원화).
-  `POST /api/rack/new|clone|clone-bulk`, `GET /api/layout?path=`.
+- `/edit` — **랙관리 · 랙타입 분류**(재설계). 전체 랙을 **랙타입별 그룹 표**로 보여주고 각 행의
+  **랙타입 셀렉트**로 재분류 → `POST /api/rack/move`(같은 존 내 rack-type 디렉터리 이동, 검증·
+  롤백·단일 커밋; `scaffold.move_rack`). `＋ 랙 추가`=카탈로그(`kind=rack`) 모델 모달(존+타입+모델+
+  ID → `POST /api/rack/new`). 행 작업 `🗺 배치`(→`/place`)·`⧉ 복제`. `GET /api/layout?path=`.
 - `/place` — **배치**: 한 존의 랙들. 보기/편집 토글, 팔레트=후보풀 전체, 신규 배치는
-  `release="DRAFT"`(미태그). 🏷 릴리즈 태깅 링크→`/placed`.
-- `/placed` — **배치 목록·릴리즈 태깅**: 랙별 배치 라인 + 체크박스 선택 → 릴리즈 태그 부여
-  (`PUT /api/rack`는 release 문자열만 변경, 구조 검증 통과). CSV/합계 CAPEX.
+  `release="DRAFT"`(미태그). (랙관리·기준정보에서 진입.)
+- `/placed` — **배치 목록**(재설계, 2-모드). *태그 매핑*: 색 태그 칩 사전 정의 → "칠할 태그" 선택
+  → 행 클릭=브러시 태깅(다중선택 일괄) → 랙별 `PUT /api/rack`(release만). *금액 조회·내보내기*:
+  태그 필터→선택→**선택 합계 금액**(미가격 제외)→**Excel CSV**(클라이언트 Blob). 금액=placement
+  `unit_cost`. `GET /api/layout?path=` + 랙별 `GET /api/rack`.
 - `/summary` — **투자 리포트**: 오퍼링/리전/존/랙타입 그룹 집계 + 릴리즈 필터
   (`/api/overview?release=`).
 - `/manage` — **기준정보**: 조직 계층(오퍼링·리전·존·랙타입) 골격만. 상단 카운트 스트립 +

@@ -98,6 +98,40 @@ def test_clone_rack_copies_placements_and_commits(gitws):
     assert r.json()["path"].endswith("R09.yaml")
 
 
+def test_move_rack_reclassifies_and_commits(gitws):
+    client, root = _client(gitws)
+    before = _count(root)
+    r = client.post("/api/rack/move", json={"source_path": RACKFILE, "rack_type": "compute"})
+    assert r.status_code == 200, r.text
+    assert _count(root) == before + 1
+    # the rack left its old rack-type and now lives under the new one, contents intact
+    assert not (root / RACKFILE).exists()
+    dst = RACKFILE.replace("rack-types/data/", "rack-types/compute/")
+    assert (root / dst).exists()
+    pl = load_racks(root / dst).racks[0].design.placements
+    assert [p.device for p in pl] == ["dell-poweredge-test1"]
+    assert r.json()["path"].endswith("rack-types/compute/racks/R02.yaml")
+
+
+def test_move_rack_conflict_409(gitws):
+    client, root = _client(gitws)
+    # seed an existing R02 under the target rack-type so the move collides
+    dst = root / RACKFILE.replace("rack-types/data/", "rack-types/compute/")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text("rack_model: { slug: acme-rack42 }\nplacements: []\n")
+    before = _count(root)
+    r = client.post("/api/rack/move", json={"source_path": RACKFILE, "rack_type": "compute"})
+    assert r.status_code == 409
+    assert (root / RACKFILE).exists()                                # source untouched
+    assert _count(root) == before
+
+
+def test_move_rack_rejects_unsafe_type(gitws):
+    client, _ = _client(gitws)
+    r = client.post("/api/rack/move", json={"source_path": RACKFILE, "rack_type": "../evil"})
+    assert r.status_code == 422
+
+
 def test_clone_rack_conflict_409(gitws):
     client, root = _client(gitws)
     before = _count(root)

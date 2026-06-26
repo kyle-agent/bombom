@@ -45,6 +45,7 @@ from ..scaffold import (
     clone_rack,
     clone_racks,
     clone_subtree,
+    move_rack,
     scaffold_offering,
     scaffold_rack,
     scaffold_rack_type,
@@ -142,6 +143,18 @@ class CloneRackBulkBody(BaseModel):
         if len(set(out)) != len(out):
             raise ValueError("duplicate rack ids")
         return out
+
+
+class MoveRackBody(BaseModel):
+    """Reclassify a rack: relocate its YAML to a different rack-type under the same zone."""
+
+    source_path: str          # offerings/.../rack-types/<old>/racks/<rack>.yaml
+    rack_type: str            # target rack-type id (compute / gpu / storage / network / …)
+
+    @field_validator("rack_type")
+    @classmethod
+    def _check_rt(cls, v: str) -> str:
+        return _safe_id(v, "rack_type")
 
 
 class CloneSubtreeBody(BaseModel):
@@ -374,6 +387,31 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
         sha = add_commit(dsts, msg, cwd=base)
         rels = [d.resolve().relative_to(base.resolve()).as_posix() for d in dsts]
         return {"ok": True, "commit": sha, "paths": rels, "count": len(dsts)}
+
+    @app.post("/api/rack/move")
+    def move_rack_ep(body: MoveRackBody, message: str = ""):
+        base = Path(root)
+        src = _resolve_rack_write(root, body.source_path)
+        if not src.is_file():
+            raise HTTPException(404, "source rack not found")
+        try:
+            dst = move_rack(src, body.rack_type)
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+        # The relocated rack must validate exactly like any other rack would.
+        loaded = next(iter(load_racks(dst).racks), None)
+        errors = [] if loaded is None else [
+            i for i in validate_rack(loaded, ws.catalog) if i.level == "error"]
+        if loaded is None or errors:
+            move_rack(dst, src.parent.parent.name)   # roll back to the original rack-type
+            raise HTTPException(400, {"issues": [vars(i) for i in errors] or "move failed to load"})
+        msg = (message or f"reclassify rack {src.stem} -> {body.rack_type}").replace(
+            "\n", " ").strip()[:500]
+        sha = add_commit([src, dst], msg, cwd=base)   # stages old-path deletion + new-path add
+        rel = dst.resolve().relative_to(base.resolve()).as_posix()
+        return {"ok": True, "commit": sha, "path": rel, "rack_type": body.rack_type}
 
     @app.post("/api/hierarchy/clone")
     def clone_subtree_ep(body: CloneSubtreeBody, message: str = ""):

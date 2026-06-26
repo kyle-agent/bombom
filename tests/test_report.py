@@ -172,7 +172,7 @@ def test_placed_csv_all_and_per_release(ws_root):
 
 
 def test_placed_page_served(ws_root):
-    # /placed = 배치 목록·릴리즈 태깅 screen
+    # /placed = 배치 목록 screen (tag-mapping + cost/export modes)
     client = _client(ws_root)
     r = client.get("/placed")
-    assert r.status_code == 200 and "릴리즈 태깅" in r.text
+    assert r.status_code == 200 and "배치 목록" in r.text and "태그 매핑" in r.text

@@ -69,6 +69,35 @@ def clone_rack(src: Path, dst_rack: str) -> Path:
     return dst
 
 
+def move_rack(src: Path, new_rack_type: str) -> Path:
+    """Relocate one rack file to a different rack-type **under the same zone** (reclassify).
+
+    `src` is `.../zones/<zone>/rack-types/<old>/racks/<id>.yaml`; the rack keeps its id and
+    contents but its parent rack-type changes, so it lands in `<new>` group. The target
+    rack-type dir is scaffolded (with a `rack-type.yaml` marker) if it doesn't exist yet.
+    Returns the new path. Raises FileExistsError if the target already holds that rack id."""
+    src = Path(src)
+    if not src.is_file():
+        raise FileNotFoundError(f"move source must be a rack file: {src}")
+    if not new_rack_type or "/" in new_rack_type or "\\" in new_rack_type or ".." in new_rack_type:
+        raise ValueError(f"unsafe rack_type id: {new_rack_type!r}")
+    racktypes_dir = src.parent.parent.parent          # .../rack-types/<old>/racks/<id>.yaml → rack-types
+    if racktypes_dir.name != "rack-types":
+        raise ValueError(f"unexpected rack path layout: {src}")
+    new_rt_dir = racktypes_dir / new_rack_type
+    if src.parent.parent == new_rt_dir:               # already this rack-type — no-op
+        return src
+    (new_rt_dir / "racks").mkdir(parents=True, exist_ok=True)
+    marker = new_rt_dir / "rack-type.yaml"
+    if not marker.exists():
+        marker.write_text(yaml.safe_dump({"name": new_rack_type}, allow_unicode=True, sort_keys=False))
+    dst = new_rt_dir / "racks" / src.name
+    if dst.exists():
+        raise FileExistsError(f"already exists: {dst}")
+    shutil.move(str(src), str(dst))
+    return dst
+
+
 def clone_racks(src: Path, dst_racks: list[str]) -> list[Path]:
     """Clone one rack into several new ids at once (lay one rack out, stamp N more like it).
 

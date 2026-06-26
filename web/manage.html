@@ -4,76 +4,91 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>bombom — 기준정보 관리</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
   :root{
-    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e7ebf0;--line2:#e2e8f0;
     --accent:#2563eb;--accent2:#0ea5e9;--ok:#16a34a;--warn:#d97706;--new:#f59e0b;--bad:#dc2626;
-    --barbg:#f1f5f9;
+    font-family:"Pretendard",system-ui,-apple-system,sans-serif;
   }
   *{box-sizing:border-box}
-  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
-  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  header .logo{font-weight:700;color:#fff}
-  header .crumb{color:#94a3b8}
-  header .links{margin-left:auto;display:flex;gap:8px}
-  header .links a{color:#cbd5e1;text-decoration:none;border:1px solid #334155;border-radius:8px;padding:3px 10px;font-size:12px}
-  header .links a:hover{background:#1e293b;color:#fff}
-  .wrap{padding:14px;display:flex;flex-direction:column;gap:14px;max-width:1100px;margin:0 auto}
-  .intro{color:var(--muted);font-size:13px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  body{margin:0;font:13px/1.45 "Pretendard",system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f4f6f9;-webkit-font-smoothing:antialiased}
+  /* ── canonical chrome ── */
+  header.top{display:flex;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid #e7ebf0;background:#fff;position:sticky;top:0;z-index:7;flex-wrap:wrap}
+  header.top .logo{font-weight:800;font-size:17px;color:#2563eb;letter-spacing:-.2px}
+  header.top .crumb{color:#64748b;font-size:13px}
+  header.top nav{margin-left:auto;display:flex;gap:2px;align-items:center}
+  header.top nav a{color:#475569;text-decoration:none;font-size:13px;padding:6px 11px;border-radius:7px}
+  header.top nav a:hover{background:#f1f5f9}
+  header.top nav a.on{color:#2563eb;background:#eff6ff;font-weight:700}
+  /* ── shimmer skeleton ── */
+  @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+  .sk{background:#e9edf2;background-image:linear-gradient(90deg,#e9edf2 0,#f3f6fa 200px,#e9edf2 400px);background-size:800px 100%;animation:shimmer 1.2s linear infinite;border-radius:8px}
+  /* ── layout ── */
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 22px 60px;display:flex;flex-direction:column;gap:14px}
+  .intro{color:var(--muted);font-size:13px;margin:0}
   /* error banner */
   .banner{display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:13px}
   .banner.show{display:block}
-  /* toolbar at top of page */
-  .pagebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  /* page bar (오퍼링 목록) */
+  .pagebar{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .pagebar h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
   .pagebar .spacer{flex:1}
   /* add controls */
-  .addbtn{border:1px dashed var(--accent);background:#eff6ff;color:var(--accent);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer}
+  .addbtn{border:1px dashed var(--accent);background:#eff6ff;color:var(--accent);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
   .addbtn:hover{background:#dbeafe}
-  .addform{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:8px 10px;background:#f8fafc;border:1px solid var(--line);border-radius:8px}
+  .addbtn.sm{padding:3px 9px;font-size:11px;border-radius:7px}
+  .addform{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:8px 10px;background:#f8fafc;border:1px solid var(--line2);border-radius:8px}
   .addform.show{display:flex}
-  .addform input{border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px}
+  .addform input{border:1px solid var(--line2);border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit}
   .addform input.id{width:170px}
   .addform input.nm{width:200px}
-  .addform button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer}
+  .addform button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit}
   .addform button:hover{filter:brightness(1.06)}
   .addform .err{color:var(--bad);font-size:12px}
   /* delete link (subtle) */
-  .delbtn{border:none;background:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1}
+  .delbtn{border:none;background:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1;font-family:inherit}
   .delbtn:hover{color:var(--bad);background:#fef2f2}
   /* clone link (subtle, teal accent) */
-  .clonebtn{border:none;background:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1}
+  .clonebtn{border:none;background:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1;font-family:inherit}
   .clonebtn:hover{color:#0d9488;background:#f0fdfa}
+  /* promoted zone actions */
+  .zact{display:inline-flex;align-items:center;gap:4px;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;text-decoration:none;line-height:1}
+  .zact.dark{background:#0f172a;color:#fff;border:1px solid #0f172a}
+  .zact.dark:hover{background:#1e293b}
+  .zact.outline{background:#fff;border:1px solid #cbd5e1;color:#334155}
+  .zact.outline:hover{background:#f8fafc;border-color:#94a3b8}
   /* node titles + ids */
   .nodename{font-weight:700}
   .nodeid{color:var(--muted);font-size:11px;margin-left:6px;font-variant-numeric:tabular-nums}
   /* offering card */
-  .offering{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .offering{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
   .offering > .head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .offering > .head .nodename{font-size:15px}
   /* nested levels via border-left indent */
   .region{margin:10px 0 0 4px;padding:8px 0 4px 14px;border-left:3px solid #bfdbfe}
   .zone{margin:8px 0 0 4px;padding:6px 0 2px 14px;border-left:3px solid #bbf7d0}
   .level-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:#f8fafc}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;background:#f8fafc}
   /* rack-type chips */
   .rtlist{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px;padding-left:14px}
-  .rtchip{display:flex;flex-direction:column;gap:1px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:6px 12px;min-width:120px}
+  .rtchip{display:flex;flex-direction:column;gap:1px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:6px 12px;min-width:130px}
   .rtchip .rtname{font-weight:600;font-size:12px}
   .rtchip .rtmeta{font-size:11px;color:var(--muted)}
   .rt-empty{color:#94a3b8;font-size:12px;padding-left:14px}
   /* stats strip */
   .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-  .stats .s{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .stats .s{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
   .stats .s .n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
   .stats .s .l{color:var(--muted);font-size:11px;margin-top:4px}
+  /* blue info callout */
   .note-split{display:flex;gap:8px;align-items:flex-start;background:#eff6ff;border:1px solid #dbeafe;color:#1e40af;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.5}
   .note-split a{color:#1d4ed8;font-weight:700;text-decoration:none}
   .note-split a:hover{text-decoration:underline}
   @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
   /* empty state */
-  .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:13px}
+  .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
   /* toast */
   #toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
   #toast .t{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.25);animation:tin .2s ease}
@@ -82,21 +97,18 @@
   @keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   @media(max-width:720px){ .addform input.id,.addform input.nm{width:100%} }
 </style>
-<style id="cxbar">
-header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
-header .logo,header .ab-logo{color:#2563eb!important}
-header .crumb{color:#64748b!important}
-header nav a,header .topnav a,header .links a{color:#475569!important;background:transparent!important;border:1px solid transparent!important;font-weight:500!important;border-radius:7px!important;padding:5px 9px!important;text-decoration:none!important}
-header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5f9!important;color:#0f172a!important}
-header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
-</style>
-<script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
 </head>
 <body>
-<header>
-  <span class="logo">bombom</span>
-  <span class="crumb">— 기준정보 관리</span>
-  <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a></nav>
+<header class="top">
+  <span class="logo">bombom</span><span class="crumb">— 기준정보</span>
+  <nav>
+    <a href="/">메인</a>
+    <a href="/candidates">후보풀</a>
+    <a href="/placed">배치 목록</a>
+    <a href="/summary">투자 리포트</a>
+    <a href="/manage" class="on">기준정보</a>
+    <a href="/edit">랙관리</a>
+  </nav>
 </header>
 
 <div class="wrap">
@@ -108,24 +120,21 @@ header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!import
 
   <div class="note-split">
     <span>ℹ️</span>
-    <span>여기서는 <b>조직 계층(오퍼링·리전·존·랙타입)</b>만 정의합니다.
-      각 랙타입 안에 실제 <b>랙</b>을 추가·복제하고 모델을 정하는 일은
+    <span>여기서는 <b>조직 계층만 정의합니다.</b> 실제 랙 추가·모델 지정은
       <a href="/edit">랙관리</a>에서, 장비 배치는 <a href="/place">배치 화면</a>에서 진행합니다.</span>
   </div>
 
   <!-- top-level add offering -->
-  <div class="card">
-    <div class="pagebar">
-      <h3>오퍼링 목록</h3>
-      <span class="spacer"></span>
-      <button type="button" class="addbtn" data-toggle="add-offering">+ 오퍼링</button>
-    </div>
-    <div class="addform" id="add-offering">
-      <input type="text" class="id" placeholder="오퍼링 id (영문/숫자/.-_)" data-field="offering">
-      <input type="text" class="nm" placeholder="표시 이름 (선택)" data-field="name">
-      <button type="button">추가</button>
-      <span class="err"></span>
-    </div>
+  <div class="pagebar">
+    <h3>오퍼링 목록</h3>
+    <span class="spacer"></span>
+    <button type="button" class="addbtn" data-toggle="add-offering">＋ 오퍼링</button>
+  </div>
+  <div class="addform" id="add-offering">
+    <input type="text" class="id" placeholder="오퍼링 id (영문/숫자/.-_)" data-field="offering">
+    <input type="text" class="nm" placeholder="표시 이름 (선택)" data-field="name">
+    <button type="button">추가</button>
+    <span class="err"></span>
   </div>
 
   <!-- tree -->
@@ -203,7 +212,6 @@ function rackTypeChip(rt, zCtx){
     + '<span class="rtmeta">' + esc(rt.rack_type) + ' · 랙 ' + cnt
     +   ' ' + cloneControl('rack_type', rtCtx, nm)
     +   ' ' + delControl('rack_type', rtCtx, nm)
-    +   (cnt ? ' ' + layoutLink(rtCtx) + ' ' + drawioLink(rtCtx) : '')
     + '</span>'
     + '</div>';
 }
@@ -217,16 +225,16 @@ function nodePath(ctx){
   return p;
 }
 
-// download-this-scope-as-draw.io link: every rack beneath ctx on one editable canvas
-function drawioLink(ctx){
+// download-this-scope-as-draw.io button: every rack beneath ctx on one editable canvas
+function drawioButton(ctx){
   const url = '/api/rack/elevation.drawio?path=' + encodeURIComponent(nodePath(ctx)) + '&download=1';
-  return '<a class="clonebtn" href="' + url + '" title="이 범위의 랙 실장도를 draw.io(.drawio)로 내려받기">⬇ draw.io</a>';
+  return '<a class="zact outline" href="' + url + '" title="이 범위의 랙 실장도를 draw.io(.drawio)로 내려받기">⬇ draw.io</a>';
 }
 
 // open-this-scope-in the interactive rack-layout view (zoom/pan/click-detail)
-function layoutLink(ctx){
+function layoutButton(ctx){
   const url = '/place?path=' + encodeURIComponent(nodePath(ctx));
-  return '<a class="clonebtn" href="' + url + '" title="이 범위의 랙 배치 화면(보기/편집)">🗺 배치 화면</a>';
+  return '<a class="zact dark" href="' + url + '" title="이 범위의 랙 배치 화면(보기/편집)">🗺 배치 화면</a>';
 }
 
 function nameAndId(name, id){
@@ -242,7 +250,7 @@ function addControl(level, label, ctx){
     return 'data-' + k + '="' + esc(ctx[k]) + '"';
   }).join(' ');
   const idHint = level === 'rack_type' ? 'Rack-Type id (영문/숫자/.-_)' : (label + ' id (영문/숫자/.-_)');
-  return '<button type="button" class="addbtn" data-add="' + level + '" ' + attrs + '>+ ' + esc(label) + '</button>'
+  return '<button type="button" class="addbtn sm" data-add="' + level + '" ' + attrs + '>+ ' + esc(label) + '</button>'
     + '<div class="addform" data-form="' + level + '" ' + attrs + '>'
     +   '<input type="text" class="id" placeholder="' + esc(idHint) + '" data-field="id">'
     +   '<input type="text" class="nm" placeholder="표시 이름 (선택)" data-field="name">'
@@ -293,11 +301,19 @@ function renderStats(){
   }).join('');
 }
 
+// shimmer skeleton shown while GET /api/hierarchy is in flight
+function renderSkeleton(){
+  document.getElementById('stats').innerHTML =
+    [0,0,0,0,0].map(function(){ return '<div class="s"><div class="sk" style="height:22px;width:40px"></div><div class="sk" style="height:11px;width:48px;margin-top:8px"></div></div>'; }).join('');
+  document.getElementById('tree').innerHTML =
+    '<div class="sk" style="height:180px"></div><div class="sk" style="height:130px;margin-top:14px"></div>';
+}
+
 function renderTree(){
   renderStats();
   const tree = document.getElementById('tree');
   if(!HIER.length){
-    tree.innerHTML = '<div class="card empty">등록된 오퍼링이 없습니다. 위의 “+ 오퍼링”으로 첫 오퍼링을 추가하세요.</div>';
+    tree.innerHTML = '<div class="empty">등록된 오퍼링이 없습니다. 위의 “＋ 오퍼링”으로 첫 오퍼링을 추가하세요.</div>';
     return;
   }
   tree.innerHTML = HIER.map(function(off){
@@ -329,9 +345,9 @@ function renderTree(){
         html += '<div class="zone"><div class="level-head"><span class="tag">존</span>'
               + nameAndId(z.name, z.zone)
               + addControl('rack_type', 'Rack-Type', zCtx)
+              + ' ' + layoutButton(zCtx) + ' ' + drawioButton(zCtx)
               + cloneControl('zone', zCtx, z.name || z.zone)
-              + delControl('zone', zCtx, z.name || z.zone)
-              + ((z.rack_types || []).length ? ' ' + layoutLink(zCtx) + ' ' + drawioLink(zCtx) : '') + '</div>';
+              + delControl('zone', zCtx, z.name || z.zone) + '</div>';
 
         const rts = z.rack_types || [];
         if(rts.length){
@@ -548,6 +564,7 @@ async function submitOfferingForm(form){
 
 // ── load ─────────────────────────────────────────────────────────────
 (function load(){
+  renderSkeleton();
   fetch('/api/hierarchy')
     .then(function(res){
       if(!res.ok) throw new Error('HTTP ' + res.status);
