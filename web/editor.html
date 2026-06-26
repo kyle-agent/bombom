@@ -1,209 +1,79 @@
 <!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
+<html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>bombom — 랙관리</title>
 <style>
-  :root{
-    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
-    --accent:#2563eb;--accent2:#0ea5e9;--ok:#16a34a;--warn:#d97706;--new:#f59e0b;--bad:#dc2626;
-    --server:#2563eb;--network:#16a34a;--storage:#9333ea;--other:#64748b;
-    --t-control:#f59e0b;--t-data:#2563eb;--t-storage:#9333ea;--t-network:#16a34a;--rackbg:#f1f5f9;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
-  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px}
-  header .logo{font-weight:700;color:#fff}
-  header .topnav{display:flex;gap:6px;margin-left:14px}
-  header .topnav a{color:#cbd5e1;text-decoration:none;font-size:13px;padding:3px 8px;border-radius:6px}
-  header .topnav a:hover{background:rgba(255,255,255,.14);color:#fff}
-  header .crumb{color:#94a3b8}
-  header .relchip{background:#1e293b;border:1px solid #334155;color:#fde68a;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600}
-  header .rackchip{background:#1e293b;border:1px solid #334155;color:#cbd5e1;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
-  header .rackchip .dot{width:8px;height:8px;border-radius:50%}
-  header .confirmbtn{margin-left:auto;background:#1e293b;border:1px solid #334155;color:#86efac;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;cursor:pointer}
-  header .confirmbtn:hover{background:#334155;color:#bbf7d0}
-  header .clonebtn{background:#1e293b;border:1px solid #334155;color:#bae6fd;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;cursor:pointer}
-  header .clonebtn:hover{background:#334155;color:#e0f2fe}
-  header .clonebtn:disabled{opacity:.45;cursor:not-allowed}
-  header .state{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
-  header .state.saved{background:var(--ok)}
-  header .state.dirty{background:var(--new)}
-  header .state.none{background:#475569}
-  .app{display:grid;grid-template-columns:230px 330px 1fr 360px;gap:10px;padding:10px;height:calc(100vh - 44px)}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0}
-  .card h3{margin:0;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line)}
-  .card .body{padding:10px 12px;overflow:auto;min-height:0}
-  /* tree */
-  .tree{font-size:13px}
-  .tree .node{padding:3px 6px;border-radius:6px;white-space:nowrap;display:flex;align-items:center;gap:6px}
-  .tree .node.rack{cursor:pointer}
-  .tree .node.rack:hover{background:#f1f5f9}
-  .tree .node.sel{background:#dbeafe;color:#1e40af;font-weight:600}
-  .tree .lvl1{padding-left:6px}.tree .lvl2{padding-left:18px}.tree .lvl3{padding-left:30px}.tree .lvl4{padding-left:42px}.tree .lvl5{padding-left:56px}
-  .rolebadge{font-size:10px;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px;letter-spacing:.3px}
-  /* ① model-select column (catalog + shortlist) */
-  .mselect{display:flex;flex-direction:column;min-height:0;height:100%}
-  .msec{display:flex;flex-direction:column;min-height:0}
-  .msec.cat{flex:1 1 55%}
-  .msec.short{flex:1 1 45%;border-top:1px solid var(--line)}
-  .msec .sechead{padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px}
-  .msec .sechead .cnt{margin-left:auto;background:#eff6ff;color:var(--accent);border-radius:10px;font-size:10px;padding:0 7px;font-weight:700}
-  .msec .secbody{padding:8px 12px;overflow:auto;min-height:0;flex:1}
-  .search{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;background:#fff;display:flex;align-items:center;gap:6px}
-  .chip .dot{width:8px;height:8px;border-radius:50%}
-  .chip.active{border-color:var(--accent);background:#eff6ff;color:#1e40af;font-weight:600}
-  .model{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:7px;background:#fff;position:relative}
-  .model.drag{cursor:grab}
-  .model.drag:hover{border-color:var(--accent2);box-shadow:0 1px 4px rgba(2,132,199,.12)}
-  .model .top{display:flex;align-items:center;gap:7px}
-  .model .cat{width:9px;height:9px;border-radius:2px;flex:none}
-  .model .name{font-weight:600}
-  .model .mfr{color:var(--muted);font-size:11px}
-  .model .meta{color:var(--muted);font-size:11px;margin-top:3px}
-  .model .add{margin-left:auto;border:none;background:#eff6ff;color:var(--accent);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px}
-  .model .added{margin-left:auto;color:var(--ok);font-size:12px;font-weight:600}
-  .model .rm{margin-left:auto;cursor:pointer;color:var(--muted);font-size:14px}
-  .model .rm:hover{color:var(--bad)}
-  .hint{color:var(--muted);font-size:11px;margin:0 0 8px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
-  /* ① model-select tabs (카탈로그 | 담은 목록) */
-  .mtabs{display:flex;border-bottom:1px solid var(--line);flex:none}
-  .mtab{flex:1;border:none;background:#f8fafc;padding:9px 8px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:6px}
-  .mtab:hover{color:var(--accent)}
-  .mtab.active{color:var(--accent);background:#fff;border-bottom-color:var(--accent)}
-  .mtab .tabcnt{background:#eff6ff;color:var(--accent);border-radius:10px;font-size:10px;padding:0 7px;font-weight:700}
-  .mpane{display:flex;flex-direction:column;min-height:0;flex:1}
-  /* add-rack button + modal */
-  .addbtn{margin-left:auto;border:1px solid var(--accent);background:#eff6ff;color:var(--accent);border-radius:7px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;text-transform:none;letter-spacing:0}
-  .addbtn:hover{background:#dbeafe}
-  .modal-back{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:50}
-  .modal-back.show{display:flex}
-  .modal{background:#fff;border-radius:12px;width:440px;max-width:92vw;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3)}
-  .modal h4{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px}
-  .modal .mbody{padding:14px 16px}
-  .modal .mfoot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
-  .modal .mfoot button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer}
-  .modal .mfoot button.primary{background:var(--ok);color:#fff;border-color:var(--ok);font-weight:600}
-  .modal .mfoot button.primary:disabled{opacity:.5;cursor:not-allowed}
-  .modal label.fl{display:block;font-size:12px;font-weight:600;margin:10px 0 3px}
-  .modal select,.modal input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:13px}
-  .modal .pickbox{border:1px solid var(--line);border-radius:8px;max-height:160px;overflow:auto;margin-top:6px}
-  .modal .pickrow{padding:7px 9px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12px}
-  .modal .pickrow:last-child{border-bottom:none}
-  .modal .pickrow:hover{background:#f1f5f9}
-  .modal .pickrow.sel{background:#dbeafe}
-  .modal .chosen{margin-top:6px;font-size:12px;color:var(--ok);font-weight:600}
-  /* center / elevation (client-side) */
-  .toolbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-  .toolbar label{font-size:12px;display:flex;align-items:center;gap:5px}
-  .toolbar select{border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
-  .toolbar button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:12px}
-  .toolbar button.primary{background:var(--ok);color:#fff;border-color:var(--ok);font-weight:600}
-  .toolbar button.primary:disabled{opacity:.5;cursor:not-allowed}
-  .rackhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-  .rackmeta{color:var(--muted);font-size:11px}
-  .zoombar{position:sticky;top:-10px;z-index:5;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-bottom:10px;flex-wrap:wrap}
-  .zoombar button{border:1px solid var(--line);background:#fff;border-radius:6px;min-width:26px;height:24px;cursor:pointer;font-size:12px;line-height:1;padding:0 6px}
-  .zoombar input[type=range]{width:130px}
-  .zoombar .zval{min-width:42px;text-align:right;color:var(--muted)}
-  .zoombar .zlbl{color:var(--muted);font-size:11px}
-  .rack{background:var(--rackbg);border:2px solid #cbd5e1;border-radius:8px;padding:6px 6px 6px 28px;position:relative}
-  .uslot{border-bottom:1px dashed #e2e8f0;position:relative}
-  .uslot .uno{position:absolute;left:-24px;width:20px;text-align:right;color:#94a3b8;font-size:9px}
-  .uslot.drophover{background:#dbeafe;outline:1px solid var(--accent)}
-  .uslot.dropbad{background:#fee2e2;outline:1px solid var(--bad)}
-  .dev{position:absolute;left:28px;right:6px;border-radius:4px;color:#fff;font-size:11px;display:flex;align-items:center;padding:0 7px;overflow:hidden;cursor:grab}
-  .dev.existing{box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
-  .dev.relsel{box-shadow:inset 0 0 0 2px var(--new)}
-  .dev.sel{outline:2px dashed var(--ink);outline-offset:-2px}
-  .dev.fade{opacity:.25;filter:grayscale(1)}
-  .dev .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .dev small{opacity:.85;margin-left:6px;white-space:nowrap}
-  .dev .relpill{background:#fff;color:var(--new);border-radius:3px;font-size:9px;font-weight:700;padding:0 4px;margin-left:6px;white-space:nowrap}
-  .dev .rm{margin-left:auto;cursor:pointer;opacity:.75;font-size:13px;padding-left:6px}.dev .rm:hover{opacity:1}
-  .zerorow{margin-top:10px}
-  .zerorow .ztag{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 8px;margin:0 6px 6px 0;font-size:11px;cursor:pointer}
-  .zerorow .ztag.sel{outline:2px dashed var(--ink);outline-offset:-2px}
-  .zerorow .ztag .dot{width:9px;height:9px;border-radius:2px}
-  .zerorow .ztag .rm{color:var(--muted);cursor:pointer}
-  .legend{font-size:11px;color:var(--muted);line-height:1.7;margin-top:12px}
-  .legend .cat{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
-  .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:12px}
-  /* right: meta form + device list + BOM */
-  .field{margin-bottom:10px}
-  .field label{display:block;font-size:12px;font-weight:600;margin-bottom:3px}
-  .field .req{color:var(--bad);font-weight:700;font-size:10px;margin-left:5px;background:#fee2e2;border-radius:4px;padding:0 5px}
-  .field .scope{color:var(--muted);font-weight:400;font-size:10px;margin-left:6px}
-  .field input[type=text],.field input[type=number],.field input[type=date],.field select{
-    width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px}
-  .field.missing input,.field.missing select{border-color:var(--bad);background:#fff5f5}
-  .field .err{color:var(--bad);font-size:11px;margin-top:3px;display:none}
-  .field.missing .err{display:block}
-  .field.bool label{display:flex;align-items:center;gap:6px;font-weight:600}
-  .field.bool input{width:auto}
-  .metahead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-  .metabox{border-bottom:1px solid var(--line);padding:10px 12px;background:#fffdf5}
-  .catdot{display:inline-block;width:9px;height:9px;border-radius:2px}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;white-space:nowrap}
-  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  tr.selrow td{background:#fffbeb}
-  tr.devrow{cursor:pointer}tr.devrow:hover td{background:#f1f5f9}
-  .relpill2{font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;color:#fff;white-space:nowrap}
-  .relpill2.sel{background:var(--new)}.relpill2.other{background:#94a3b8}
-  .miss{color:var(--bad);font-weight:700}
-  .bom{border-top:1px solid var(--line);padding:12px;background:#f8fafc;border-radius:0 0 10px 10px}
-  .bom .row{display:flex;justify-content:space-between;margin:3px 0}
-  .bom .total{font-size:17px;font-weight:700}
-  .bom .release{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin:8px 0 4px}
-  .bom .release .lbl{color:var(--warn);font-weight:700}
-  .bom .release .amt{font-size:18px;font-weight:800;color:var(--warn)}
-  .bom .sub{color:var(--muted);font-size:11px}
-  .note{font-size:11px;color:var(--muted);margin-top:6px}
-  /* issues + toast */
-  .issues{margin:0 12px 10px;border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:8px 10px;font-size:12px}
-  .issues .ihead{color:var(--bad);font-weight:700;margin-bottom:4px}
-  .issues .iitem{margin:2px 0}
-  .issues .lvl{font-weight:700;text-transform:uppercase;font-size:10px;margin-right:6px}
-  .issues .lvl.error{color:var(--bad)}.issues .lvl.warning{color:var(--warn)}.issues .lvl.info{color:var(--muted)}
-  .banner{margin:10px;border-radius:8px;padding:8px 10px;font-size:12px}
-  .banner.err{border:1px solid #fecaca;background:#fef2f2;color:var(--bad)}
-  /* confirm (확정) modal */
-  .modal.wide{width:600px}
-  .cbadge{display:inline-block;font-size:10px;font-weight:700;border-radius:5px;padding:1px 7px;text-transform:uppercase;letter-spacing:.3px;color:#fff}
-  .cbadge.draft{background:var(--muted)}
-  .cbadge.in-review{background:var(--new)}
-  .cbadge.confirmed{background:var(--ok)}
-  .kindpick{display:flex;gap:8px;margin-top:4px}
-  .kindbtn{flex:1;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)}
-  .kindbtn.active{border-color:var(--accent);background:#eff6ff;color:#1e40af}
-  .gateres{margin-top:12px}
-  .gateres .ghead{font-size:12px;font-weight:700;margin-bottom:6px}
-  .gateres .ghead.bad{color:var(--bad)}
-  .gateres .ghead.ok{color:var(--ok)}
-  .erow{border:1px solid #fecaca;background:#fef2f2;border-radius:7px;padding:7px 9px;margin:4px 0;font-size:12px;color:var(--bad);cursor:pointer}
-  .erow:hover{background:#fee2e2}
-  .erow .ep{color:var(--muted);font-size:11px}
-  .wrow{border:1px solid #fde68a;background:#fffbeb;border-radius:7px;padding:7px 9px;margin:4px 0;font-size:12px;color:var(--warn)}
-  .crow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;cursor:pointer;background:#fff}
-  .crow:hover{background:#f8fafc}
-  .crow .cid{font-weight:700}
-  .crow .ckind{color:var(--muted);font-size:11px}
-  .crow .ctag{margin-left:auto;font-size:11px;color:var(--muted)}
-  .crow .capvbtn{border:1px solid var(--ok);background:#f0fdf4;color:var(--ok);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer}
-  .crow .capvbtn:hover{background:#dcfce7}
-  .cdetail{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px;background:#f8fafc}
-  .cdetail .dh{font-size:12px;font-weight:700;margin:0 0 6px}
-  .csum{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:8px;font-weight:700}
-  .csum .amt{color:var(--warn);font-size:15px}
-  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
-    padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:99}
-  #toast.show{opacity:1}
-  #toast.err{background:var(--bad)}
+ :root{--accent:#2563eb;--accent2:#0ea5e9;--ink:#0f172a;--muted:#64748b;--line:#e7ebf0;
+   --ok:#16a34a;--bad:#dc2626;font-family:system-ui,-apple-system,'Noto Sans KR',sans-serif}
+ *{box-sizing:border-box}
+ body{margin:0;background:#f4f6f9;color:var(--ink)}
+ header{display:flex;gap:10px;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+ .logo{font-weight:800;font-size:17px;color:var(--accent);letter-spacing:-.2px}
+ .crumb{color:var(--muted);font-size:13px}
+ nav{margin-left:auto;display:flex;gap:2px}
+ nav a{color:#475569;text-decoration:none;font-size:13px;padding:6px 10px;border-radius:7px}
+ nav a:hover{background:#f1f5f9}
+ .app{display:grid;grid-template-columns:280px 1fr;gap:0;height:calc(100vh - 53px)}
+ /* sidebar tree */
+ .side{background:#fff;border-right:1px solid var(--line);overflow:auto;padding:10px 0}
+ .side .sh{padding:6px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+ .tnode{user-select:none}
+ .toff{padding:7px 14px;font-weight:700;font-size:13px;color:#0f172a}
+ .treg{padding:4px 14px 4px 26px;font-weight:600;font-size:12px;color:#334155}
+ .tzone{padding:3px 14px 3px 38px;font-size:12px;color:#475569;display:flex;align-items:center;gap:6px}
+ .tzone .zdot{width:7px;height:7px;border-radius:50%;background:#cbd5e1}
+ .trt{margin:1px 14px 1px 50px;padding:4px 10px;font-size:12px;border-radius:7px;cursor:pointer;
+   display:flex;align-items:center;gap:7px;color:#475569}
+ .trt:hover{background:#f1f5f9;color:#0f172a}
+ .trt.on{background:#eff6ff;color:var(--accent);font-weight:700}
+ .trt .cnt{margin-left:auto;font-size:11px;color:#94a3b8;font-variant-numeric:tabular-nums}
+ .trt.on .cnt{color:var(--accent)}
+ .empty{color:#94a3b8;font-size:12px;padding:10px 16px}
+ /* main */
+ .main{overflow:auto;padding:18px 22px 60px}
+ .mbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+ .mbar .path{font-size:15px;font-weight:700}
+ .mbar .path .sep{color:#cbd5e1;margin:0 5px;font-weight:400}
+ .mbar .sub{color:var(--muted);font-size:12px}
+ .mbar .spacer{flex:1}
+ .addbtn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+ .addbtn:hover{filter:brightness(1.06)}
+ .addbtn:disabled{opacity:.4;cursor:not-allowed}
+ .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+ .rack{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 1px 3px rgba(15,23,42,.04);display:flex;flex-direction:column;gap:8px}
+ .rack .rh{display:flex;align-items:baseline;gap:8px}
+ .rack .rh b{font-size:15px}
+ .rack .rh .rt{font-size:11px;color:#fff;background:var(--accent);border-radius:5px;padding:1px 6px;font-weight:600}
+ .rack .rh .rt.gpu{background:#7c3aed}.rack .rh .rt.storage{background:#9333ea}.rack .rh .rt.network{background:#16a34a}
+ .rack .meta{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+ .rack .elev{display:flex;justify-content:center;background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:6px;min-height:90px;overflow:hidden}
+ .rack .elev svg{max-height:220px;height:auto;width:auto}
+ .rack .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+ .rack .btns a,.rack .btns button{flex:1;text-align:center;border:1px solid var(--line);background:#fff;color:#334155;
+   border-radius:8px;padding:6px 4px;font-size:11.5px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+ .rack .btns a.place{border-color:#bfdbfe;background:#eff6ff;color:var(--accent)}
+ .rack .btns a:hover,.rack .btns button:hover{filter:brightness(.98);border-color:#cbd5e1}
+ .hint{color:#94a3b8;font-size:13px;text-align:center;padding:60px 20px}
+ /* modal */
+ .back{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:30}
+ .back.show{display:flex}
+ .modal{background:#fff;border-radius:16px;padding:20px 22px;width:min(440px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+ .modal h3{margin:0 0 14px;font-size:16px}
+ .modal label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+ .modal input,.modal select{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px}
+ .mres{max-height:170px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+ .mres .it{padding:7px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f4f6f9;display:flex;justify-content:space-between;gap:8px}
+ .mres .it:hover{background:#f1f5f9}.mres .it.on{background:#eff6ff;color:var(--accent);font-weight:600}
+ .mres .it .u{color:#94a3b8;font-variant-numeric:tabular-nums}
+ .modal .act{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+ .modal .act button{border-radius:9px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff;color:#334155}
+ .modal .act button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+ .modal .err{color:var(--bad);font-size:12px;margin-top:8px;min-height:16px}
+ /* toast */
+ #toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
+ #toast .t{background:#0f172a;color:#e2e8f0;border-radius:9px;padding:9px 15px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+ #toast .t.ok{background:#166534}#toast .t.bad{background:#7f1d1d}
+ @media(max-width:780px){.app{grid-template-columns:1fr;height:auto}.side{height:auto;max-height:260px}}
 </style>
 <style id="cxbar">
 header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
@@ -217,1168 +87,194 @@ header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!import
 </head>
 <body>
 <header>
-  <span class="logo">bombom — 랙관리</span>
-  <span class="relchip" id="relchip">● 현재 작업 릴리즈 —</span>
-  <span class="rackchip" id="rackchip" style="display:none"></span>
-  <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/diff">변경비교</a><a href="/health">검증</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a><a href="/search">검색</a></nav>
-  <button class="confirmbtn" id="confirmBtn" title="확정 워크플로우">✅ 확정</button>
-  <button class="clonebtn" id="cloneBtn" title="이 랙을 같은 Rack-Type에 복제" disabled>⧉ 복제</button>
-  <button class="clonebtn" id="cloneBulkBtn" title="이 랙을 여러 ID로 한 번에 복제" disabled>⧉ 여러 개</button>
-  <span class="state none" id="statechip">랙 미선택</span>
+ <span class="logo">bombom</span><span class="crumb">— 랙관리</span>
+ <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a></nav>
 </header>
-
 <div class="app">
-  <!-- LEFT: hierarchy -->
-  <div class="card">
-    <h3 style="display:flex;align-items:center;gap:8px">Offering / Region / Zone · Rack-Type · Rack
-      <button class="addbtn" id="addRackBtn">＋ 랙 추가</button></h3>
-    <div class="body tree" id="tree"><div class="empty">트리 로딩 중…</div></div>
-  </div>
-
-  <!-- ① MODEL SELECT: tabs — 카탈로그(담기) | 담은 목록(배치 드래그 소스) -->
-  <div class="card">
-    <h3>① 모델 선택</h3>
-    <div class="mselect">
-      <div class="mtabs">
-        <button class="mtab active" data-tab="cat">카탈로그</button>
-        <button class="mtab" data-tab="short">담은 목록 <span class="tabcnt" id="shortCnt">0</span></button>
-      </div>
-      <div class="mpane" id="paneCat">
-        <div class="secbody">
-          <div class="hint">후보를 보고 <b>＋담기</b>. 배치는 <b>담은 목록</b> 탭에서만 드래그합니다.</div>
-          <div class="chips" id="catChips"></div>
-          <input class="search" id="catSearch" placeholder="제조사/모델 검색…">
-          <div id="catResults"><div class="empty">불러오는 중…</div></div>
-        </div>
-      </div>
-      <div class="mpane" id="paneShort" style="display:none">
-        <div class="secbody" id="shortBody">
-          <div class="empty">카탈로그 탭에서 ＋담기 하세요.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CENTER: elevation editor -->
-  <div class="card">
-    <div class="toolbar">
-      <label>릴리즈 <select id="relSel"></select></label>
-      <label><input type="checkbox" id="relOnly"> 선택 릴리즈만</label>
-      <button class="primary" id="saveBtn" disabled>💾 저장 (PUT + git commit)</button>
-      <button id="reloadBtn" title="서버에서 다시 불러오기">↺ 되돌리기</button>
-    </div>
-    <div id="issuesBox"></div>
-    <h3 style="border-top:1px solid var(--line)">랙 실장도</h3>
-    <div class="body" id="mainview"><div class="empty">좌측에서 랙을 선택하세요.</div></div>
-  </div>
-
-  <!-- RIGHT: meta form + device list + BOM -->
-  <div class="card">
-    <h3>장비 / BOM + 메타</h3>
-    <div id="metaBox"></div>
-    <div class="body" style="flex:1">
-      <table id="devtable"><thead><tr id="devhead"></tr></thead><tbody id="devrows"></tbody></table>
-      <div id="devempty" class="empty">배치된 장비가 없습니다.</div>
-    </div>
-    <div class="bom">
-      <div class="row sub"><span id="ulbl">장착 U</span><span id="uused">—</span></div>
-      <div class="row"><span class="total">총 CAPEX</span><span class="total" id="capex">—</span></div>
-      <div class="release">
-        <div class="row"><span class="lbl" id="rellbl">선택 릴리즈 추가분 CAPEX</span><span class="amt" id="capexrel">—</span></div>
-        <div class="row sub"><span>해당 릴리즈 항목</span><span id="reldetail">0건</span></div>
-      </div>
-      <div class="note">※ 가격은 pricing/ 오버레이(원화). 합계는 클라이언트에서 placements + custom_line_items 기준으로 계산.</div>
-    </div>
-  </div>
+ <aside class="side">
+   <div class="sh">랙타입 선택</div>
+   <div id="tree"><div class="empty">불러오는 중…</div></div>
+ </aside>
+ <section class="main">
+   <div class="mbar">
+     <div>
+       <div class="path" id="crumb">랙타입을 선택하세요</div>
+       <div class="sub" id="subcrumb">좌측에서 오퍼링 · 리전 · 존 아래 랙타입을 고르면 해당 랙 목록이 보입니다.</div>
+     </div>
+     <span class="spacer"></span>
+     <button class="addbtn" id="addBtn" disabled>＋ 랙 추가</button>
+   </div>
+   <div id="racks"><div class="hint">랙타입을 선택하면 그 안의 랙들을 관리할 수 있습니다.<br>서버·장비 배치는 각 랙의 <b>🗺 배치</b>에서 진행합니다.</div></div>
+ </section>
 </div>
 
-<!-- ＋ Add Rack modal -->
-<div class="modal-back" id="addRackModal">
-  <div class="modal">
-    <h4>＋ 랙 추가</h4>
-    <div class="mbody">
-      <label class="fl">Region</label>
-      <select id="arRegion"></select>
-      <label class="fl">Zone</label>
-      <select id="arZone"></select>
-      <label class="fl">Rack-Type (용도)</label>
-      <input type="text" id="arRackType" list="arRackTypeList" placeholder="data / control / storage / network">
-      <datalist id="arRackTypeList"></datalist>
-      <label class="fl">Rack 이름</label>
-      <input type="text" id="arRackName" placeholder="예: R09">
-      <label class="fl">Rack Model (카탈로그에서 선택)</label>
-      <input type="text" id="arModelSearch" placeholder="랙 모델 검색 (제조사/모델)…">
-      <div class="pickbox" id="arModelResults"><div class="empty" style="padding:10px">검색어를 입력하세요.</div></div>
-      <div class="chosen" id="arModelChosen" style="display:none"></div>
-      <div id="arErr" class="banner err" style="display:none;margin:12px 0 0"></div>
-    </div>
-    <div class="mfoot">
-      <button id="arCancel">취소</button>
-      <button class="primary" id="arCreate" disabled>생성 (git commit)</button>
-    </div>
-  </div>
-</div>
-
-<!-- ✅ 확정 (Confirm) modal -->
-<div class="modal-back" id="confirmModal">
-  <div class="modal wide">
-    <h4>✅ 확정</h4>
-    <div class="mtabs">
-      <button class="mtab active" data-ctab="request">확정 요청</button>
-      <button class="mtab" data-ctab="status">확정 현황</button>
-    </div>
-    <!-- Tab A — 확정 요청 -->
-    <div class="mbody" id="ctabRequest">
-      <label class="fl">대상 종류</label>
-      <div class="kindpick">
-        <button type="button" class="kindbtn active" id="ckRelease" data-kind="release">릴리즈</button>
-        <button type="button" class="kindbtn" id="ckBuild" data-kind="build">신규 빌드</button>
-      </div>
-      <label class="fl">확정 ID</label>
-      <input type="text" id="cReqId" placeholder="예: R26.07">
-      <div id="cBuildPath" style="display:none">
-        <label class="fl">대상 경로</label>
-        <input type="text" id="cReqPath" placeholder="예: offerings/cloud-b">
-      </div>
-      <label class="fl">요청자(선택)</label>
-      <input type="text" id="cReqRequester" placeholder="이름 (선택)">
-      <div class="mfoot" style="padding:12px 0 0">
-        <button class="primary" id="cReqBtn">게이트 검사 &amp; 확정 요청</button>
-      </div>
-      <div class="gateres" id="cReqResult"></div>
-    </div>
-    <!-- Tab B — 확정 현황 -->
-    <div class="mbody" id="ctabStatus" style="display:none">
-      <div id="cList"><div class="empty">불러오는 중…</div></div>
-      <div id="cListDetail"></div>
-    </div>
-    <div class="mfoot">
-      <button id="cClose">닫기</button>
-    </div>
-  </div>
+<!-- add rack modal -->
+<div class="back" id="addModal">
+ <div class="modal">
+   <h3>랙 추가</h3>
+   <div class="sub" id="amTarget" style="font-size:12px;color:#64748b"></div>
+   <label>랙 ID (영문/숫자/.-_)</label>
+   <input id="amRack" placeholder="예: R04, web-01">
+   <label>랙 모델 (Rack-Type 인클로저)</label>
+   <input id="amModelQ" placeholder="제조사/모델 검색… 예: vertiv, apc">
+   <div class="mres" id="amModelRes"></div>
+   <div class="err" id="amErr"></div>
+   <div class="act"><button id="amCancel">취소</button><button class="primary" id="amSave">추가</button></div>
+ </div>
 </div>
 
 <div id="toast"></div>
-
 <script>
 "use strict";
-const CUR = '₩';
-const CATCOLOR = {server:'#2563eb', network:'#16a34a', storage:'#9333ea', other:'#64748b'};
-const CATLABEL = {server:'Server', network:'Network', storage:'Storage', other:'Other'};
-const ROLECOLOR = {control:'#f59e0b', data:'#2563eb', storage:'#9333ea', network:'#16a34a'};
-const RACK_U_DEFAULT = 42;
-const BASE_USLOT = 16;
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m,k){const w=document.getElementById('toast');const e=document.createElement('div');e.className='t'+(k?' '+k:'');e.textContent=m;w.appendChild(e);setTimeout(()=>e.remove(),3000);}
+async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function postJSON(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});let d=null;try{d=await r.json();}catch(e){}if(!r.ok){const det=(d&&d.detail)?(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail)):'HTTP '+r.status;const e=new Error(det);e.status=r.status;throw e;}return d;}
 
-// ── state ──────────────────────────────────────────────────────────────
-let TREE = null;            // /api/tree response
-let TREE_PATH = 'offerings/cloud-a';
-let rackFiles = {};         // rackId -> RACK_FILE path (from tree)
-let RACK = null;            // server rack object (last loaded/saved)
-let FIELDS = [];            // meta field defs
-let RELEASES = [];
-let currentRelease = '';
-let selectedRelease = '';
-let selectedRackId = null;
-let selectedRackFile = null;
-// working copy
-let work = null;            // {rack_model, role, placements:[...], custom_line_items:[...]}
-let selIdx = -1;            // selected placement index in work.placements
-let dirty = false;
-let zoom = 1;
-let releaseOnly = false;
-let catCategory = '';
-// client-side shortlist of candidate models (the ONLY drag source to the rack)
-let shortlist = [];         // [{slug,name,category,u_height,manufacturer,unit_cost}]
+const RTC={compute:'',gpu:'gpu',storage:'storage',network:'network'};
+let HIER=[], SEL=null;   // SEL = {key,offering,region,zone,rack_type,zlabel}
 
-// ── helpers ────────────────────────────────────────────────────────────
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function won(n){ return CUR + Math.round(n||0).toLocaleString('ko-KR'); }
-function wonShort(n){ n=n||0;
-  if(n>=1e8) return CUR + (n/1e8).toLocaleString('ko-KR',{maximumFractionDigits:1}) + '억';
-  if(n>=1e4) return CUR + Math.round(n/1e4).toLocaleString('ko-KR') + '만';
-  return CUR + Math.round(n).toLocaleString('ko-KR'); }
-function uslotPx(){ return Math.max(7, Math.round(BASE_USLOT*zoom)); }
-function rackUHeight(){ return (work && work.rack_model && work.rack_model.u_height) || (RACK && RACK.rack_model && RACK.rack_model.u_height) || RACK_U_DEFAULT; }
-function toast(msg, isErr){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.className='show'+(isErr?' err':'');
-  setTimeout(()=>{ t.className=isErr?'err':''; }, 3200);
-}
-function setDirty(d){ dirty=d; renderState(); }
-function renderState(){
-  const s=document.getElementById('statechip'), btn=document.getElementById('saveBtn');
-  const clone=document.getElementById('cloneBtn');
-  const cloneBulk=document.getElementById('cloneBulkBtn');
-  if(!selectedRackId){ s.className='state none'; s.textContent='랙 미선택'; btn.disabled=true; if(clone) clone.disabled=true; if(cloneBulk) cloneBulk.disabled=true; return; }
-  if(clone) clone.disabled=false;
-  if(cloneBulk) cloneBulk.disabled=false;
-  btn.disabled=!dirty;
-  if(dirty){ s.className='state dirty'; s.textContent='● 변경됨 (미저장)'; }
-  else { s.className='state saved'; s.textContent='저장됨'; }
-}
+function nodePath(s){return `offerings/${s.offering}/regions/${s.region}/zones/${s.zone}/rack-types/${s.rack_type}`;}
 
-// ── fetch wrapper ──────────────────────────────────────────────────────
-async function apiGet(url){
-  const r = await fetch(url, {headers:{'Accept':'application/json'}});
-  if(!r.ok){ let d; try{ d=await r.json(); }catch(e){} const m=(d&&d.detail&&d.detail.message)||('HTTP '+r.status); const err=new Error(m); err.status=r.status; err.data=d; throw err; }
-  return r.json();
-}
-
-// ── tree ───────────────────────────────────────────────────────────────
-async function loadTree(){
-  const el=document.getElementById('tree');
-  try{
-    TREE = await apiGet('/api/tree?path='+encodeURIComponent(TREE_PATH));
-    renderTree();
-  }catch(e){
-    el.innerHTML = '<div class="banner err">트리를 불러오지 못했습니다: '+esc(e.message)+'<br>API 서버가 떠 있는지 확인하세요.</div>';
-  }
-}
-function rackFilePath(region, zone, rt, rackId){
-  return `${TREE_PATH}/regions/${region}/zones/${zone}/rack-types/${rt}/racks/${rackId}.yaml`;
-}
+// ── sidebar tree ────────────────────────────────────────────────────────
 function renderTree(){
-  const t=TREE; const el=document.getElementById('tree');
-  if(!t){ el.innerHTML='<div class="empty">트리 데이터 없음</div>'; return; }
-  rackFiles={};
-  let h=`<div class="node lvl1">📦 ${esc(t.name||t.offering||'')}</div>`;
-  (t.regions||[]).forEach(rg=>{
-    h+=`<div class="node lvl2">🌏 ${esc(rg.region)}</div>`;
-    (rg.zones||[]).forEach(z=>{
-      h+=`<div class="node lvl3">🏢 ${esc(z.zone)}</div>`;
-      (z.rack_types||[]).forEach(grp=>{
-        h+=`<div class="node lvl4" title="Rack-Type">▦ ${esc(grp.rack_type)}</div>`;
-        (grp.racks||[]).forEach(rid=>{
-          const file=rackFilePath(rg.region, z.zone, grp.rack_type, rid);
-          rackFiles[rid]=file;
-          const sel=rid===selectedRackId;
-          h+=`<div class="node rack lvl5 ${sel?'sel':''}" data-rack="${esc(rid)}" data-file="${esc(file)}">▣ ${esc(rid)}</div>`;
-        });
-      });
-    });
-  });
-  el.innerHTML=h;
-  el.querySelectorAll('.node.rack').forEach(n=>{
-    n.addEventListener('click', ()=>{
-      if(dirty && !confirm('저장하지 않은 변경이 있습니다. 다른 랙으로 이동할까요?')) return;
-      loadRack(n.dataset.rack, n.dataset.file);
-    });
-  });
-}
-
-// ── load rack ──────────────────────────────────────────────────────────
-async function loadRack(rackId, file){
-  selectedRackId=rackId; selectedRackFile=file;
-  document.getElementById('issuesBox').innerHTML='';
-  document.getElementById('mainview').innerHTML='<div class="empty">랙 로딩 중…</div>';
-  try{
-    const data = await apiGet('/api/rack?path='+encodeURIComponent(file));
-    applyRackResponse(data);
-    selIdx=-1;
-    setDirty(false);
-    renderTree();
-    renderAll();
-  }catch(e){
-    document.getElementById('mainview').innerHTML='<div class="banner err">랙을 불러오지 못했습니다: '+esc(e.message)+'</div>';
-  }
-}
-function applyRackResponse(data){
-  RACK = data.rack;
-  FIELDS = data.fields || [];
-  RELEASES = data.releases || [];
-  currentRelease = data.current_release || (RELEASES[0]||'');
-  if(!selectedRelease || !RELEASES.includes(selectedRelease)) selectedRelease = currentRelease;
-  // build working copy from server placements
-  work = {
-    rack_model: Object.assign({}, RACK.rack_model),
-    role: RACK.role,
-    placements: (RACK.placements||[]).map(p=>({
-      device:p.device, name:p.name, category:p.category||'other',
-      position:p.position, u:p.u||1, release:p.release||currentRelease,
-      qty:p.qty||1, unit_cost:p.unit_cost||0,
-      meta:Object.assign({}, p.meta||{}), meta_missing:(p.meta_missing||[]).slice()
-    })),
-    custom_line_items:(RACK.custom_line_items||[]).map(c=>Object.assign({}, c))
-  };
-}
-
-// ── clone rack (POST /api/rack/clone — byte-for-byte copy in same Rack-Type) ──
-async function cloneRack(){
-  if(!selectedRackId || !selectedRackFile){ toast('먼저 랙을 선택하세요', true); return; }
-  const id=prompt('새 랙 ID (같은 Rack-Type에 복제됩니다)', '');
-  if(id===null) return;
-  const rackId=id.trim();
-  if(!rackId) return;
-  const btn=document.getElementById('cloneBtn'); if(btn) btn.disabled=true;
-  try{
-    const r=await fetch('/api/rack/clone', {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({source_path:selectedRackFile, rack:rackId})});
-    const data=await r.json().catch(()=>null);
-    if(!r.ok){
-      let msg=(data&&data.detail)||('HTTP '+r.status);
-      if(r.status===409) msg='이미 있는 랙 ID 입니다';
-      else if(r.status===422) msg='ID 형식이 올바르지 않습니다';
-      toast(String(msg), true);
-      return;
+  const box=document.getElementById('tree');
+  if(!HIER.length){box.innerHTML='<div class="empty">등록된 오퍼링이 없습니다. 기준정보에서 추가하세요.</div>';return;}
+  let h='';
+  for(const o of HIER){
+    h+=`<div class="tnode"><div class="toff">${esc(o.name||o.offering)}</div>`;
+    for(const rg of (o.regions||[])){
+      h+=`<div class="treg">${esc(rg.name||rg.region)}</div>`;
+      const zs=rg.zones||[];
+      if(!zs.length){h+=`<div class="empty" style="padding:2px 14px 2px 38px">존 없음</div>`;}
+      for(const z of zs){
+        h+=`<div class="tzone"><span class="zdot"></span>${esc(z.name||z.zone)}</div>`;
+        const rts=z.rack_types||[];
+        if(!rts.length){h+=`<div class="empty" style="padding:2px 14px 2px 50px">랙타입 없음</div>`;}
+        for(const rt of rts){
+          const cnt=(rt.racks||[]).length;
+          const key=`${o.offering}|${rg.region}|${z.zone}|${rt.rack_type}`;
+          const on=SEL&&SEL.key===key?' on':'';
+          h+=`<div class="trt${on}" data-key="${esc(key)}" data-off="${esc(o.offering)}" data-reg="${esc(rg.region)}" data-zone="${esc(z.zone)}" data-rt="${esc(rt.rack_type)}" data-zlabel="${esc(z.name||z.zone)}">`
+            +`▦ ${esc(rt.name&&rt.name!==rt.rack_type?rt.name:rt.rack_type)}<span class="cnt">${cnt}</span></div>`;
+        }
+      }
     }
-    toast('복제됨 → '+(data.rack||rackId));
-    // open the new rack the way the editor opens any rack (tree refresh → loadRack)
-    await loadTree();
-    loadRack(data.rack||rackId, data.path);
-  }catch(e){
-    toast('복제 실패: '+e.message, true);
-  }finally{
-    renderState();   // restore the clone button's enabled/disabled state
-  }
-}
-
-// ── bulk clone rack (POST /api/rack/clone-bulk — many byte-for-byte copies, one commit) ──
-function expandRackNames(spec){
-  const out = [];
-  spec.split(',').map(s => s.trim()).filter(Boolean).forEach(tok => {
-    const m = tok.match(/^(.*?)(\d+)\.\.(?:.*?)(\d+)$/);   // prefix + start..end (numeric)
-    if(m){
-      const pre = m[1], aStr = m[2];
-      let lo = parseInt(m[2],10), hi = parseInt(m[3],10);
-      const pad = aStr.length;
-      if(hi < lo){ const t=lo; lo=hi; hi=t; }
-      for(let i=lo;i<=hi && (i-lo)<100; i++) out.push(pre + String(i).padStart(pad,'0'));
-    } else { out.push(tok); }
-  });
-  return out;
-}
-async function cloneRackBulk(){
-  if(!selectedRackId || !selectedRackFile){ toast('먼저 랙을 선택하세요', true); return; }
-  const spec=prompt('복제할 랙 ID들 — 쉼표 구분, 범위는 .. 사용\n예: R10,R11  또는  web-02..web-05', '');
-  if(spec===null) return;
-  if(!spec.trim()) return;
-  const list=expandRackNames(spec);
-  if(!list.length){ toast('복제할 ID가 없습니다', true); return; }
-  if(list.length>100){ toast('한 번에 100개까지만 가능합니다', true); return; }
-  const btn=document.getElementById('cloneBulkBtn'); if(btn) btn.disabled=true;
-  try{
-    const r=await fetch('/api/rack/clone-bulk', {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({source_path:selectedRackFile, racks:list})});
-    const data=await r.json().catch(()=>null);
-    if(!r.ok){
-      let msg=(data&&data.detail)||('HTTP '+r.status);
-      if(r.status===409) msg='이미 있는 ID가 있어 전체 취소됨';
-      else if(r.status===422) msg='ID 형식/중복 오류';
-      toast(String(msg), true);
-      return;
-    }
-    toast(data.count + '개 복제됨');
-    // several racks were made — refresh the tree, don't navigate to one specific rack
-    await loadTree();
-  }catch(e){
-    toast('복제 실패: '+e.message, true);
-  }finally{
-    renderState();   // restore the clone buttons' enabled/disabled state
-  }
-}
-
-// ── meta field scoping ──────────────────────────────────────────────────
-function fieldInScope(f, p){
-  if((f.applies_to||'placement')!=='placement') return false;
-  const sc=f.scope||'all';
-  if(sc==='all') return true;
-  if(sc.startsWith('category:')) return p.category===sc.slice(9);
-  if(sc.startsWith('role:')) return (work.role||'')===sc.slice(5);
-  return false;
-}
-function scopedFields(p){ return FIELDS.filter(f=>fieldInScope(f,p)); }
-function missingRequired(p){
-  return scopedFields(p).filter(f=>{
-    if(!f.required) return false;
-    const v=p.meta?p.meta[f.key]:undefined;
-    return v===undefined || v===null || v==='' ;
-  }).map(f=>f.key);
-}
-
-// ── occupancy / placement (client-side, front face) ─────────────────────
-function occupied(exceptIdx){
-  const s=new Set();
-  work.placements.forEach((p,i)=>{ if(i===exceptIdx) return; if(!p.u || p.u===0) return;
-    for(let u=p.position; u<p.position+p.u; u++) s.add(u); });
-  return s;
-}
-function canPlace(position, u, exceptIdx){
-  const U=rackUHeight();
-  if(position<1) return 'U 범위 미만';
-  if(position+u-1>U) return '랙 상단 초과';
-  const occ=occupied(exceptIdx);
-  for(let x=position; x<position+u; x++) if(occ.has(x)) return `U ${x} 점유됨`;
-  return null;
-}
-function placeNew(item, position){
-  const u=item.u_height|0;
-  const p={ device:item.slug, name:item.name||item.model||item.slug,
-    category:item.category||'other', position:position, u:u,
-    release:selectedRelease, qty:1, unit_cost:item.unit_cost||0,
-    meta:{}, meta_missing:[] };
-  if(u===0){ p.position=0; work.placements.push(p); selIdx=work.placements.length-1; afterMutate(); return; }
-  const err=canPlace(position, u, -1);
-  if(err){ toast(err, true); return; }
-  work.placements.push(p); selIdx=work.placements.length-1; afterMutate();
-}
-function relocate(idx, position){
-  const p=work.placements[idx]; if(!p) return;
-  if(!p.u || p.u===0) return;
-  const err=canPlace(position, p.u, idx);
-  if(err){ toast(err, true); return; }
-  p.position=position; selIdx=idx; afterMutate();
-}
-function removeP(idx){ work.placements.splice(idx,1); if(selIdx===idx)selIdx=-1; else if(selIdx>idx)selIdx--; afterMutate(); }
-function afterMutate(){ setDirty(true); renderMain(); renderMeta(); renderBom(); }
-
-// ── center: client-side elevation ───────────────────────────────────────
-function blocksOf(){ const out=[]; work.placements.forEach((p,idx)=>{ if(!p.u||p.u===0) return; out.push({p,idx}); }); return out; }
-function zeroU(){ const out=[]; work.placements.forEach((p,idx)=>{ if(!p.u||p.u===0) out.push({p,idx}); }); return out; }
-
-function renderMain(){
-  const mv=document.getElementById('mainview');
-  if(!selectedRackId || !work){ mv.innerHTML='<div class="empty">좌측에서 랙을 선택하세요.</div>'; return; }
-  const role=work.role||'other', color=ROLECOLOR[role]||CATCOLOR.other;
-  const slug=(work.rack_model&&work.rack_model.slug)||'—';
-  const U=uslotPx(), RU=rackUHeight();
-  mv.innerHTML='';
-
-  // zoom bar
-  const bar=document.createElement('div'); bar.className='zoombar';
-  bar.innerHTML=`<span class="zlbl">확대/축소</span>
-    <button id="zminus">−</button>
-    <input type="range" id="zrange" min="0.6" max="3" step="0.1" value="${zoom}">
-    <button id="zplus">＋</button><span class="zval">${Math.round(zoom*100)}%</span>
-    <button id="z100">100%</button>`;
-  mv.appendChild(bar);
-
-  // header (role badge + id + Rack Model slug + change button)
-  const head=document.createElement('div'); head.className='rackhead';
-  head.innerHTML=`<span class="rolebadge" style="background:${color}">${esc(role.toUpperCase())}</span>
-    <b>${esc(selectedRackId)}</b>
-    <span class="rackmeta">· Rack Model: ${esc(slug)} (${RU}U) · Front</span>
-    <button id="rackModelBtn" style="border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 9px;cursor:pointer;font-size:11px">Rack Model 변경</button>`;
-  mv.appendChild(head);
-
-  // Rack Model picker (hidden by default)
-  const rmPanel=document.createElement('div'); rmPanel.id='rackModelPanel';
-  rmPanel.style.cssText='display:none;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;background:#f8fafc';
-  rmPanel.innerHTML=`<div class="rackmeta" style="margin-bottom:6px">Rack Model 고르기</div>
-    <input class="search" id="rmSearch" placeholder="랙 모델 검색 (제조사/모델)…" style="margin-bottom:6px">
-    <div id="rmResults"><div class="empty" style="padding:10px">검색어를 입력하세요.</div></div>`;
-  mv.appendChild(rmPanel);
-
-  // rack
-  const rack=document.createElement('div'); rack.className='rack';
-  rack.style.width=Math.round(200*zoom+60)+'px'; rack.style.height=(RU*U+12)+'px';
-  for(let u=RU; u>=1; u--){
-    const slot=document.createElement('div'); slot.className='uslot'; slot.style.height=U+'px'; slot.dataset.u=u;
-    slot.innerHTML=`<span class="uno">${u}</span>`;
-    slot.addEventListener('dragover', e=>{ e.preventDefault(); markHover(slot, +slot.dataset.u); });
-    slot.addEventListener('dragleave', ()=>{ slot.classList.remove('drophover','dropbad'); });
-    slot.addEventListener('drop', e=>{ e.preventDefault(); slot.classList.remove('drophover','dropbad'); onDrop(e, +slot.dataset.u); });
-    rack.appendChild(slot);
-  }
-  blocksOf().forEach(({p,idx})=>{
-    const isRel=p.release===selectedRelease, isSel=idx===selIdx;
-    const missing=missingRequired(p).length>0;
-    const blk=document.createElement('div'); blk.draggable=true;
-    blk.className='dev '+(isRel?'relsel':'existing')+(isSel?' sel':'')+(releaseOnly&&!isRel?' fade':'');
-    blk.style.backgroundColor=CATCOLOR[p.category]||CATCOLOR.other;
-    blk.style.bottom=((p.position-1)*U+6)+'px'; blk.style.height=(p.u*U-2)+'px';
-    blk.style.fontSize=Math.max(9, Math.round(11*Math.min(zoom,1.4)))+'px';
-    blk.addEventListener('dragstart', e=>e.dataTransfer.setData('text/plain','move:'+idx));
-    blk.addEventListener('click', ()=>selectPlacement(idx));
-    blk.innerHTML=`<span class="nm">${esc(p.name)}</span><small>U${p.position}</small>`
-      +(missing?`<span title="필수 메타 누락" style="margin-left:6px">⚠️</span>`:'')
-      +`<span class="relpill" style="${isRel?'':'background:#e2e8f0;color:#64748b'}">${esc(p.release)}</span>`
-      +`<span class="rm" title="제거" data-rm="${idx}">✕</span>`;
-    rack.appendChild(blk);
-  });
-  // scroll/wheel over the rack = zoom the elevation (keep the pointed U roughly in place)
-  rack.addEventListener('wheel', e=>{
-    e.preventDefault();
-    const before = uslotPx();
-    const uAt = (rack.scrollHeight - (e.offsetY)) / before;   // U index under the cursor
-    setZoom(zoom + (e.deltaY < 0 ? 0.1 : -0.1));
-    const after = uslotPx();
-    mv.scrollTop += (after - before) * uAt;                   // re-center on that U
-  }, {passive:false});
-  mv.appendChild(rack);
-
-  // 0U items row (PDUs etc.)
-  const z=zeroU();
-  if(z.length){
-    const zr=document.createElement('div'); zr.className='zerorow';
-    zr.innerHTML='<div class="rackmeta" style="margin-bottom:4px">0U 항목 (PDU 등)</div>'
-      + z.map(({p,idx})=>`<span class="ztag ${idx===selIdx?'sel':''}" data-sel="${idx}">
-          <span class="dot" style="background:${CATCOLOR[p.category]||CATCOLOR.other}"></span>${esc(p.name)}
-          <span class="relpill" style="color:var(--muted)">${esc(p.release)}</span>
-          <span class="rm" data-rm="${idx}">✕</span></span>`).join('');
-    mv.appendChild(zr);
-  }
-
-  // legend
-  const lg=document.createElement('div'); lg.className='legend';
-  lg.innerHTML=`<b style="color:var(--ink)">카테고리</b>
-    <div><span class="cat" style="background:#2563eb"></span>Server
-      <span class="cat" style="background:#16a34a;margin-left:10px"></span>Network
-      <span class="cat" style="background:#9333ea;margin-left:10px"></span>Storage
-      <span class="cat" style="background:#64748b;margin-left:10px"></span>Other</div>
-    <div style="margin-top:6px">• <b>담은 목록</b> 항목을 U로 드래그=배치 (릴리즈 <b>${esc(selectedRelease)}</b>)<br>
-      • 블록 드래그=이동 · 클릭=선택/메타편집 · ✕=제거 · 노란 테두리=선택 릴리즈</div>`;
-  mv.appendChild(lg);
-
-  // wire
-  document.getElementById('zminus').addEventListener('click', ()=>setZoom(zoom-0.2));
-  document.getElementById('zplus').addEventListener('click', ()=>setZoom(zoom+0.2));
-  document.getElementById('z100').addEventListener('click', ()=>setZoom(1));
-  document.getElementById('zrange').addEventListener('input', e=>setZoom(+e.target.value));
-  mv.querySelectorAll('[data-rm]').forEach(el=>el.addEventListener('click', e=>{ e.stopPropagation(); removeP(+el.dataset.rm); }));
-  mv.querySelectorAll('[data-sel]').forEach(el=>el.addEventListener('click', e=>{ e.stopPropagation(); selectPlacement(+el.dataset.sel); }));
-  // Rack Model picker wiring
-  document.getElementById('rackModelBtn').addEventListener('click', ()=>{
-    const panel=document.getElementById('rackModelPanel');
-    const show = panel.style.display==='none';
-    panel.style.display = show?'block':'none';
-    if(show){ const s=document.getElementById('rmSearch'); s.focus(); }
-  });
-  document.getElementById('rmSearch').addEventListener('input', scheduleRackModelSearch);
-}
-let rmTimer=null;
-function scheduleRackModelSearch(){ clearTimeout(rmTimer); rmTimer=setTimeout(doRackModelSearch, 250); }
-async function doRackModelSearch(){
-  const inp=document.getElementById('rmSearch'); if(!inp) return;
-  const q=inp.value.trim();
-  const box=document.getElementById('rmResults');
-  if(!q){ box.innerHTML='<div class="empty" style="padding:10px">검색어를 입력하세요.</div>'; return; }
-  box.innerHTML='<div class="empty" style="padding:10px">검색 중…</div>';
-  try{
-    const res=await apiGet('/api/catalog/search?kind=rack&q='+encodeURIComponent(q));
-    if(!res.length){ box.innerHTML='<div class="empty" style="padding:10px">검색 결과 없음.</div>'; return; }
-    box.innerHTML=res.map((r,i)=>`<div class="model" data-rmpick="${i}" style="cursor:pointer">
-        <div class="top"><span class="name">${esc(r.model||r.slug)}</span></div>
-        <div class="mfr">${esc(r.manufacturer||'')}</div>
-        <div class="meta">${(r.u_height|0)}U · ${esc(r.slug)}</div></div>`).join('');
-    box.querySelectorAll('[data-rmpick]').forEach(el=>el.addEventListener('click', ()=>{
-      const r=res[+el.dataset.rmpick]; pickRackModel(r);
-    }));
-  }catch(e){
-    box.innerHTML='<div class="banner err">랙 모델 검색 실패: '+esc(e.message)+'</div>';
-  }
-}
-function pickRackModel(r){
-  if(!work) return;
-  work.rack_model = { slug:r.slug, u_height:r.u_height|0 };
-  document.getElementById('rackModelPanel').style.display='none';
-  setDirty(true);
-  renderAll();
-  toast('Rack Model 변경: '+(r.slug)+' ('+(r.u_height|0)+'U)');
-}
-function markHover(slot, u){
-  // crude: highlight; bad if first cell occupied
-  const occ=occupied(-1);
-  slot.classList.toggle('dropbad', occ.has(u));
-  slot.classList.toggle('drophover', !occ.has(u));
-}
-function setZoom(z){ zoom=Math.min(3, Math.max(0.6, Math.round(z*10)/10)); renderMain(); }
-function onDrop(e, position){
-  const data=e.dataTransfer.getData('text/plain')||'';
-  if(data.startsWith('move:')){ relocate(+data.slice(5), position); return; }
-  if(data.startsWith('short:')){
-    if(!work){ toast('먼저 랙을 선택하세요', true); return; }
-    const slug=data.slice(6);
-    const item=shortlist.find(s=>s.slug===slug);
-    if(!item){ toast('담은 목록에서 찾을 수 없음', true); return; }
-    placeNew(item, position);
-  }
-}
-function selectPlacement(idx){ selIdx=idx; renderMain(); renderMeta(); }
-
-// ── catalog search (＋담기 only — NOT draggable) ─────────────────────────
-function renderCatChips(){
-  const cats=['','server','network','storage','other'];
-  document.getElementById('catChips').innerHTML = cats.map(c=>{
-    const lbl=c===''?'전체':CATLABEL[c];
-    return `<div class="chip ${catCategory===c?'active':''}" data-cat="${c}">${c?`<span class="dot" style="background:${CATCOLOR[c]}"></span>`:''}${lbl}</div>`;
-  }).join('');
-  document.getElementById('catChips').querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click', ()=>{ catCategory=ch.dataset.cat; renderCatChips(); doCatSearch(); }));
-}
-let catTimer=null;
-function scheduleCatSearch(){ clearTimeout(catTimer); catTimer=setTimeout(doCatSearch, 250); }
-let catCache=[];   // last catalog results (for ＋담기)
-async function doCatSearch(){
-  const q=document.getElementById('catSearch').value.trim();
-  const box=document.getElementById('catResults');
-  box.innerHTML='<div class="empty">불러오는 중…</div>';
-  try{
-    let url='/api/catalog/search?kind=device&pool=1&q='+encodeURIComponent(q)+'&limit=50';   // 후보풀에서만
-    if(catCategory) url+='&category='+encodeURIComponent(catCategory);
-    const res=await apiGet(url);
-    catCache=res||[];
-    if(!res.length){ box.innerHTML='<div class="empty">후보풀이 비었습니다 — <a href="/candidates">장비 후보 선택</a> 화면에서 후보를 먼저 추가하세요.</div>'; return; }
-    box.innerHTML=res.map((r,i)=>{
-      const cat=r.category||'other';
-      const inShort=shortlist.some(s=>s.slug===r.slug);
-      const right=inShort?`<span class="added">✓ 담음</span>`:`<button class="add" data-add="${i}">＋ 담기</button>`;
-      const price=r.priced?('₩'+(r.unit_cost||0).toLocaleString('ko-KR')):'<span style="color:var(--warn)">가격 미정</span>';
-      return `<div class="model">
-        <div class="top"><span class="cat" style="background:${CATCOLOR[cat]||CATCOLOR.other}"></span><span class="name">${esc(r.model||r.slug)}</span>${right}</div>
-        <div class="mfr">${esc(r.manufacturer||'')} · ${esc(CATLABEL[cat]||cat)} · ${price}</div>
-        <div class="meta">${(r.u_height|0)===0?'0U':(r.u_height+'U')} · ${esc(r.slug)}</div></div>`;
-    }).join('');
-    box.querySelectorAll('[data-add]').forEach(el=>el.addEventListener('click', e=>{
-      e.stopPropagation(); addShort(catCache[+el.dataset.add]);
-    }));
-  }catch(e){
-    box.innerHTML='<div class="banner err">카탈로그 검색 실패: '+esc(e.message)+'</div>';
-  }
-}
-
-// ── shortlist (담은 목록 — the ONLY drag source) ─────────────────────────
-function addShort(r){
-  if(!r) return;
-  if(shortlist.some(s=>s.slug===r.slug)) return;
-  shortlist.push({ slug:r.slug, name:(r.model||r.slug), category:r.category||'other',
-    u_height:r.u_height||0, manufacturer:r.manufacturer||'', unit_cost:r.unit_cost||0 });
-  renderShortlist();
-  doCatSearch();   // refresh catalog rows so the "✓ 담음" state updates
-}
-function removeShort(slug){
-  shortlist=shortlist.filter(s=>s.slug!==slug);
-  renderShortlist();
-  doCatSearch();
-}
-function renderShortlist(){
-  document.getElementById('shortCnt').textContent=shortlist.length;
-  const box=document.getElementById('shortBody');
-  if(!shortlist.length){ box.innerHTML='<div class="empty">위에서 ＋담기 하세요.</div>'; return; }
-  box.innerHTML=`<div class="hint">담은 항목을 <b>가운데 랙의 U 슬롯으로 드래그</b>=배치 (릴리즈 ${esc(selectedRelease)}).</div>`
-    + shortlist.map(s=>`<div class="model drag" draggable="true" data-slug="${esc(s.slug)}">
-        <div class="top"><span class="cat" style="background:${CATCOLOR[s.category]||CATCOLOR.other}"></span><span class="name">${esc(s.name)}</span><span class="rm" data-rmshort="${esc(s.slug)}" title="제거">✕</span></div>
-        <div class="mfr">${esc(s.manufacturer||'')} · ${esc(CATLABEL[s.category]||s.category)}</div>
-        <div class="meta">${(s.u_height|0)===0?'0U':(s.u_height+'U')} · ${esc(s.slug)}</div></div>`).join('');
-  box.querySelectorAll('.model.drag').forEach(el=>el.addEventListener('dragstart', e=>{
-    e.dataTransfer.setData('text/plain','short:'+el.dataset.slug);
-  }));
-  box.querySelectorAll('[data-rmshort]').forEach(el=>el.addEventListener('click', e=>{
-    e.stopPropagation(); removeShort(el.dataset.rmshort);
-  }));
-}
-
-// ── meta form (shown in right column when a placement is selected) ───────
-function renderMeta(){
-  const box=document.getElementById('metaBox');
-  if(!work || selIdx<0 || !work.placements[selIdx]){ box.innerHTML=''; return; }
-  const p=work.placements[selIdx];
-  const fields=scopedFields(p);
-  const missing=missingRequired(p);
-  let h=`<div class="metabox"><div class="metahead">
-      <span class="catdot" style="background:${CATCOLOR[p.category]||CATCOLOR.other}"></span>
-      <b>${esc(p.name)}</b>
-      <span class="rackmeta">${p.u?('U'+p.position+' · '+p.u+'U'):'0U'} · ${esc(p.device)}</span>
-    </div>`;
-  h+=`<div class="field"><label>릴리즈</label><select id="mfRel">`
-     + RELEASES.map(r=>`<option ${r===p.release?'selected':''}>${esc(r)}</option>`).join('')
-     + `</select></div>`;
-  if(!fields.length){
-    h+=`<div class="hint">이 장비(${esc(CATLABEL[p.category]||p.category)}/${esc(work.role||'-')})에 적용되는 메타 필드가 없습니다.</div>`;
-  }
-  fields.forEach(f=>{
-    const v = (p.meta && (f.key in p.meta)) ? p.meta[f.key] : '';
-    const isMissing = f.required && missing.includes(f.key);
-    const scopeLbl = f.scope && f.scope!=='all' ? `<span class="scope">${esc(f.scope)}</span>` : '';
-    const reqLbl = f.required ? `<span class="req">필수</span>` : '';
-    let widget='';
-    if(f.type==='enum' || f.type==='select'){
-      const opts=(f.options||[]);
-      widget=`<select data-key="${esc(f.key)}"><option value="">— 선택 —</option>`
-        + opts.map(o=>`<option ${String(v)===String(o)?'selected':''}>${esc(o)}</option>`).join('') + `</select>`;
-    }else if(f.type==='bool' || f.type==='boolean'){
-      widget=`<label class="boolwrap"><input type="checkbox" data-key="${esc(f.key)}" ${v===true||v==='true'?'checked':''}> ${esc(f.label||f.key)}</label>`;
-    }else if(f.type==='date'){
-      widget=`<input type="date" data-key="${esc(f.key)}" value="${esc(v)}">`;
-    }else if(f.type==='int' || f.type==='integer' || f.type==='number'){
-      widget=`<input type="number" data-key="${esc(f.key)}" value="${esc(v)}">`;
-    }else{
-      widget=`<input type="text" data-key="${esc(f.key)}" value="${esc(v)}">`;
-    }
-    const cls = (f.type==='bool'||f.type==='boolean') ? 'field bool' : 'field';
-    h+=`<div class="${cls} ${isMissing?'missing':''}">
-        <label>${esc(f.label||f.key)} ${reqLbl}${scopeLbl}</label>
-        ${widget}
-        <div class="err">필수 항목입니다. 저장 전에 입력하세요.</div>
-      </div>`;
-  });
-  h+=`</div>`;
-  box.innerHTML=h;
-
-  document.getElementById('mfRel').addEventListener('change', e=>{ p.release=e.target.value; setDirty(true); renderMain(); renderBom(); });
-  box.querySelectorAll('[data-key]').forEach(el=>{
-    const ev = (el.type==='checkbox') ? 'change' : 'input';
-    el.addEventListener(ev, ()=>{
-      const key=el.getAttribute('data-key');
-      let val;
-      if(el.type==='checkbox') val=el.checked;
-      else if(el.type==='number') val = el.value===''?'':Number(el.value);
-      else val=el.value;
-      if(val===''|| val===false){ delete p.meta[key]; }
-      else p.meta[key]=val;
-      setDirty(true); renderMain(); renderMeta(); renderBom();
-    });
-  });
-}
-
-// ── device list + BOM ───────────────────────────────────────────────────
-function lineItems(){
-  if(!work) return [];
-  const out=[];
-  work.placements.forEach((p,idx)=>out.push({kind:'placement', idx, category:p.category||'other',
-    name:p.name, device:p.device, position:p.position, u:p.u, release:p.release,
-    qty:p.qty||1, unit_cost:p.unit_cost||0, meta:p.meta||{}, missing:missingRequired(p)}));
-  (work.custom_line_items||[]).forEach(c=>out.push({kind:'custom', idx:-1, category:c.category||'other',
-    name:c.name, device:null, position:null, u:0, release:c.release,
-    qty:c.qty||1, unit_cost:c.unit_cost||0, meta:{}, missing:[]}));
-  return out;
-}
-function renderBom(){
-  document.getElementById('rellbl').textContent=`선택 릴리즈(${selectedRelease}) 추가분 CAPEX`;
-  const fields=FIELDS.filter(f=>(f.applies_to||'placement')==='placement');
-  let head=`<th>Cat</th><th>Model</th><th>릴리즈</th>`;
-  fields.forEach(f=>head+=`<th>${esc(f.label||f.key)}</th>`);
-  head+=`<th class="num">수량</th><th class="num">소계(${CUR})</th>`;
-  document.getElementById('devhead').innerHTML=head;
-  const rows=document.getElementById('devrows'); rows.innerHTML='';
-  if(!work){ document.getElementById('devempty').style.display='block'; setBomVals(0,0,0,0); return; }
-
-  const items=lineItems();
-  let capex=0, usedU=0, relCapex=0, relQty=0, shown=0;
-  items.forEach(li=>{
-    const sub=(li.qty||1)*(li.unit_cost||0);
-    const isSel=li.release===selectedRelease;
-    capex+=sub; usedU+=(li.u||0)*(li.qty||1);
-    if(isSel){ relCapex+=sub; relQty+=(li.qty||1); }
-    if(releaseOnly && !isSel) return;
-    shown++;
-    let metaCells='';
-    fields.forEach(f=>{
-      if(li.kind!=='placement'){ metaCells+=`<td><span style="color:#cbd5e1">—</span></td>`; return; }
-      const inScope = li.idx>=0 && fieldInScope(f, work.placements[li.idx]);
-      if(!inScope){ metaCells+=`<td><span style="color:#cbd5e1">·</span></td>`; return; }
-      const v=li.meta[f.key];
-      if(v===undefined||v===null||v===''){
-        metaCells+= f.required ? `<td><span class="miss">필수누락</span></td>` : `<td><span style="color:#cbd5e1">—</span></td>`;
-      }else metaCells+=`<td>${esc(String(v))}</td>`;
-    });
-    const sub2 = li.kind==='custom' ? '커스텀 항목' : (li.device||'');
-    rows.insertAdjacentHTML('beforeend', `<tr class="devrow ${isSel?'selrow':''}" ${li.idx>=0?`data-idx="${li.idx}"`:''}>
-      <td><span class="catdot" style="background:${CATCOLOR[li.category]||CATCOLOR.other}"></span></td>
-      <td>${esc(li.name)}<div class="mfr" style="color:var(--muted);font-size:11px">${esc(sub2)}${li.position?` · U${esc(String(li.position))}`:''}</div></td>
-      <td><span class="relpill2 ${isSel?'sel':'other'}">${esc(li.release||'')}</span></td>
-      ${metaCells}
-      <td class="num">${li.qty||1}</td>
-      <td class="num">${won(sub)}</td></tr>`);
-  });
-  document.getElementById('devempty').style.display = shown?'none':'block';
-  rows.querySelectorAll('tr[data-idx]').forEach(tr=>tr.addEventListener('click', ()=>selectPlacement(+tr.dataset.idx)));
-  setBomVals(capex, usedU, relCapex, relQty);
-}
-function setBomVals(capex, usedU, relCapex, relQty){
-  document.getElementById('capex').textContent = capex>=1e6 ? `${won(capex)} (${wonShort(capex)})` : won(capex);
-  document.getElementById('uused').textContent = usedU + 'U / ' + rackUHeight() + 'U';
-  document.getElementById('capexrel').textContent = relCapex>=1e6 ? `${won(relCapex)} (${wonShort(relCapex)})` : won(relCapex);
-  document.getElementById('reldetail').textContent = relQty + '건';
-}
-
-// ── save ────────────────────────────────────────────────────────────────
-function validateBeforeSave(){
-  const problems=[];
-  work.placements.forEach((p,idx)=>{
-    missingRequired(p).forEach(k=>problems.push({idx, key:k, name:p.name}));
-  });
-  return problems;
-}
-async function save(){
-  if(!work || !selectedRackFile) return;
-  const problems=validateBeforeSave();
-  if(problems.length){
-    // jump to first offending placement
-    selIdx=problems[0].idx; renderMain(); renderMeta();
-    showIssues(problems.map(p=>({path:`placements[${p.idx}].meta.${p.key}`, level:'error', message:`${p.name}: 필수 메타 '${p.key}' 누락`})), '필수 메타 항목이 비어 저장할 수 없습니다');
-    toast('필수 메타 항목을 입력하세요', true);
-    return;
-  }
-  const def = 'edit '+selectedRackId;
-  const message = prompt('커밋 메시지', def) ;
-  if(message===null) return; // cancelled
-  const body={
-    rack_model:{ slug:(work.rack_model&&work.rack_model.slug)||'' },
-    placements:work.placements.map(p=>({
-      device:p.device, position:p.position, release:p.release||currentRelease, qty:p.qty||1,
-      meta:p.meta||{}
-    })),
-    custom_line_items:(work.custom_line_items||[]).map(c=>({
-      name:c.name, qty:c.qty||1, unit_cost:c.unit_cost||0, release:c.release, category:c.category||'other'
-    }))
-  };
-  const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='저장 중…';
-  document.getElementById('issuesBox').innerHTML='';
-  try{
-    const url='/api/rack?path='+encodeURIComponent(selectedRackFile)+'&message='+encodeURIComponent(message||def);
-    const r=await fetch(url, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    const data = await r.json().catch(()=>null);
-    if(r.status===400){
-      const issues=(data&&data.detail&&data.detail.issues)||[{level:'error',message:'구조 검증 실패'}];
-      showIssues(issues, '저장 거부됨 — 구조 검증 실패 (편집 내용은 유지됨)');
-      toast('저장 거부됨 (검증 실패)', true);
-      return;
-    }
-    if(!r.ok){ throw new Error((data&&data.detail&&data.detail.message)||('HTTP '+r.status)); }
-    // 200
-    const sha=(data.commit||'').slice(0,7);
-    applyRackResponse(data);
-    selIdx=-1;
-    setDirty(false);
-    renderAll();
-    if(data.issues && data.issues.length) showIssues(data.issues, '저장됨 — 경고 있음');
-    toast('저장됨 (commit '+(sha||'?')+')');
-  }catch(e){
-    showIssues([{level:'error', message:e.message}], '저장 실패 (네트워크/서버 오류)');
-    toast('저장 실패: '+e.message, true);
-  }finally{
-    btn.textContent='💾 저장 (PUT + git commit)';
-    renderState();
-  }
-}
-function showIssues(issues, title){
-  const box=document.getElementById('issuesBox');
-  if(!issues || !issues.length){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="issues"><div class="ihead">${esc(title||'문제')}</div>`
-    + issues.map(i=>`<div class="iitem"><span class="lvl ${esc(i.level||'error')}">${esc(i.level||'error')}</span>`
-        + (i.path?`<code>${esc(i.path)}</code> — `:'') + esc(i.message||'') + `</div>`).join('')
-    + `</div>`;
-}
-
-// ── release selector ────────────────────────────────────────────────────
-function renderReleaseSel(){
-  const sel=document.getElementById('relSel');
-  sel.innerHTML=RELEASES.map(r=>`<option ${r===selectedRelease?'selected':''}>${esc(r)}</option>`).join('');
-  document.getElementById('relchip').textContent='● 현재 작업 릴리즈 '+(selectedRelease||'—')
-    + (selectedRelease!==currentRelease && currentRelease ? ` (기본 ${currentRelease})` : '');
-  const rc=document.getElementById('rackchip');
-  if(selectedRackId){
-    rc.style.display='';
-    const role=(work&&work.role)||'other';
-    rc.innerHTML=`<span class="dot" style="background:${ROLECOLOR[role]||CATCOLOR.other}"></span>${esc(selectedRackId)} · ${esc((work&&work.rack_model&&work.rack_model.slug)||'')}`;
-  }else rc.style.display='none';
-}
-
-// ── ① model-select tabs ──────────────────────────────────────────────────
-function switchMTab(name){
-  document.querySelectorAll('.mtab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
-  document.getElementById('paneCat').style.display = name==='cat'?'':'none';
-  document.getElementById('paneShort').style.display = name==='short'?'':'none';
-}
-
-// ── ＋ add rack (POST /api/rack/new) ─────────────────────────────────────
-let arSelectedModel=null;
-let arTimer=null;
-function offeringId(){ return TREE_PATH.replace(/^offerings\//,'').split('/')[0]; }
-function arRegions(){ return (TREE&&TREE.regions)||[]; }
-function arFillRegions(){
-  document.getElementById('arRegion').innerHTML =
-    arRegions().map(r=>`<option value="${esc(r.region)}">${esc(r.region)}</option>`).join('');
-  arFillZones();
-}
-function arFillZones(){
-  const rg=arRegions().find(r=>r.region===document.getElementById('arRegion').value);
-  const zones=(rg&&rg.zones)||[];
-  document.getElementById('arZone').innerHTML =
-    zones.map(z=>`<option value="${esc(z.zone)}">${esc(z.zone)}</option>`).join('');
-  arFillRackTypes();
-}
-function arFillRackTypes(){
-  const rg=arRegions().find(r=>r.region===document.getElementById('arRegion').value);
-  const z=((rg&&rg.zones)||[]).find(x=>x.zone===document.getElementById('arZone').value);
-  const rts=((z&&z.rack_types)||[]).map(g=>g.rack_type);
-  document.getElementById('arRackTypeList').innerHTML = rts.map(t=>`<option value="${esc(t)}">`).join('');
-}
-function arValidate(){
-  const ok = document.getElementById('arRegion').value &&
-             document.getElementById('arZone').value &&
-             document.getElementById('arRackType').value.trim() &&
-             document.getElementById('arRackName').value.trim() &&
-             arSelectedModel;
-  document.getElementById('arCreate').disabled=!ok;
-}
-function openAddRack(){
-  if(!TREE){ toast('트리 로딩 중…', true); return; }
-  arSelectedModel=null;
-  document.getElementById('arModelSearch').value='';
-  document.getElementById('arModelResults').innerHTML='<div class="empty" style="padding:10px">검색어를 입력하세요.</div>';
-  document.getElementById('arModelChosen').style.display='none';
-  document.getElementById('arRackName').value='';
-  document.getElementById('arRackType').value='';
-  document.getElementById('arErr').style.display='none';
-  arFillRegions();
-  arValidate();
-  document.getElementById('addRackModal').classList.add('show');
-}
-function closeAddRack(){ document.getElementById('addRackModal').classList.remove('show'); }
-function arScheduleSearch(){ clearTimeout(arTimer); arTimer=setTimeout(arDoSearch, 250); }
-async function arDoSearch(){
-  const q=document.getElementById('arModelSearch').value.trim();
-  const box=document.getElementById('arModelResults');
-  if(!q){ box.innerHTML='<div class="empty" style="padding:10px">검색어를 입력하세요.</div>'; return; }
-  box.innerHTML='<div class="empty" style="padding:10px">검색 중…</div>';
-  try{
-    const res=await apiGet('/api/catalog/search?kind=rack&q='+encodeURIComponent(q));
-    if(!res.length){ box.innerHTML='<div class="empty" style="padding:10px">검색 결과 없음.</div>'; return; }
-    box.innerHTML=res.map((r,i)=>`<div class="pickrow" data-i="${i}">${esc(r.model||r.slug)}
-        <span style="color:var(--muted)">· ${esc(r.manufacturer||'')} · ${(r.u_height|0)}U · ${esc(r.slug)}</span></div>`).join('');
-    box.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click', ()=>{
-      arSelectedModel=res[+el.dataset.i];
-      box.querySelectorAll('.pickrow').forEach(x=>x.classList.remove('sel'));
-      el.classList.add('sel');
-      const c=document.getElementById('arModelChosen');
-      c.style.display=''; c.textContent='선택됨: '+arSelectedModel.slug+' ('+(arSelectedModel.u_height|0)+'U)';
-      arValidate();
-    }));
-  }catch(e){ box.innerHTML='<div class="banner err">검색 실패: '+esc(e.message)+'</div>'; }
-}
-function detailMsg(data, status){
-  if(data && data.detail!=null){
-    if(typeof data.detail==='string') return data.detail;
-    if(data.detail.message) return data.detail.message;
-    if(Array.isArray(data.detail) && data.detail[0]) return (data.detail[0].msg||JSON.stringify(data.detail[0]));
-    return JSON.stringify(data.detail);
-  }
-  return 'HTTP '+status;
-}
-async function createRack(){
-  if(!arSelectedModel) return;
-  const body={
-    offering: offeringId(),
-    region: document.getElementById('arRegion').value,
-    zone: document.getElementById('arZone').value,
-    rack_type: document.getElementById('arRackType').value.trim(),
-    rack: document.getElementById('arRackName').value.trim(),
-    rack_model: arSelectedModel.slug
-  };
-  const btn=document.getElementById('arCreate'); btn.disabled=true; btn.textContent='생성 중…';
-  const errBox=document.getElementById('arErr'); errBox.style.display='none';
-  try{
-    const r=await fetch('/api/rack/new', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    const data=await r.json().catch(()=>null);
-    if(!r.ok) throw new Error(detailMsg(data, r.status));
-    closeAddRack();
-    toast('랙 생성됨: '+body.rack+' (commit '+((data.commit||'').slice(0,7)||'?')+')');
-    await loadTree();
-    loadRack(body.rack, data.path);
-  }catch(e){
-    errBox.style.display=''; errBox.textContent='생성 실패: '+(e.message||e);
-  }finally{
-    btn.textContent='생성 (git commit)'; arValidate();
-  }
-}
-
-// ── ✅ 확정 (confirm workflow) ───────────────────────────────────────────
-let confirmKind='release';   // 'release' | 'build'
-
-function stemOf(path){ const seg=String(path||'').split('/').pop()||''; return seg.replace(/\.yaml$/,''); }
-
-function openConfirm(){
-  document.getElementById('confirmModal').classList.add('show');
-  switchCTab('request');
-  setConfirmKind('release');
-  document.getElementById('cReqResult').innerHTML='';
-}
-function closeConfirm(){ document.getElementById('confirmModal').classList.remove('show'); }
-
-function switchCTab(name){
-  document.querySelectorAll('.mtab[data-ctab]').forEach(t=>t.classList.toggle('active', t.dataset.ctab===name));
-  document.getElementById('ctabRequest').style.display = name==='request'?'':'none';
-  document.getElementById('ctabStatus').style.display = name==='status'?'':'none';
-  if(name==='status'){ document.getElementById('cListDetail').innerHTML=''; loadConfirmList(); }
-}
-
-function setConfirmKind(kind){
-  confirmKind=kind;
-  document.getElementById('ckRelease').classList.toggle('active', kind==='release');
-  document.getElementById('ckBuild').classList.toggle('active', kind==='build');
-  document.getElementById('cBuildPath').style.display = kind==='build'?'':'none';
-  const idIn=document.getElementById('cReqId');
-  if(kind==='release'){ idIn.value=selectedRelease||''; idIn.placeholder='예: R26.07'; }
-  else { idIn.value=''; idIn.placeholder='예: cloud-b-init'; document.getElementById('cReqPath').value=TREE_PATH; }
-}
-
-function renderGateErrors(gate, box){
-  const errs=(gate&&gate.errors)||[];
-  let h=`<div class="ghead bad">확정 불가 — 아래 항목을 고치세요</div>`;
-  h+=errs.map((e,i)=>`<div class="erow" data-eidx="${i}">${esc(e.message||'')}<div class="ep">${esc(e.path||'')}${e.index!=null?` · 배치 #${esc(String(e.index))}`:''}</div></div>`).join('');
-  box.innerHTML=h;
-  box.querySelectorAll('[data-eidx]').forEach(el=>el.addEventListener('click', ()=>{
-    const e=errs[+el.dataset.eidx]; if(!e||!e.path) return;
-    closeConfirm();
-    loadRack(stemOf(e.path), e.path);
-  }));
-}
-function renderGateWarnings(gate){
-  const ws=(gate&&gate.warnings)||[];
-  if(!ws.length) return '';
-  return ws.map(w=>`<div class="wrow">${esc(w.message||'')}<div class="ep" style="color:var(--warn)">${esc(w.path||'')}</div></div>`).join('');
-}
-
-async function submitConfirmRequest(){
-  const id=document.getElementById('cReqId').value.trim();
-  if(!id){ toast('확정 ID를 입력하세요', true); return; }
-  const requester=document.getElementById('cReqRequester').value.trim();
-  const body={ id, kind:confirmKind, scope:{}, requester:requester||undefined };
-  if(confirmKind==='release'){ body.scope.release=id; }
-  else { body.scope.paths=[document.getElementById('cReqPath').value.trim()]; }
-  const btn=document.getElementById('cReqBtn'); btn.disabled=true; const ot=btn.textContent; btn.textContent='검사 중…';
-  const box=document.getElementById('cReqResult'); box.innerHTML='';
-  try{
-    const r=await fetch('/api/confirm/request', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    const data=await r.json().catch(()=>null);
-    if(r.status===400){ renderGateErrors(data&&data.detail&&data.detail.gate, box); return; }
-    if(r.status===409 || r.status===422){
-      box.innerHTML=`<div class="erow" style="cursor:default">${esc(detailMsg(data, r.status))}</div>`;
-      toast(detailMsg(data, r.status), true); return;
-    }
-    if(!r.ok) throw new Error(detailMsg(data, r.status));
-    // 200
-    const gate=data.gate||{};
-    const racks=(gate.affected_racks||[]).length;
-    let h=`<div class="ghead ok">요청됨 → 검토중(in-review)</div>`;
-    h+=`<div class="cdetail"><div class="dh">대상 랙 ${racks}대 · 변경셋 CAPEX ${won(gate.capex)}</div>${renderGateWarnings(gate)}</div>`;
-    box.innerHTML=h;
-    toast('확정 요청됨 ('+esc(id)+')');
-  }catch(e){
-    box.innerHTML=`<div class="erow" style="cursor:default">${esc(e.message||String(e))}</div>`;
-    toast('확정 요청 실패: '+e.message, true);
-  }finally{ btn.disabled=false; btn.textContent=ot; }
-}
-
-async function loadConfirmList(){
-  const box=document.getElementById('cList');
-  box.innerHTML='<div class="empty">불러오는 중…</div>';
-  try{
-    const rows=await apiGet('/api/confirm');
-    if(!rows.length){ box.innerHTML='<div class="empty">확정 항목이 없습니다.</div>'; return; }
-    box.innerHTML=rows.map(c=>{
-      const tag=c.tag?`<span class="ctag">봉인 태그 ${esc(c.tag)}</span>`:'';
-      const apv=c.status==='in-review'?`<button class="capvbtn" data-apv="${esc(c.id)}">확정</button>`:'';
-      return `<div class="crow" data-cid="${esc(c.id)}">
-        <span class="cid">${esc(c.id)}</span>
-        <span class="ckind">${esc(c.kind||'')}</span>
-        <span class="cbadge ${esc(c.status||'draft')}">${esc(c.status||'draft')}</span>
-        ${tag}${apv}</div>`;
-    }).join('');
-    box.querySelectorAll('[data-apv]').forEach(el=>el.addEventListener('click', e=>{ e.stopPropagation(); approveConfirm(el.dataset.apv); }));
-    box.querySelectorAll('.crow').forEach(el=>el.addEventListener('click', ()=>showConfirmDetail(el.dataset.cid)));
-  }catch(e){
-    box.innerHTML='<div class="banner err">확정 현황을 불러오지 못했습니다: '+esc(e.message)+'</div>';
-  }
-}
-
-async function approveConfirm(id){
-  try{
-    const r=await fetch('/api/confirm/approve?id='+encodeURIComponent(id), {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
-    const data=await r.json().catch(()=>null);
-    if(r.status===400){
-      const box=document.getElementById('cListDetail'); box.innerHTML='';
-      renderGateErrors(data&&data.detail&&data.detail.gate, box);
-      toast('확정 불가 (게이트 오류)', true); return;
-    }
-    if(r.status===409){ toast(detailMsg(data, r.status), true); return; }
-    if(!r.ok) throw new Error(detailMsg(data, r.status));
-    toast('확정됨 (봉인 태그 '+(data.tag||'?')+')');
-    loadConfirmList();
-  }catch(e){ toast('확정 실패: '+e.message, true); }
-}
-
-async function showConfirmDetail(id){
-  const box=document.getElementById('cListDetail');
-  box.innerHTML='<div class="cdetail"><div class="empty">불러오는 중…</div></div>';
-  try{
-    const data=await apiGet('/api/confirm/'+encodeURIComponent(id));
-    const gate=data.gate||{};
-    const racks=gate.affected_racks||[];
-    const items=gate.items||[];
-    let h=`<div class="cdetail"><div class="dh">${esc(id)} · 대상 랙 ${racks.length}대</div>`;
-    if(racks.length) h+=`<div class="rackmeta" style="margin-bottom:8px">${racks.map(p=>esc(p)).join('<br>')}</div>`;
-    if(items.length){
-      h+=`<table><thead><tr><th>장비명</th><th>카테고리</th><th>릴리즈</th><th class="num">수량</th><th class="num">단가</th><th class="num">소계</th></tr></thead><tbody>`;
-      h+=items.map(it=>`<tr>
-        <td>${esc(it.name||it.device||'')}<div class="mfr" style="color:var(--muted);font-size:11px">${esc(it.rack_id||'')}</div></td>
-        <td>${esc(it.category||'')}</td>
-        <td>${esc(it.release||'')}</td>
-        <td class="num">${it.qty||1}</td>
-        <td class="num">${it.unit_cost==null?'<span class="miss">미등록</span>':won(it.unit_cost)}</td>
-        <td class="num">${won(it.subtotal)}</td></tr>`).join('');
-      h+=`</tbody></table>`;
-    }else{
-      h+=`<div class="empty">변경 항목이 없습니다.</div>`;
-    }
-    h+=`<div class="csum"><span>변경셋 CAPEX</span><span class="amt">${won(gate.capex)}</span></div>`;
-    h+=renderGateWarnings(gate);
     h+=`</div>`;
-    box.innerHTML=h;
-  }catch(e){
-    box.innerHTML='<div class="banner err">확정 상세를 불러오지 못했습니다: '+esc(e.message)+'</div>';
   }
+  box.innerHTML=h;
 }
 
-// ── render all ──────────────────────────────────────────────────────────
-function renderAll(){ renderReleaseSel(); renderMain(); renderMeta(); renderBom(); renderShortlist(); renderState(); }
+document.getElementById('tree').addEventListener('click',e=>{
+  const n=e.target.closest('.trt');if(!n)return;
+  SEL={key:n.dataset.key,offering:n.dataset.off,region:n.dataset.reg,zone:n.dataset.zone,
+       rack_type:n.dataset.rt,zlabel:n.dataset.zlabel};
+  renderTree();
+  loadRacks();
+});
 
-// ── init / wiring ───────────────────────────────────────────────────────
-function init(){
-  // release dropdown (new placements + highlight)
-  document.getElementById('relSel').addEventListener('change', e=>{ selectedRelease=e.target.value; renderAll(); });
-  document.getElementById('relOnly').addEventListener('change', e=>{ releaseOnly=e.target.checked; renderMain(); renderBom(); });
-  document.getElementById('saveBtn').addEventListener('click', save);
-  document.getElementById('reloadBtn').addEventListener('click', ()=>{
-    if(!selectedRackId) return;
-    if(dirty && !confirm('변경 내용을 버리고 서버에서 다시 불러올까요?')) return;
-    loadRack(selectedRackId, selectedRackFile);
-  });
-  document.getElementById('catSearch').addEventListener('input', scheduleCatSearch);
-  // ① model-select tabs (scoped to data-tab so the 확정 modal's data-ctab tabs don't collide)
-  document.querySelectorAll('.mtab[data-tab]').forEach(t=>t.addEventListener('click', ()=>switchMTab(t.dataset.tab)));
-  // ✅ 확정 workflow
-  document.getElementById('confirmBtn').addEventListener('click', openConfirm);
-  document.getElementById('cloneBtn').addEventListener('click', cloneRack);
-  document.getElementById('cloneBulkBtn').addEventListener('click', cloneRackBulk);
-  document.getElementById('cClose').addEventListener('click', closeConfirm);
-  document.getElementById('confirmModal').addEventListener('click', e=>{ if(e.target.id==='confirmModal') closeConfirm(); });
-  document.querySelectorAll('.mtab[data-ctab]').forEach(t=>t.addEventListener('click', ()=>switchCTab(t.dataset.ctab)));
-  document.getElementById('ckRelease').addEventListener('click', ()=>setConfirmKind('release'));
-  document.getElementById('ckBuild').addEventListener('click', ()=>setConfirmKind('build'));
-  document.getElementById('cReqBtn').addEventListener('click', submitConfirmRequest);
-  // ＋ add rack
-  document.getElementById('addRackBtn').addEventListener('click', openAddRack);
-  document.getElementById('arCancel').addEventListener('click', closeAddRack);
-  document.getElementById('arCreate').addEventListener('click', createRack);
-  document.getElementById('arRegion').addEventListener('change', ()=>{ arFillZones(); arValidate(); });
-  document.getElementById('arZone').addEventListener('change', ()=>{ arFillRackTypes(); arValidate(); });
-  document.getElementById('arRackType').addEventListener('input', arValidate);
-  document.getElementById('arRackName').addEventListener('input', arValidate);
-  document.getElementById('arModelSearch').addEventListener('input', arScheduleSearch);
-  document.getElementById('addRackModal').addEventListener('click', e=>{ if(e.target.id==='addRackModal') closeAddRack(); });
-  renderCatChips();
-  renderShortlist();
-  doCatSearch();   // auto-load top 50 candidates on open (empty q)
-  // allow ?path= override of tree root, and ?rack=<file.yaml> to open straight into edit mode
-  const qp=new URLSearchParams(location.search);
-  if(qp.get('path')) TREE_PATH=qp.get('path');
-  loadTree().then(()=>{
-    const rf=qp.get('rack');
-    if(rf){ loadRack(rf.split('/').pop().replace(/\.yaml$/,''), rf); }
-  });
+// ── rack list for selected rack-type ────────────────────────────────────
+async function loadRacks(){
+  if(!SEL)return;
+  document.getElementById('crumb').innerHTML=
+    `${esc(SEL.offering)}<span class="sep">›</span>${esc(SEL.region)}<span class="sep">›</span>${esc(SEL.zlabel)}<span class="sep">›</span><span style="color:var(--accent)">▦ ${esc(SEL.rack_type)}</span>`;
+  document.getElementById('subcrumb').textContent='이 랙타입의 랙을 추가·복제하고, 각 랙에서 장비를 배치합니다.';
+  document.getElementById('addBtn').disabled=false;
+  const box=document.getElementById('racks');
+  box.innerHTML='<div class="hint">불러오는 중…</div>';
+  try{
+    const d=await getJSON('/api/layout?path='+encodeURIComponent(nodePath(SEL)));
+    const racks=(d.racks||[]).filter(r=>(r.hierarchy||{}).rack_type===SEL.rack_type);
+    if(!racks.length){box.innerHTML='<div class="hint">아직 랙이 없습니다. <b>＋ 랙 추가</b>로 첫 랙을 만드세요.</div>';return;}
+    box.innerHTML='<div class="grid">'+racks.map(rackCard).join('')+'</div>';
+  }catch(err){box.innerHTML='<div class="hint">불러오기 실패: '+esc(err.message)+'</div>';}
 }
-init();
+
+function rackCard(r){
+  const rt=r.hierarchy.rack_type;
+  const file=nodePath(SEL)+'/racks/'+r.rack_id+'.yaml';
+  const placePath=`offerings/${SEL.offering}/regions/${SEL.region}/zones/${SEL.zone}`;
+  return `<div class="rack">
+    <div class="rh"><b>${esc(r.rack_id)}</b><span class="rt ${RTC[rt]||''}">${esc(rt)}</span></div>
+    <div class="meta">${esc(r.rack_model||'—')} · ${r.rack_u||'?'}U</div>
+    <div class="elev">${r.svg||''}</div>
+    <div class="btns">
+      <a class="place" href="/place?path=${encodeURIComponent(placePath)}" title="이 존의 배치 화면 열기">🗺 배치</a>
+      <button data-clone="${esc(file)}" data-id="${esc(r.rack_id)}">⧉ 복제</button>
+      <button data-bulk="${esc(file)}" data-id="${esc(r.rack_id)}">⧉ 여러 개</button>
+    </div></div>`;
+}
+
+// ── clone / bulk clone ──────────────────────────────────────────────────
+function expandIds(spec){
+  // "R10,R11" or "web-02..05" → list. Range token "A..B": share alpha prefix, numeric span, zero-pad.
+  const out=[];
+  spec.split(',').map(s=>s.trim()).filter(Boolean).forEach(tok=>{
+    const m=tok.match(/^(.*?)(\d+)\.\.(\d+)$/);
+    if(m){const pre=m[1],a=m[2],b=parseInt(m[3],10),pad=a.length;
+      for(let i=parseInt(a,10);i<=b;i++)out.push(pre+String(i).padStart(pad,'0'));}
+    else out.push(tok);
+  });
+  return [...new Set(out)];
+}
+document.getElementById('racks').addEventListener('click',async e=>{
+  const cb=e.target.closest('[data-clone]');
+  if(cb){const nid=prompt('복제본 랙 ID (배치 그대로 복사)','');if(nid==null)return;const rack=nid.trim();if(!rack)return;
+    try{await postJSON('/api/rack/clone',{source_path:cb.dataset.clone,rack});toast('복제됨 → '+rack,'ok');loadRacks();refreshHier();}
+    catch(err){toast(err.status===409?'이미 존재하는 랙입니다':err.message,'bad');}return;}
+  const bb=e.target.closest('[data-bulk]');
+  if(bb){const spec=prompt('여러 랙 ID (쉼표 또는 범위). 예: R10,R11  또는  web-02..05','');if(spec==null)return;
+    const racks=expandIds(spec);if(!racks.length){toast('ID를 입력하세요','bad');return;}
+    try{const d=await postJSON('/api/rack/clone-bulk',{source_path:bb.dataset.bulk,racks});toast((d.count||racks.length)+'개 복제됨','ok');loadRacks();refreshHier();}
+    catch(err){toast(err.status===409?'이미 존재하는 랙이 있습니다':err.message,'bad');}return;}
+});
+
+// ── add rack ────────────────────────────────────────────────────────────
+let amModel=null, amTimer=null;
+const addModal=document.getElementById('addModal');
+document.getElementById('addBtn').addEventListener('click',()=>{
+  if(!SEL)return;
+  amModel=null;
+  document.getElementById('amTarget').textContent=`${SEL.offering} › ${SEL.region} › ${SEL.zlabel} › ${SEL.rack_type}`;
+  document.getElementById('amRack').value='';
+  document.getElementById('amModelQ').value='';
+  document.getElementById('amErr').textContent='';
+  document.getElementById('amModelRes').innerHTML='';
+  addModal.classList.add('show');
+  searchModels('');
+});
+document.getElementById('amCancel').addEventListener('click',()=>addModal.classList.remove('show'));
+addModal.addEventListener('click',e=>{if(e.target===addModal)addModal.classList.remove('show');});
+document.getElementById('amModelQ').addEventListener('input',e=>{clearTimeout(amTimer);const q=e.target.value;amTimer=setTimeout(()=>searchModels(q),180);});
+async function searchModels(q){
+  const box=document.getElementById('amModelRes');
+  try{
+    const rows=await getJSON('/api/catalog/search?kind=rack&limit=30&q='+encodeURIComponent(q));
+    if(!rows.length){box.innerHTML='<div class="it" style="color:#94a3b8;cursor:default">결과 없음</div>';return;}
+    box.innerHTML=rows.map(r=>`<div class="it${amModel&&amModel.slug===r.slug?' on':''}" data-slug="${esc(r.slug)}" data-u="${r.u_height||0}">`
+      +`<span>${esc(r.manufacturer||'')} ${esc(r.model||r.slug)}</span><span class="u">${r.u_height||'?'}U</span></div>`).join('');
+  }catch(err){box.innerHTML='<div class="it" style="color:#94a3b8;cursor:default">모델 검색 불가 (데모에서는 비활성)</div>';}
+}
+document.getElementById('amModelRes').addEventListener('click',e=>{
+  const it=e.target.closest('.it[data-slug]');if(!it)return;
+  amModel={slug:it.dataset.slug,u_height:+it.dataset.u};
+  [...document.querySelectorAll('#amModelRes .it')].forEach(x=>x.classList.toggle('on',x===it));
+});
+document.getElementById('amSave').addEventListener('click',async ()=>{
+  const rack=document.getElementById('amRack').value.trim();
+  const err=document.getElementById('amErr');err.textContent='';
+  if(!rack){err.textContent='랙 ID를 입력하세요';return;}
+  if(!amModel){err.textContent='랙 모델을 선택하세요';return;}
+  try{
+    await postJSON('/api/rack/new',{offering:SEL.offering,region:SEL.region,zone:SEL.zone,
+      rack_type:SEL.rack_type,rack,rack_model:amModel.slug});
+    addModal.classList.remove('show');toast('랙 "'+rack+'" 추가됨','ok');loadRacks();refreshHier();
+  }catch(e2){err.textContent=e2.status===409?'이미 존재하는 랙입니다':e2.message;}
+});
+
+// ── load ────────────────────────────────────────────────────────────────
+async function refreshHier(){try{HIER=await getJSON('/api/hierarchy');renderTree();}catch(e){}}
+getJSON('/api/hierarchy').then(d=>{HIER=Array.isArray(d)?d:[];renderTree();})
+  .catch(e=>{document.getElementById('tree').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>';});
 </script>
-</body>
-</html>
+</body></html>

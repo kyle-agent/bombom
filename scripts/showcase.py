@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Seed a *filled* showcase workspace — densely-packed racks across several zones, two tagged
-releases (for /diff), prices, candidates and meta — so the static full-app demo has realistic
-data on every screen. Distinct from scripts/demo.py (which is intentionally sparse and seeds
-validation errors for /health). All slugs exist in the vendored devicetype-library.
+"""Seed a demo workspace whose org structure is: 4 offerings (Enterprise, Samsung, PPP,
+Sovereign), each with regions kr-east1 & kr-west1, and only Samsung/kr-west1 holding zones
+(zone1, zone2) with densely-filled racks + two tagged releases (for /diff). Empty offerings/
+regions exist (marker YAMLs) so the structure shows on the main dashboard. All slugs exist in
+the vendored devicetype-library.
 
     python scripts/showcase.py demo-showcase     # then: bombom serve --root demo-showcase
 """
@@ -13,7 +14,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-# slug → U-height (from the catalog), category for the overlay
 SERVER_2U = "dell-poweredge-r760"
 SERVER_1U = "dell-poweredge-r660"
 SERVER_1U_B = "dell-poweredge-r650"
@@ -25,34 +25,31 @@ STOR_2U_B = "dell-md1400"
 U = {SERVER_2U: 2, SERVER_1U: 1, SERVER_1U_B: 1, GPU_3U: 3,
      SW_1U: 1, SW_1U_B: 1, STOR_2U: 2, STOR_2U_B: 2}
 
-OFF = "offerings/cloud-a/regions/{reg}/zones/{az}/rack-types/{rt}/racks/{rack}.yaml"
+OFFERINGS = ["Enterprise", "Samsung", "PPP", "Sovereign"]
+REGIONS = ["kr-east1", "kr-west1"]
+RACK = "offerings/{off}/regions/{reg}/zones/{zone}/rack-types/{rt}/racks/{rack}.yaml"
 
 
-def _pl(device: str, position: int, release: str, **meta) -> dict:
+def _pl(device, position, release, **meta):
     d = {"device": device, "position": position, "release": release}
     if meta:
         d["meta"] = meta
     return d
 
 
-def _yaml(rack_slug: str, placements: list[dict]) -> str:
+def _yaml(rack_slug, placements):
     out = [f"rack_model: {{ slug: {rack_slug} }}", "placements:"]
     for p in placements:
         parts = [f"device: {p['device']}", f"position: {p['position']}", f"release: {p['release']}"]
         if p.get("meta"):
-            m = ", ".join(f"{k}: {v}" for k, v in p["meta"].items())
-            parts.append(f"meta: {{ {m} }}")
+            parts.append("meta: { " + ", ".join(f"{k}: {v}" for k, v in p["meta"].items()) + " }")
         out.append("  - { " + ", ".join(parts) + " }")
     return "\n".join(out) + "\n"
 
 
-def _stack(devs: list[str], *, start: int, release: str, prefix: str,
-           gaps: set[int] | None = None, top_u: int = 42) -> list[dict]:
-    """Pack `devs` bottom-up from U`start`, skipping any U in `gaps`, never exceeding top_u."""
+def _stack(devs, *, start, release, prefix, gaps=None, top_u=42):
     gaps = gaps or set()
-    pos = start
-    pls: list[dict] = []
-    n = 0
+    pos, pls, n = start, [], 0
     for dev in devs:
         h = U[dev]
         while pos in gaps:
@@ -68,39 +65,30 @@ def _stack(devs: list[str], *, start: int, release: str, prefix: str,
     return pls
 
 
-def _compute_rack(prefix: str, release: str) -> list[dict]:
-    # 2 ToR switches at the top, ~17 servers packed from the bottom (mix 2U/1U)
-    servers = [SERVER_2U] * 12 + [SERVER_1U] * 6
-    pls = _stack(servers, start=1, release=release, prefix=prefix, top_u=38)
-    pls += [_pl(SW_1U, 41, release), _pl(SW_1U_B, 42, release)]
-    return pls
+def _compute_rack(prefix, release):
+    pls = _stack([SERVER_2U] * 12 + [SERVER_1U] * 6, start=1, release=release, prefix=prefix, top_u=38)
+    return pls + [_pl(SW_1U, 41, release), _pl(SW_1U_B, 42, release)]
 
 
-def _storage_rack(prefix: str, release: str) -> list[dict]:
-    arrays = [STOR_2U] * 9 + [STOR_2U_B] * 6
-    pls = _stack(arrays, start=1, release=release, prefix=prefix, top_u=34)
-    pls += [_pl(SW_1U, 42, release)]
-    return pls
+def _storage_rack(prefix, release):
+    pls = _stack([STOR_2U] * 9 + [STOR_2U_B] * 6, start=1, release=release, prefix=prefix, top_u=34)
+    return pls + [_pl(SW_1U, 42, release)]
 
 
-def _gpu_rack(prefix: str, release: str) -> list[dict]:
+def _gpu_rack(prefix, release):
     pls = _stack([GPU_3U] * 11, start=1, release=release, prefix=prefix, top_u=36)
-    pls += [_pl(SW_1U, 41, release), _pl(SW_1U_B, 42, release)]
-    return pls
+    return pls + [_pl(SW_1U, 41, release), _pl(SW_1U_B, 42, release)]
 
 
-def _network_rack(release: str) -> list[dict]:
-    # a spine/leaf-style network rack: switches every other U, leaving airflow gaps
-    devs = [SW_1U, SW_1U_B] * 8
-    return _stack(devs, start=4, release=release, prefix="NET",
+def _network_rack(release):
+    return _stack([SW_1U, SW_1U_B] * 8, start=4, release=release, prefix="NET",
                   gaps={g for g in range(4, 43) if g % 3 == 0}, top_u=42)
 
 
 CATS = (
     "categories:\n"
     f"  {SERVER_2U}: server\n  {SERVER_1U}: server\n  {SERVER_1U_B}: server\n  {GPU_3U}: server\n"
-    f"  {SW_1U}: network\n  {SW_1U_B}: network\n"
-    f"  {STOR_2U}: storage\n  {STOR_2U_B}: storage\n"
+    f"  {SW_1U}: network\n  {SW_1U_B}: network\n  {STOR_2U}: storage\n  {STOR_2U_B}: storage\n"
 )
 PRICES = (
     "entries:\n"
@@ -134,44 +122,46 @@ CANDIDATES = (
 )
 
 
-def _git(root: Path, *args: str) -> None:
+def _git(root, *args):
     r = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit(f"git {' '.join(args)} failed:\n{r.stderr}")
 
 
-def _write(root: Path, files: dict[str, str]) -> None:
+def _write(root, files):
     for rel, content in files.items():
         p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content)
 
 
-def seed(target: Path) -> Path:
+def _zrack(off, reg, zone, rt, rack):
+    return RACK.format(off=off, reg=reg, zone=zone, rt=rt, rack=rack)
+
+
+def seed(target):
     target = Path(target)
     if target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True)
-
     R0, R1 = "R25.01", "R26.07"
-    base: dict[str, str] = {
-        "offerings/cloud-a/offering.yaml": "name: 퍼블릭 클라우드 A\n",
-        "offerings/cloud-a/regions/kr-east/region.yaml": "name: 서울 동부\n",
-        "offerings/cloud-a/regions/kr-west/region.yaml": "name: 서울 서부\n",
-        "categories/overlay.yaml": CATS,
-        "pricing/catalog.yaml": PRICES,
-        "meta/fields.yaml": FIELDS,
-        "candidates/pool.yaml": CANDIDATES,
+
+    # marker YAMLs so empty offerings/regions show in the hierarchy / 메인 대시보드
+    base = {
+        "categories/overlay.yaml": CATS, "pricing/catalog.yaml": PRICES,
+        "meta/fields.yaml": FIELDS, "candidates/pool.yaml": CANDIDATES,
     }
-    # R25.01 baseline — kr-east/az1 fully built out
-    for i in range(1, 5):
-        base[OFF.format(reg="kr-east", az="az1", rt="compute", rack=f"R{i:02d}")] = \
-            _yaml("vertiv-vr3300", _compute_rack(f"E1C{i}", R0))
-    for i in range(1, 3):
-        base[OFF.format(reg="kr-east", az="az1", rt="storage", rack=f"S{i:02d}")] = \
-            _yaml("vertiv-vr3300", _storage_rack(f"E1S{i}", R0))
-    base[OFF.format(reg="kr-east", az="az1", rt="network", rack="N01")] = \
-        _yaml("vertiv-vr3300", _network_rack(R0))
+    for off in OFFERINGS:
+        base[f"offerings/{off}/offering.yaml"] = f"name: {off}\n"
+        for reg in REGIONS:
+            base[f"offerings/{off}/regions/{reg}/region.yaml"] = f"name: {reg}\n"
+
+    # R25.01 baseline — Samsung/kr-west1/zone1
+    z1 = ("Samsung", "kr-west1", "zone1")
+    for i in range(1, 4):
+        base[_zrack(*z1, "compute", f"R{i:02d}")] = _yaml("vertiv-vr3300", _compute_rack(f"S1C{i}", R0))
+    base[_zrack(*z1, "storage", "S01")] = _yaml("vertiv-vr3300", _storage_rack("S1S1", R0))
+    base[_zrack(*z1, "network", "N01")] = _yaml("vertiv-vr3300", _network_rack(R0))
 
     _write(target, base)
     _git(target, "init", "-q")
@@ -181,33 +171,24 @@ def seed(target: Path) -> Path:
     _git(target, "commit", "-q", "-m", f"{R0} baseline")
     _git(target, "tag", "-a", R0, "-m", f"release {R0}")
 
-    # R26.07 expansion — az2 compute + kr-west gpu zone
-    exp: dict[str, str] = {}
+    # R26.07 expansion — Samsung/kr-west1/zone2
+    z2 = ("Samsung", "kr-west1", "zone2")
+    exp = {}
     for i in range(10, 13):
-        exp[OFF.format(reg="kr-east", az="az2", rt="compute", rack=f"R{i}")] = \
-            _yaml("vertiv-vr3300", _compute_rack(f"E2C{i}", R1))
-    for i in range(1, 3):
-        exp[OFF.format(reg="kr-west", az="az1", rt="gpu", rack=f"G{i:02d}")] = \
-            _yaml("vertiv-vr3300", _gpu_rack(f"WG{i}", R1))
-    exp[OFF.format(reg="kr-west", az="az1", rt="compute", rack="R20")] = \
-        _yaml("vertiv-vr3300", _compute_rack("WC20", R1))
+        exp[_zrack(*z2, "compute", f"R{i}")] = _yaml("vertiv-vr3300", _compute_rack(f"S2C{i}", R1))
+    exp[_zrack(*z2, "gpu", "G01")] = _yaml("vertiv-vr3300", _gpu_rack("S2G1", R1))
     _write(target, exp)
     _git(target, "add", "-A")
     _git(target, "commit", "-q", "-m", f"{R1} expansion")
     _git(target, "tag", "-a", R1, "-m", f"release {R1}")
 
-    # sealed confirmation manifests so /diff lists the two releases as selectable refs
     confs = {
-        "confirmations/rel-2025-01.yaml": (
-            "id: rel-2025-01\nkind: release\nstatus: confirmed\n"
+        "confirmations/rel-2025-01.yaml": ("id: rel-2025-01\nkind: release\nstatus: confirmed\n"
             "requester: designer\napprover: lead\n"
-            f"created_at: '2025-01-05T09:00:00'\nconfirmed_at: '2025-01-06T10:00:00'\ntag: {R0}\n"
-        ),
-        "confirmations/rel-2026-07.yaml": (
-            "id: rel-2026-07\nkind: release\nstatus: confirmed\n"
+            f"created_at: '2025-01-05T09:00:00'\nconfirmed_at: '2025-01-06T10:00:00'\ntag: {R0}\n"),
+        "confirmations/rel-2026-07.yaml": ("id: rel-2026-07\nkind: release\nstatus: confirmed\n"
             "requester: designer\napprover: lead\n"
-            f"created_at: '2026-07-01T09:00:00'\nconfirmed_at: '2026-07-02T10:00:00'\ntag: {R1}\n"
-        ),
+            f"created_at: '2026-07-01T09:00:00'\nconfirmed_at: '2026-07-02T10:00:00'\ntag: {R1}\n"),
     }
     _write(target, confs)
     _git(target, "add", "-A")
@@ -215,12 +196,11 @@ def seed(target: Path) -> Path:
     return target
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("target", nargs="?", default="demo-showcase")
-    args = ap.parse_args(argv)
-    out = seed(Path(args.target))
-    print(f"seeded filled showcase workspace at {out}")
+    out = seed(Path(ap.parse_args(argv).target))
+    print(f"seeded showcase (4 offerings; racks under Samsung/kr-west1/zone1+zone2) at {out}")
     return 0
 
 

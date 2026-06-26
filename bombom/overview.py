@@ -1,22 +1,20 @@
-"""Overview aggregation — powers the main page (offering→region→zone summary) and the
+"""Overview aggregation — powers the main page (offering→region→zone structure) and the
 selectable rollup report (group by offering / region / zone / rack-type).
 
-Built from `placed_rows` (every priced/unpriced line item tagged with its full hierarchy), so
-the counts and CAPEX reconcile with the dashboard and the BOM engine. Server count = line
+The tree comes from the **directory hierarchy** (`list_hierarchy`), so empty offerings/regions/
+zones still show. Counts/CAPEX are overlaid from `placed_rows` (every priced/unpriced line item
+tagged with its full hierarchy), so they reconcile with the BOM engine. Server count = line
 items whose category is "server"; device count = all qty; rack count = distinct racks.
 """
 
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Optional
 
+from .hierarchy import list_hierarchy
 from .report import placed_rows
-
-
-def _zone_path(r: dict) -> str:
-    return (f"offerings/{r['offering']}/regions/{r['region']}"
-            f"/zones/{r['zone']}")
 
 
 class _Agg:
@@ -44,84 +42,98 @@ class _Agg:
                 "devices": self.devices, "capex": self.capex}
 
 
+_EMPTY = _Agg()
+
+
 def build_overview(ws, root, *, release: Optional[str] = None,
                    valuation_date: Optional[date] = None) -> dict:
+    # Hierarchy comes from the workspace root (the dir holding offerings/); the `root` arg may be
+    # a resolved sub-node path used only to scope which placements are aggregated.
+    hier = list_hierarchy(Path(getattr(ws, "root", root)))
     all_rows = placed_rows(ws, root, valuation_date=valuation_date)
-    # release values present (DRAFT = untagged 작업본); used by report/tagging dropdowns
-    releases = sorted({r["release"] for r in all_rows if r["release"]})
+    releases = sorted({r["release"] for r in all_rows if r["release"]})  # DRAFT=미태그 작업본
     rows = all_rows if not release else [r for r in all_rows if r["release"] == release]
 
-    groups: dict[str, dict[str, _Agg]] = {"offering": {}, "region": {}, "zone": {}, "rack_type": {}}
-    # nested offering→region→zone aggregation for the main-page tree
-    tree: dict = {}
+    # placement aggregates keyed by hierarchy names
+    z_agg: dict[tuple, _Agg] = {}
+    r_agg: dict[tuple, _Agg] = {}
+    o_agg: dict[str, _Agg] = {}
+    rt_agg: dict[str, _Agg] = {}
     total = _Agg()
-
     for r in rows:
         total.add(r)
-        keys = {
-            "offering": (r["offering"], r["offering"]),
-            "region": (f"{r['offering']}/{r['region']}", f"{r['offering']} / {r['region']}"),
-            "zone": (_zone_path(r), f"{r['region']} / {r['zone']}"),
-            "rack_type": (r["rack_type"], r["rack_type"]),
-        }
-        for level, (k, _label) in keys.items():
-            groups[level].setdefault(k, _Agg()).add(r)
-        (tree.setdefault(r["offering"], {})
-             .setdefault(r["region"], {})
-             .setdefault(r["zone"], _Agg())).add(r)
+        z_agg.setdefault((r["offering"], r["region"], r["zone"]), _Agg()).add(r)
+        r_agg.setdefault((r["offering"], r["region"]), _Agg()).add(r)
+        o_agg.setdefault(r["offering"], _Agg()).add(r)
+        rt_agg.setdefault(r["rack_type"], _Agg()).add(r)
 
-    # materialise the tree with labels + per-zone paths
-    tree_out = []
-    for off, regions in sorted(tree.items()):
-        off_agg = groups["offering"][off]
+    # tree from the directory hierarchy (empty nodes included), aggregates overlaid
+    tree_out, n_regions, n_zones = [], 0, 0
+    for o in hier:
+        off = o["offering"]
         reg_list = []
-        for reg, zones in sorted(regions.items()):
-            reg_agg = groups["region"][f"{off}/{reg}"]
+        for rg in o["regions"]:
+            n_regions += 1
+            region = rg["region"]
             zone_list = []
-            for zn, agg in sorted(zones.items()):
-                z = agg.row("", zn)
-                z["zone"] = zn
-                z["path"] = f"offerings/{off}/regions/{reg}/zones/{zn}"
-                zone_list.append(z)
-            r = reg_agg.row(f"{off}/{reg}", reg)
-            r["region"] = reg
-            r["zones"] = zone_list
-            reg_list.append(r)
-        o = off_agg.row(off, off)
-        o["offering"] = off
-        o["regions"] = reg_list
-        tree_out.append(o)
+            for z in rg["zones"]:
+                n_zones += 1
+                zr = z_agg.get((off, region, z["zone"]), _EMPTY).row("", z.get("name") or z["zone"])
+                zr["zone"] = z["zone"]
+                zr["path"] = f"offerings/{off}/regions/{region}/zones/{z['zone']}"
+                zone_list.append(zr)
+            rr = r_agg.get((off, region), _EMPTY).row(f"{off}/{region}", rg.get("name") or region)
+            rr["region"] = region
+            rr["zones"] = zone_list
+            reg_list.append(rr)
+        orow = o_agg.get(off, _EMPTY).row(off, o.get("name") or off)
+        orow["offering"] = off
+        orow["regions"] = reg_list
+        tree_out.append(orow)
 
-    def rows_for(level: str) -> list[dict]:
-        labels = {
-            "offering": lambda k: k,
-            "region": lambda k: k.split("/", 1)[-1],
-            "zone": lambda k: k,           # zone key is its path; label set below
-            "rack_type": lambda k: k,
-        }
-        out = []
-        for k, agg in groups[level].items():
-            out.append(agg.row(k, labels[level](k)))
+    totals = total.row("", "전체")
+    totals["regions"] = n_regions
+    totals["zones"] = n_zones
+
+    # groups for the bars/report — offerings & regions span the whole hierarchy (0 when empty)
+    def grp_offering():
+        out = [o_agg.get(o["offering"], _EMPTY).row(o["offering"], o.get("name") or o["offering"])
+               for o in hier]
         return sorted(out, key=lambda x: x["capex"], reverse=True)
 
-    # nicer zone labels for the report (region / zone), keyed by path
-    zone_label = {z["path"]: f"{rg['region']} / {z['zone']}"
-                  for o in tree_out for rg in o["regions"] for z in rg["zones"]}
-    zone_rows = rows_for("zone")
-    for zr in zone_rows:
-        zr["label"] = zone_label.get(zr["key"], zr["key"])
+    def grp_region():
+        out = []
+        for o in hier:
+            for rg in o["regions"]:
+                a = r_agg.get((o["offering"], rg["region"]), _EMPTY)
+                out.append(a.row(f"{o['offering']}/{rg['region']}", f"{o['offering']} · {rg['region']}"))
+        return sorted(out, key=lambda x: x["capex"], reverse=True)
+
+    def grp_zone():
+        out = []
+        for o in hier:
+            for rg in o["regions"]:
+                for z in rg["zones"]:
+                    a = z_agg.get((o["offering"], rg["region"], z["zone"]), _EMPTY)
+                    path = f"offerings/{o['offering']}/regions/{rg['region']}/zones/{z['zone']}"
+                    out.append(a.row(path, f"{rg['region']} / {z['zone']}"))
+        return sorted(out, key=lambda x: x["capex"], reverse=True)
+
+    def grp_rack_type():
+        out = [a.row(k, k) for k, a in rt_agg.items()]
+        return sorted(out, key=lambda x: x["capex"], reverse=True)
 
     return {
         "path": str(root),
         "currency": "₩",
         "release": release or "",
         "releases": releases,
-        "totals": total.row("", "전체"),
+        "totals": totals,
         "tree": tree_out,
         "groups": {
-            "offering": rows_for("offering"),
-            "region": rows_for("region"),
-            "zone": zone_rows,
-            "rack_type": rows_for("rack_type"),
+            "offering": grp_offering(),
+            "region": grp_region(),
+            "zone": grp_zone(),
+            "rack_type": grp_rack_type(),
         },
     }

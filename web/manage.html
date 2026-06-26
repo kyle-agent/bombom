@@ -63,6 +63,15 @@
   .rtchip .rtname{font-weight:600;font-size:12px}
   .rtchip .rtmeta{font-size:11px;color:var(--muted)}
   .rt-empty{color:#94a3b8;font-size:12px;padding-left:14px}
+  /* stats strip */
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .stats .s{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .stats .s .n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .stats .s .l{color:var(--muted);font-size:11px;margin-top:4px}
+  .note-split{display:flex;gap:8px;align-items:flex-start;background:#eff6ff;border:1px solid #dbeafe;color:#1e40af;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.5}
+  .note-split a{color:#1d4ed8;font-weight:700;text-decoration:none}
+  .note-split a:hover{text-decoration:underline}
+  @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
   /* empty state */
   .empty{color:#94a3b8;text-align:center;padding:24px 8px;font-size:13px}
   /* toast */
@@ -87,13 +96,22 @@ header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!import
 <header>
   <span class="logo">bombom</span>
   <span class="crumb">— 기준정보 관리</span>
-  <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/diff">변경비교</a><a href="/health">검증</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a><a href="/search">검색</a></nav>
+  <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a></nav>
 </header>
 
 <div class="wrap">
   <div class="banner" id="banner"></div>
 
-  <p class="intro">오퍼링 → 리전 → 존(AZ) → Rack-Type 순으로 기준정보를 추가합니다.</p>
+  <p class="intro">오퍼링 → 리전 → 존(AZ) → Rack-Type 순으로 조직 계층(기준정보)을 만듭니다.</p>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="note-split">
+    <span>ℹ️</span>
+    <span>여기서는 <b>조직 계층(오퍼링·리전·존·랙타입)</b>만 정의합니다.
+      각 랙타입 안에 실제 <b>랙</b>을 추가·복제하고 모델을 정하는 일은
+      <a href="/edit">랙관리</a>에서, 장비 배치는 <a href="/place">배치 화면</a>에서 진행합니다.</span>
+  </div>
 
   <!-- top-level add offering -->
   <div class="card">
@@ -255,7 +273,28 @@ function cloneControl(level, ctx, name){
     + 'data-name="' + esc(name) + '" ' + attrs + '>⧉ 복제</button>';
 }
 
+function renderStats(){
+  let nOff=0, nReg=0, nZone=0, nRt=0, nRack=0;
+  HIER.forEach(function(o){
+    nOff++;
+    (o.regions||[]).forEach(function(rg){
+      nReg++;
+      (rg.zones||[]).forEach(function(z){
+        nZone++;
+        (z.rack_types||[]).forEach(function(rt){
+          nRt++; nRack += (rt.racks||[]).length;
+        });
+      });
+    });
+  });
+  const cells = [['오퍼링',nOff],['리전',nReg],['존(AZ)',nZone],['랙타입',nRt],['랙',nRack]];
+  document.getElementById('stats').innerHTML = cells.map(function(c){
+    return '<div class="s"><div class="n">'+c[1]+'</div><div class="l">'+c[0]+'</div></div>';
+  }).join('');
+}
+
 function renderTree(){
+  renderStats();
   const tree = document.getElementById('tree');
   if(!HIER.length){
     tree.innerHTML = '<div class="card empty">등록된 오퍼링이 없습니다. 위의 “+ 오퍼링”으로 첫 오퍼링을 추가하세요.</div>';

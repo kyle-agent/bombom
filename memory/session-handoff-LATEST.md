@@ -10,36 +10,44 @@
 > `gh repo edit kyle-agent/bombom --default-branch main`. (I can't change the default branch with
 > the available tools.) After switching, the feature branch can be deleted (identical to `main`).
 
-> Branch: work is on BOTH `main` and `claude/vibrant-tesla-okhpxz` (same commit). 135 tests pass, ruff clean.
+> Branch: `claude/vibrant-tesla-okhpxz`. 168 tests pass, ruff clean. Static demo →
+> https://kyle-agent.github.io/bombom/ (Pages workflow builds `web/*.html` via
+> `scripts/build_static_app.py --out public`).
 
-## Where things are (2026-06-20)
+## Where things are (2026-06-26)
 
-The end-to-end designer flow is built and pushed on the feature branch, all screen-driven
-(git never surfaced to users). Run `bombom serve` then:
+화면 IA가 **계층 한 단계씩** 정리됨 (ADR `2026-06-26-screen-responsibility-split.md`).
+캐노니컬 내비: `메인 · 후보풀 · 배치 목록 · 투자 리포트 · 기준정보 · 랙관리`.
+Run `bombom serve` then:
 
-- `/manage` — 기준정보·Rack-Type 관리 (offering/region/zone/rack-type 추가·삭제[빈 노드만]).
-- `/candidates` — 장비 후보풀: 카탈로그에서 후보 선별 + 가격/부가정보 입력. (후보=별도 목록
-  `candidates/pool.yaml`, 가격은 `pricing/manual.yaml`로 분리. ADR candidate-pool.) 조직이
-  `meta/fields.yaml`에 `applies_to: candidate` 필드를 정의하면 후보별 **구조화 부가정보**(리드타임
-  등) 입력칸이 뜨고 `candidate.meta`에 저장된다. `GET /api/candidate-fields`.
-- `/search` — 전역 검색: 노드/랙/배치 장비를 이름으로 찾기(`GET /api/search`). 랙·장비 결과는
-  뷰어로 딥링크.
-- `/health` — 검증 대시보드: confirm 전에 검증오류·경고·미가격배치·미가격후보·후보메타누락을 한
-  화면에 모아 클릭으로 수정 이동. `bombom/health.py` `build_health`(= compute_bom 이슈/unpriced +
-  후보풀 갭 집계), `GET /api/health?path=`.
-- `/edit` — 배치: "① 모델 선택" 검색이 후보풀만(`?pool=1`) 본다. ✅확정 모달(게이트→봉인 태그).
-- `/placed` — 배치예정 장비 목록 + 합계 CAPEX + 릴리즈 필터 + CSV(전체/릴리즈별).
-- `/dashboard` — 누적 총 CAPEX 헤드라인 + 계층/카테고리 롤업 + 릴리즈 추이 + 상위 지출.
-- 확정 워크플로우: `bombom/confirm/` (release+build, manifest `confirmations/<id>.yaml`,
-  annotated 태그). ADR confirm-workflow.
-- **복제**: 에디터 `⧉ 복제`(랙→같은 Rack-Type 새 랙, 배치 그대로) + `⧉ 여러 개`(일괄 N개,
-  `R10,R11`/`web-02..05` 패턴, 단일 커밋), `/manage` 노드별 `⧉ 복제`(존/타입/리전 서브트리
-  통째). `POST /api/rack/clone`·`/api/rack/clone-bulk`·`/api/hierarchy/clone`. ADR clone.
-- **보고서 export**: `/placed`·`/dashboard`의 `📄 보고서` → `GET /api/report.html`(데이터 구운
-  standalone HTML, 인쇄/PDF). `export.build_report_data` = dashboard 롤업 + placed 행.
-- **변경 비교(/diff)**: 확정 태그(=릴리즈) 또는 작업본(WORKING) 두 개를 슬롯 단위로 비교 →
-  추가/제거/교체 + CAPEX 델타. `bombom/release/diff.py` `compare_releases`, `GET /api/release/
-  diff?base&head&path`. release="설계 모음 확정" 정의를 구현. ADR release-diff.
+- `/` (home.html) — **메인 대시보드**. ① 오퍼링→리전→존 구조(빈 노드 포함, 존 칩→`/place`),
+  ② 랙타입별/리전별/오퍼링별 투자 막대, KPI=전체 랙·서버·리전·존 수. 검은 총액 히어로 없음.
+  `GET /api/overview?path=offerings`.
+- `/candidates` — **후보풀**: 등록된 후보를 카테고리(server/network/storage/other)별 목록으로
+  보여주고 **인라인 가격 입력** + 비고/메타 필드. `＋ 후보 추가`는 카탈로그 검색 팝업(85+ 결과).
+  후보=`candidates/pool.yaml`, 가격=`pricing/`. `GET /api/candidate-fields`.
+- `/edit` — **랙관리**(rack 단위 전용). 좌측 트리에서 랙타입 선택 → 그 안의 랙 카드(미니 실장도+
+  모델+U). `＋ 랙 추가`(모델 검색 `kind=rack`), `⧉ 복제`/`⧉ 여러 개`(`R10..12` 범위), 각 랙
+  `🗺 배치`→`/place`. **장비 배치 캔버스·팔레트·확정 모달은 제거됨**(`/place`로 일원화).
+  `POST /api/rack/new|clone|clone-bulk`, `GET /api/layout?path=`.
+- `/place` — **배치**: 한 존의 랙들. 보기/편집 토글, 팔레트=후보풀 전체, 신규 배치는
+  `release="DRAFT"`(미태그). 🏷 릴리즈 태깅 링크→`/placed`.
+- `/placed` — **배치 목록·릴리즈 태깅**: 랙별 배치 라인 + 체크박스 선택 → 릴리즈 태그 부여
+  (`PUT /api/rack`는 release 문자열만 변경, 구조 검증 통과). CSV/합계 CAPEX.
+- `/summary` — **투자 리포트**: 오퍼링/리전/존/랙타입 그룹 집계 + 릴리즈 필터
+  (`/api/overview?release=`).
+- `/manage` — **기준정보**: 조직 계층(오퍼링·리전·존·랙타입) 골격만. 상단 카운트 스트립 +
+  역할 분리 안내. 노드 추가·삭제(빈 노드)·서브트리 복제. `/api/hierarchy`.
+- 확정 워크플로우 `bombom/confirm/`, 보고서 export `GET /api/report.html`은 백엔드 유지.
+- **메뉴 비노출(백엔드는 유지):** `/diff`(변경 비교, `bombom/release/diff.py`), `/health`(검증,
+  `bombom/health.py`), `/search`(전역 검색). 라우트·테스트 살아있음. 완전 삭제는 사용자 확인 후.
+
+### 이번 세션 핵심 수정
+- `build_overview`가 트리(`list_hierarchy`)는 **`ws.root`**, 배치 집계는 **넘어온 노드 경로**로
+  분리해서 읽도록 고침. 이전엔 같은 인자를 둘 다에 써서 API 경유 시 트리가 비었음
+  (정적 데모 메인 구조가 안 보이던 버그). `bombom/overview.py:50`.
+- `scripts/showcase.py` 데모 구조: 4 오퍼링(Enterprise/Samsung/PPP/Sovereign) × kr-east1/kr-west1,
+  **Samsung/kr-west1만 zone1·zone2**(랙 채워짐). 태그 R25.01/R26.07.
 
 Key modules: `bombom/{confirm,candidates,hierarchy,dashboard}.py`, `bombom/report/`,
 endpoints in `bombom/api/app.py`, pages in `web/{manage,candidates,placed,dashboard}.html`.

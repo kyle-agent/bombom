@@ -1,81 +1,169 @@
 <!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
+<html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>bombom — 장비 후보 선택</title>
+<title>bombom — 후보풀</title>
 <style>
-  :root{
-    --bg:#0f172a;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
-    --accent:#2563eb;--accent2:#0ea5e9;--ok:#16a34a;--warn:#d97706;--new:#f59e0b;--bad:#dc2626;
-    --server:#2563eb;--network:#16a34a;--storage:#9333ea;--other:#64748b;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font:13px/1.45 -apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--ink);background:#f8fafc}
-  header{background:var(--bg);color:#e2e8f0;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  header .logo{font-weight:700;color:#fff}
-  header .crumb{color:#94a3b8}
-  header .links{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-  header .links a{color:#cbd5e1;text-decoration:none;border:1px solid #334155;border-radius:8px;padding:3px 10px;font-size:12px}
-  header .links a:hover{background:#1e293b;color:#fff}
-  .wrap{padding:14px;display:flex;flex-direction:column;gap:14px;max-width:1400px;margin:0 auto}
-  .intro{color:var(--muted);font-size:13px}
-  .cols{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-width:0}
-  .col{flex:1 1 420px;min-width:0}
-  .card h3{margin:0;padding:12px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
-  .card h3 .cnt{margin-left:auto;background:#eff6ff;color:var(--accent);border-radius:10px;font-size:11px;padding:1px 9px;font-weight:700;text-transform:none;letter-spacing:0}
-  .body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
-  .search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
-  .results{display:flex;flex-direction:column;gap:7px;max-height:560px;overflow:auto}
-  .row{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
-  .row.dim{opacity:.6;background:#f8fafc}
-  .row .top{display:flex;align-items:center;gap:8px}
-  .row .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .row .slug{color:var(--muted);font-size:11px}
-  .row .mfr{color:var(--muted);font-size:11px;margin-top:3px}
-  .chip{display:inline-block;font-size:10px;font-weight:700;color:#fff;border-radius:5px;padding:1px 7px;letter-spacing:.3px;white-space:nowrap;flex:none}
-  .addbtn{margin-left:auto;flex:none;border:none;background:#eff6ff;color:var(--accent);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600}
-  .addbtn:hover{background:#dbeafe}
-  .addbtn:disabled{cursor:default}
-  .added{margin-left:auto;flex:none;color:var(--muted);font-size:12px;font-weight:600}
-  /* candidate pool rows */
-  .crow{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;display:flex;flex-direction:column;gap:8px}
-  .crow .head{display:flex;align-items:center;gap:8px}
-  .crow .inputs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .crow .pricewrap{display:flex;align-items:center;gap:5px}
-  .crow .pricewrap .cur{color:var(--muted);font-weight:600}
-  .crow input[type=number]{width:130px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
-  .crow input[type=text].note{flex:1 1 160px;min-width:120px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px}
-  .crow .savebtn{border:1px solid var(--ok);background:#f0fdf4;color:var(--ok);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
-  .crow .savebtn:hover{background:#dcfce7}
-  .crow .delbtn{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer}
-  .crow .delbtn:hover{border-color:var(--bad);color:var(--bad)}
-  /* structured org-defined meta fields */
-  .crow .meta{display:flex;flex-direction:column;gap:7px;border-top:1px dashed var(--line);padding-top:8px}
-  .crow .meta .mfields{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
-  .crow .meta .mfield{display:flex;flex-direction:column;gap:3px;min-width:0}
-  .crow .meta .mlabel{color:var(--muted);font-size:11px;font-weight:600}
-  .crow .meta .mlabel .req{color:var(--bad);margin-left:3px}
-  .crow .meta .mlabel.missing{color:var(--bad)}
-  .crow .meta .mhint{color:var(--bad);font-size:10px;font-weight:700}
-  .crow .meta input[type=text],.crow .meta input[type=number],.crow .meta input[type=date]{width:150px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px}
-  .crow .meta input.missing{border-color:var(--bad)}
-  .crow .meta .mbool{display:flex;align-items:center;gap:6px;height:31px}
-  .crow .meta .savemeta{border:1px solid var(--ok);background:#f0fdf4;color:var(--ok);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start}
-  .crow .meta .savemeta:hover{background:#dcfce7}
-  .badge{font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;white-space:nowrap;flex:none}
-  .badge.priced{background:#f0fdf4;color:var(--ok);border:1px solid #bbf7d0;font-variant-numeric:tabular-nums}
-  .badge.unpriced{background:#fffbeb;color:var(--warn);border:1px solid #fde68a}
-  .foot{border-top:1px solid var(--line);padding:10px 14px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
-  .empty{color:#94a3b8;text-align:center;padding:22px 8px;font-size:12px}
-  .hint{color:var(--muted);font-size:12px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
-  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
-    padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:99;max-width:90vw}
-  #toast.show{opacity:1}
-  #toast.err{background:var(--bad)}
-  @media(max-width:880px){ .col{flex:1 1 100%} }
-</style>
+ :root{--accent:#2563eb;--line:#e7ebf0;--muted:#64748b;font-family:system-ui,-apple-system,sans-serif}
+ *{box-sizing:border-box}
+ body{margin:0;background:#f4f6f9;color:#0f172a}
+ header{display:flex;gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:6}
+ .logo{font-weight:800;font-size:16px;color:var(--accent)}
+ .crumb{color:var(--muted);font-size:13px}
+ nav{margin-left:auto;display:flex;gap:2px}
+ nav a{color:#475569;text-decoration:none;font-size:13px;padding:5px 9px;border-radius:6px}
+ .wrap{max-width:1080px;margin:20px auto;padding:0 18px 50px}
+ .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+ .toolbar .t{font-size:14px;color:var(--muted)}
+ .btn{font-size:13px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:7px 12px;cursor:pointer}
+ .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+ .btn.primary:hover{background:#1d4ed8}
+ .spacer{margin-left:auto}
+ .cat{margin-bottom:18px}
+ .cat .ch{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin:0 0 8px}
+ .cat .ch .dot{width:11px;height:11px;border-radius:3px}
+ .cat .ch .cnt{color:var(--muted);font-weight:400;font-size:12px}
+ table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+ th,td{padding:9px 12px;border-bottom:1px solid #f4f6f9;font-size:13px;text-align:left;vertical-align:middle}
+ th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:11px}
+ tr:last-child td{border-bottom:0}
+ td.dev b{font-weight:700}td.dev .slug{color:#94a3b8;font-size:11px;margin-left:6px}
+ .pricewrap{display:inline-flex;align-items:center;gap:4px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 8px;background:#fff}
+ .pricewrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(37,99,235,.15)}
+ .pricewrap .w{color:#94a3b8}
+ .pricewrap input{border:0;outline:0;width:120px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;background:transparent}
+ td.price .none{color:#d97706;font-size:11px;margin-left:6px}
+ input.note,input.meta{border:1px solid #e2e8f0;border-radius:7px;padding:5px 8px;font-size:12px;width:100%}
+ input.note:focus,input.meta:focus{border-color:var(--accent);outline:0}
+ .req::after{content:" *";color:#dc2626}
+ td.rm{text-align:right}
+ .delbtn{border:none;background:none;color:#94a3b8;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:6px}
+ .delbtn:hover{color:#dc2626;background:#fef2f2}
+ .empty{padding:50px;text-align:center;color:#94a3b8}
+ .modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:flex-start;justify-content:center;z-index:30}
+ .modal.on{display:flex}
+ .modal .box{background:#fff;border-radius:12px;margin-top:60px;width:560px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(15,23,42,.25)}
+ .modal .mh{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+ .modal .mh b{font-size:14px}.modal .mh .x{margin-left:auto;cursor:pointer;color:#94a3b8;font-size:20px}
+ .modal .controls{padding:10px 16px 4px}.modal input.s{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px}
+ .modal .mhint{padding:2px 16px 8px;color:var(--muted);font-size:12px}
+ .modal .res{overflow:auto;padding:6px 12px 14px}
+ .mrow{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--line);border-radius:9px;margin:6px 0}
+ .mrow .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+ .mrow .info{flex:1;min-width:0}.mrow .info .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mrow .info .m{font-size:11px;color:var(--muted)}
+ .mrow .add{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+ .mrow .add.in{background:#e2e8f0;color:#64748b;cursor:default}
+ #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
+ #toast.on{opacity:.96}
+</style></head>
+<body>
+<header>
+ <span class="logo">bombom</span><span class="crumb">— 후보풀 (1차 후보)</span>
+ <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a></nav>
+</header>
+<div class="wrap">
+ <div class="toolbar">
+   <span class="t" id="summary">불러오는 중…</span>
+   <span class="spacer"></span>
+   <button class="btn primary" id="addBtn">＋ 후보 추가</button>
+ </div>
+ <div id="list"><div class="empty">불러오는 중…</div></div>
+</div>
+<div class="modal" id="modal"><div class="box">
+  <div class="mh"><b>＋ 후보 추가 (카탈로그에서 선택)</b><span class="x" id="mClose">×</span></div>
+  <div class="controls"><input class="s" id="mSearch" placeholder="제조사 / 모델 검색…"></div>
+  <div class="mhint">검색해서 <b>＋추가</b>하면 후보풀에 반영됩니다. 가격·비고는 목록에서 바로 입력하세요.</div>
+  <div class="res" id="mRes"><div class="empty">검색어를 입력하세요.</div></div>
+</div></div>
+<div id="toast"></div>
+<script>
+const CAT={server:"#2563eb",network:"#16a34a",storage:"#9333ea",other:"#64748b"};
+const CATLABEL={server:"서버",network:"네트워크",storage:"스토리지",other:"기타"};
+const ORDER=["server","network","storage","other"];
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2000);}
+
+let POOL=[], FIELDS=[];
+const myFields=()=>FIELDS.filter(f=>f.applies_to==='candidate');
+
+async function apiPut(slug, body){
+  const r=await fetch('/api/candidates/'+encodeURIComponent(slug),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok){const d=await r.json().catch(()=>null);throw new Error((d&&d.detail)||('HTTP '+r.status));}
+  return r.json();
+}
+function render(){
+  const byCat={}; POOL.forEach(c=>{(byCat[c.category]=byCat[c.category]||[]).push(c);});
+  document.getElementById('summary').textContent=`후보 ${POOL.length}종 · 미가격 ${POOL.filter(c=>!c.priced).length}`;
+  const cats=ORDER.filter(c=>byCat[c]);
+  if(!cats.length){ document.getElementById('list').innerHTML='<div class="empty">후보가 없습니다 — <b>＋ 후보 추가</b>로 카탈로그에서 선택하세요.</div>'; return; }
+  const fcols=myFields();
+  document.getElementById('list').innerHTML=cats.map(cat=>{
+    const rows=byCat[cat].sort((a,b)=>(a.model||a.slug).localeCompare(b.model||b.slug)).map(c=>{
+      const price=`<div class="pricewrap"><span class="w">₩</span><input type="number" min="0" step="100000" value="${c.unit_cost!=null?c.unit_cost:''}" data-slug="${esc(c.slug)}" data-k="price" placeholder="0"></div>${c.priced?'':'<span class="none">미입력</span>'}`;
+      const metas=fcols.map(f=>`<td><input class="meta" value="${esc((c.meta&&c.meta[f.key])!=null?c.meta[f.key]:'')}" data-slug="${esc(c.slug)}" data-k="meta" data-field="${esc(f.key)}" placeholder="${esc(f.label)}"></td>`).join('');
+      return `<tr><td class="dev"><b>${esc(c.model||c.slug)}</b><span class="slug">${esc(c.slug)}</span></td>
+        <td class="price">${price}</td>${metas}
+        <td><input class="note" value="${esc(c.note||'')}" data-slug="${esc(c.slug)}" data-k="note" placeholder="비고"></td>
+        <td class="rm"><button class="delbtn" data-del="${esc(c.slug)}">✕ 제거</button></td></tr>`;
+    }).join('');
+    return `<div class="cat"><div class="ch"><span class="dot" style="background:${CAT[cat]||CAT.other}"></span>${CATLABEL[cat]||cat}<span class="cnt">· ${byCat[cat].length}종</span></div>
+      <table><thead><tr><th>장비</th><th>단가</th>${fcols.map(f=>`<th class="${f.required?'req':''}">${esc(f.label)}</th>`).join('')}<th>비고</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  wire();
+}
+function wire(){
+  document.querySelectorAll('input[data-k="price"]').forEach(el=>el.addEventListener('change',async()=>{
+    const v=el.value.trim(); if(v==='')return;
+    try{ await apiPut(el.dataset.slug,{unit_cost:Math.max(0,Math.round(+v))}); const c=POOL.find(x=>x.slug===el.dataset.slug); if(c){c.unit_cost=+v;c.priced=true;} toast('가격 저장: '+el.dataset.slug); }
+    catch(e){ toast('저장 실패: '+e.message); }
+  }));
+  document.querySelectorAll('input[data-k="note"]').forEach(el=>el.addEventListener('change',async()=>{
+    try{ await apiPut(el.dataset.slug,{note:el.value}); toast('비고 저장됨'); }catch(e){ toast('저장 실패: '+e.message); }
+  }));
+  document.querySelectorAll('input[data-k="meta"]').forEach(el=>el.addEventListener('change',async()=>{
+    const c=POOL.find(x=>x.slug===el.dataset.slug); const meta=Object.assign({},c&&c.meta); meta[el.dataset.field]=el.value;
+    try{ await apiPut(el.dataset.slug,{meta}); if(c)c.meta=meta; toast('항목 저장됨'); }catch(e){ toast('저장 실패: '+e.message); }
+  }));
+  document.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',async()=>{
+    if(!confirm(el.dataset.del+' 를 후보풀에서 제거할까요?'))return;
+    const r=await fetch('/api/candidates/'+encodeURIComponent(el.dataset.del),{method:'DELETE'});
+    if(r.ok){ POOL=POOL.filter(c=>c.slug!==el.dataset.del); render(); toast('제거됨'); } else toast('제거 실패');
+  }));
+}
+
+const modal=document.getElementById('modal');
+document.getElementById('addBtn').onclick=()=>{ modal.classList.add('on'); document.getElementById('mSearch').focus(); search(); };
+document.getElementById('mClose').onclick=()=>modal.classList.remove('on');
+modal.addEventListener('click',e=>{ if(e.target===modal)modal.classList.remove('on'); });
+let st=null;
+document.getElementById('mSearch').addEventListener('input',()=>{ clearTimeout(st); st=setTimeout(search,200); });
+function search(){
+  const q=document.getElementById('mSearch').value.trim();
+  const box=document.getElementById('mRes'); box.innerHTML='<div class="empty">불러오는 중…</div>';
+  fetch('/api/catalog/search?kind=device&limit=50&q='+encodeURIComponent(q)).then(r=>r.json()).then(rows=>{
+    if(!rows.length){ box.innerHTML='<div class="empty">검색 결과가 없습니다.</div>'; return; }
+    const have=new Set(POOL.map(c=>c.slug));
+    box.innerHTML=rows.map(r=>{
+      const cat=r.category||'other', inpool=have.has(r.slug);
+      return `<div class="mrow"><span class="dot" style="background:${CAT[cat]||CAT.other}"></span>
+        <span class="info"><span class="n">${esc(r.model||r.slug)}</span><span class="m">${esc(r.manufacturer||'')} · ${esc(cat)} · ${esc(r.slug)}</span></span>
+        <button class="add ${inpool?'in':''}" data-slug="${esc(r.slug)}" ${inpool?'disabled':''}>${inpool?'담김':'＋ 추가'}</button></div>`;
+    }).join('');
+    box.querySelectorAll('.add:not(.in)').forEach(btn=>btn.addEventListener('click',async()=>{
+      const r=await fetch('/api/candidates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:btn.dataset.slug})});
+      if(r.ok){ const j=await r.json(); POOL.push(j.candidate||{slug:btn.dataset.slug,category:'other'}); btn.textContent='담김'; btn.classList.add('in'); btn.disabled=true; render(); toast('후보풀에 추가: '+btn.dataset.slug); }
+      else { const d=await r.json().catch(()=>null); toast('추가 실패: '+((d&&d.detail)||r.status)); }
+    }));
+  }).catch(e=>{ box.innerHTML='<div class="empty">검색 실패: '+esc(e.message)+'</div>'; });
+}
+
+Promise.all([
+  fetch('/api/candidates').then(r=>r.json()),
+  fetch('/api/candidate-fields').then(r=>r.json()).catch(()=>[]),
+]).then(([pool,fields])=>{ POOL=pool||[]; FIELDS=fields||[]; render(); })
+  .catch(e=>{ document.getElementById('list').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message)+'</div>'; });
+</script>
 <style id="cxbar">
 header{background:#fff!important;color:#0f172a!important;border-bottom:1px solid #e7ebf0!important}
 header .logo,header .ab-logo{color:#2563eb!important}
@@ -85,419 +173,4 @@ header nav a:hover,header .topnav a:hover,header .links a:hover{background:#f1f5
 header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!important;color:#2563eb!important;font-weight:700!important}
 </style>
 <script>addEventListener('DOMContentLoaded',function(){function st(h){h=(h||'').split('?')[0].split('#')[0].replace(/^.*\//,'').replace(/\.html$/,'');return h||'index';}var cur=st(location.pathname);if(cur==='home')cur='index';document.querySelectorAll('header a[href]').forEach(function(a){if(a.classList.contains('logo')||a.classList.contains('ab-logo'))return;var s=st(a.getAttribute('href'));if(s==='home')s='index';if(s===cur)a.classList.add('on');});});</script>
-</head>
-<body>
-<header>
-  <span class="logo">bombom</span>
-  <span class="crumb">— 장비 후보 선택</span>
-  <nav class="topnav"><a href="/">메인</a><a href="/candidates">후보풀</a><a href="/placed">배치 목록</a><a href="/summary">투자 리포트</a><a href="/diff">변경비교</a><a href="/health">검증</a><a href="/manage">기준정보</a><a href="/edit">랙관리</a><a href="/search">검색</a></nav>
-</header>
-
-<div class="wrap">
-  <div class="intro">카탈로그에서 후보 장비를 고르고, 후보별 가격·부가정보를 입력합니다. 배치는 후보풀에서만 합니다.</div>
-
-  <div class="cols">
-    <!-- LEFT: catalog search -->
-    <div class="card col">
-      <h3>카탈로그 검색</h3>
-      <div class="body">
-        <input class="search" id="catSearch" placeholder="제조사 / 모델 검색…" autocomplete="off">
-        <div class="results" id="catResults">
-          <div class="empty" id="catEmpty">검색어를 입력하면 카탈로그 장비가 표시됩니다.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT: candidate pool -->
-    <div class="card col">
-      <h3>후보풀 <span class="cnt" id="poolCnt">0</span></h3>
-      <div class="body">
-        <div class="results" id="poolResults">
-          <div class="empty" id="poolEmpty">아직 후보가 없습니다</div>
-        </div>
-      </div>
-      <div class="foot" id="poolFoot">후보 0개 · 가격 입력됨 0개 · 미정 0개</div>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-<script>
-"use strict";
-
-// ── helpers ──────────────────────────────────────────────────────────
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function won(n){ return '₩' + Number(n||0).toLocaleString('ko-KR'); }
-const CATCOLOR = {server:'#2563eb', network:'#16a34a', storage:'#9333ea', other:'#64748b'};
-function catColor(c){ return CATCOLOR[String(c||'').toLowerCase()] || CATCOLOR.other; }
-function catChip(c){
-  const cat = String(c||'other');
-  return `<span class="chip" style="background:${catColor(cat)}">${esc(cat)}</span>`;
-}
-
-function toast(msg, isErr){
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'show' + (isErr ? ' err' : '');
-  setTimeout(()=>{ t.className = isErr ? 'err' : ''; }, 3200);
-}
-
-// friendly error messages by status
-function friendly(status, detail){
-  if(status===404) return detail || '대상을 찾을 수 없습니다.';
-  if(status===409) return detail || '이미 후보풀에 담겨 있습니다.';
-  if(status===422) return detail || '입력값이 올바르지 않습니다 (가격은 0 이상의 정수).';
-  if(status===400) return detail || '변경할 내용이 없습니다.';
-  return detail || ('요청 실패 (HTTP ' + status + ').');
-}
-
-// ── fetch wrappers ───────────────────────────────────────────────────
-async function getJSON(url){
-  const r = await fetch(url, {headers:{'Accept':'application/json'}});
-  if(!r.ok){ const d = await readDetail(r); const e = new Error(friendly(r.status, d)); e.status = r.status; throw e; }
-  return r.json();
-}
-async function sendJSON(method, url, body){
-  const r = await fetch(url, {
-    method,
-    headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body: body===undefined ? undefined : JSON.stringify(body)
-  });
-  if(!r.ok){ const d = await readDetail(r); const e = new Error(friendly(r.status, d)); e.status = r.status; throw e; }
-  return r.json();
-}
-function postJSON(url, body){ return sendJSON('POST', url, body); }
-function putJSON(url, body){ return sendJSON('PUT', url, body); }
-function del(url){ return sendJSON('DELETE', url, undefined); }
-async function readDetail(r){
-  try{
-    const d = await r.json();
-    if(d && d.detail){
-      if(typeof d.detail === 'string') return d.detail;
-      if(d.detail.message) return d.detail.message;
-    }
-  }catch(e){}
-  return '';
-}
-
-// ── state: pool slug set (for LEFT 담김 marking) ─────────────────────
-const poolSlugs = new Set();
-let catCache = [];   // last catalog search results
-let metaFields = []; // org-defined candidate-scoped field defs (may be empty)
-
-// ── org-defined meta fields ──────────────────────────────────────────
-async function loadMetaFields(){
-  try{
-    const defs = await getJSON('/api/candidate-fields');
-    metaFields = Array.isArray(defs) ? defs : [];
-  }catch(e){
-    metaFields = [];  // opt-in feature; on error render nothing
-  }
-}
-
-// HTML input type for a field def's declared type
-function metaInputType(t){
-  switch(String(t||'').toLowerCase()){
-    case 'int': case 'number': return 'number';
-    case 'date': return 'date';
-    case 'bool': return 'bool';
-    default: return 'text';
-  }
-}
-
-// ── LEFT: catalog search (debounced) ─────────────────────────────────
-let catTimer = null;
-function scheduleCatSearch(){ clearTimeout(catTimer); catTimer = setTimeout(doCatSearch, 250); }
-
-async function doCatSearch(){
-  const q = document.getElementById('catSearch').value.trim();
-  const box = document.getElementById('catResults');
-  if(!q){
-    catCache = [];
-    box.innerHTML = '<div class="empty">검색어를 입력하면 카탈로그 장비가 표시됩니다.</div>';
-    return;
-  }
-  box.innerHTML = '<div class="empty">검색 중…</div>';
-  try{
-    const res = await getJSON('/api/catalog/search?kind=device&limit=50&q=' + encodeURIComponent(q));
-    catCache = (res || []).slice(0, 50);
-    renderCatResults();
-  }catch(e){
-    box.innerHTML = '<div class="empty">카탈로그 검색 실패: ' + esc(e.message) + '</div>';
-  }
-}
-
-function renderCatResults(){
-  const box = document.getElementById('catResults');
-  if(!catCache.length){ box.innerHTML = '<div class="empty">검색 결과가 없습니다.</div>'; return; }
-  box.innerHTML = catCache.map((r,i)=>{
-    const inPool = poolSlugs.has(r.slug);
-    const right = inPool
-      ? `<span class="added">담김</span>`
-      : `<button class="addbtn" data-add="${i}">＋ 후보</button>`;
-    return `<div class="row ${inPool?'dim':''}">
-      <div class="top">
-        <span class="name">${esc(r.model || r.slug)}</span>
-        <span class="slug">${esc(r.slug)}</span>
-        ${catChip(r.category)}
-        ${right}
-      </div>
-      <div class="mfr">${esc(r.manufacturer || '')}</div>
-    </div>`;
-  }).join('');
-  box.querySelectorAll('[data-add]').forEach(el=>el.addEventListener('click', ()=>{
-    const r = catCache[+el.dataset.add];
-    if(r) addCandidate(r.slug);
-  }));
-}
-
-// ── add to pool ──────────────────────────────────────────────────────
-async function addCandidate(slug){
-  try{
-    await postJSON('/api/candidates', {slug});
-    poolSlugs.add(slug);
-    toast('후보풀에 담았습니다: ' + slug);
-    renderCatResults();
-    await loadPool();
-  }catch(e){
-    if(e.status===409){ poolSlugs.add(slug); renderCatResults(); }
-    toast(e.message, true);
-  }
-}
-
-// ── RIGHT: candidate pool ────────────────────────────────────────────
-async function loadPool(){
-  const box = document.getElementById('poolResults');
-  try{
-    const pool = await getJSON('/api/candidates');
-    renderPool(pool || []);
-  }catch(e){
-    box.innerHTML = '<div class="empty">후보풀을 불러오지 못했습니다: ' + esc(e.message) + '</div>';
-    document.getElementById('poolFoot').textContent = '—';
-  }
-}
-
-function renderPool(pool){
-  // refresh slug set + LEFT 담김 marks
-  poolSlugs.clear();
-  pool.forEach(c=>poolSlugs.add(c.slug));
-  renderCatResults();
-
-  document.getElementById('poolCnt').textContent = pool.length;
-  const box = document.getElementById('poolResults');
-
-  if(!pool.length){
-    box.innerHTML = '<div class="empty">아직 후보가 없습니다</div>';
-    document.getElementById('poolFoot').textContent = '후보 0개 · 가격 입력됨 0개 · 미정 0개';
-    return;
-  }
-
-  box.innerHTML = '';
-  let priced = 0;
-  pool.forEach(c=>{
-    if(c.priced) priced++;
-    const el = document.createElement('div');
-    el.className = 'crow';
-    const badge = c.priced
-      ? `<span class="badge priced">${won(c.unit_cost)}</span>`
-      : `<span class="badge unpriced">가격 미정</span>`;
-    el.innerHTML = `
-      <div class="head">
-        <span class="name">${esc(c.model || c.slug)}</span>
-        <span class="slug">${esc(c.slug)}</span>
-        ${catChip(c.category)}
-        ${badge}
-        <button class="delbtn" type="button">삭제</button>
-      </div>
-      <div class="inputs">
-        <span class="pricewrap"><span class="cur">₩</span><input type="number" min="0" step="1" placeholder="가격 (원)" class="price"></span>
-        <input type="text" class="note" placeholder="부가정보 (선택)">
-        <button class="savebtn" type="button">저장</button>
-      </div>
-      ${renderMetaBlock(c)}`;
-
-    // prefill via property assignment (no HTML interpolation of server strings)
-    const priceInp = el.querySelector('.price');
-    const noteInp = el.querySelector('.note');
-    if(c.priced && c.unit_cost != null) priceInp.value = c.unit_cost;
-    noteInp.value = (c.note == null ? '' : c.note);
-
-    // track baselines to send only changed fields
-    const basePrice = (c.priced && c.unit_cost != null) ? String(c.unit_cost) : '';
-    const baseNote = (c.note == null ? '' : c.note);
-
-    el.querySelector('.savebtn').addEventListener('click', ()=>{
-      saveCandidate(c.slug, priceInp, noteInp, basePrice, baseNote);
-    });
-    el.querySelector('.delbtn').addEventListener('click', ()=>{
-      removeCandidate(c.slug);
-    });
-
-    // wire structured meta inputs + save
-    prefillMeta(el, c);
-    const saveMetaBtn = el.querySelector('.savemeta');
-    if(saveMetaBtn){
-      saveMetaBtn.addEventListener('click', ()=>{ saveMeta(c.slug, el); });
-    }
-
-    box.appendChild(el);
-  });
-
-  const unpriced = pool.length - priced;
-  document.getElementById('poolFoot').textContent =
-    `후보 ${pool.length}개 · 가격 입력됨 ${priced}개 · 미정 ${unpriced}개`;
-}
-
-// ── save (price + note in one PUT; only changed fields) ──────────────
-async function saveCandidate(slug, priceInp, noteInp, basePrice, baseNote){
-  const body = {};
-  const rawPrice = priceInp.value.trim();
-  if(rawPrice !== basePrice){
-    if(rawPrice !== ''){
-      const n = Number(rawPrice);
-      if(!Number.isFinite(n) || n < 0 || !Number.isInteger(n)){
-        toast('가격은 0 이상의 정수로 입력하세요.', true);
-        return;
-      }
-      body.unit_cost = n;
-    }
-  }
-  const noteVal = noteInp.value;
-  if(noteVal !== baseNote){ body.note = noteVal; }
-
-  if(Object.keys(body).length === 0){
-    toast('변경된 내용이 없습니다.');
-    return;
-  }
-  try{
-    await putJSON('/api/candidates/' + encodeURIComponent(slug), body);
-    toast('저장했습니다: ' + slug);
-    await loadPool();
-  }catch(e){
-    toast(e.message, true);
-  }
-}
-
-// ── remove ───────────────────────────────────────────────────────────
-async function removeCandidate(slug){
-  try{
-    await del('/api/candidates/' + encodeURIComponent(slug));
-    poolSlugs.delete(slug);
-    toast('후보풀에서 제거했습니다: ' + slug);
-    renderCatResults();
-    await loadPool();
-  }catch(e){
-    toast(e.message, true);
-  }
-}
-
-// ── structured meta: render / prefill / save ─────────────────────────
-// Build the meta block HTML for one candidate row. Returns '' when the org
-// has no candidate-scoped fields (opt-in). Values prefilled separately via
-// prefillMeta to avoid HTML-interpolating server strings.
-function renderMetaBlock(c){
-  if(!metaFields.length) return '';
-  const missing = new Set(Array.isArray(c.meta_missing) ? c.meta_missing : []);
-  const fields = metaFields.map((f, i)=>{
-    const key = f.key;
-    const label = f.label || f.key;
-    const itype = metaInputType(f.type);
-    const isMissing = missing.has(key);
-    const reqMark = f.required ? `<span class="req">*</span>` : '';
-    const hint = isMissing ? `<span class="mhint">필수</span>` : '';
-    const labelCls = 'mlabel' + (isMissing ? ' missing' : '');
-    const inpCls = isMissing ? ' missing' : '';
-    let control;
-    if(itype === 'bool'){
-      control = `<label class="mbool"><input type="checkbox" data-mkey="${esc(key)}"><span>예</span></label>`;
-    }else{
-      control = `<input type="${esc(itype)}" data-mkey="${esc(key)}"${inpCls?` class="${inpCls.trim()}"`:''}>`;
-    }
-    return `<div class="mfield" data-mfield="${i}">
-      <span class="${labelCls}">${esc(label)}${reqMark} ${hint}</span>
-      ${control}
-    </div>`;
-  }).join('');
-  return `<div class="meta">
-    <div class="mfields">${fields}</div>
-    <button class="savemeta" type="button">부가정보 저장</button>
-  </div>`;
-}
-
-// Prefill meta inputs from c.meta via property assignment (no HTML interp).
-function prefillMeta(el, c){
-  if(!metaFields.length) return;
-  const meta = (c.meta && typeof c.meta === 'object') ? c.meta : {};
-  el.querySelectorAll('[data-mkey]').forEach(inp=>{
-    const key = inp.getAttribute('data-mkey');
-    const v = meta[key];
-    if(inp.type === 'checkbox'){
-      inp.checked = (v === true || v === 'true' || v === 1);
-    }else{
-      inp.value = (v == null ? '' : v);
-    }
-  });
-}
-
-// Collect meta values by declared type and PUT {meta}.
-// checkbox → boolean; number → Number; empty string stays '' to clear.
-async function saveMeta(slug, el){
-  const meta = {};
-  const byKey = {};
-  metaFields.forEach(f=>{ byKey[f.key] = f; });
-  el.querySelectorAll('[data-mkey]').forEach(inp=>{
-    const key = inp.getAttribute('data-mkey');
-    const def = byKey[key] || {};
-    const itype = metaInputType(def.type);
-    if(itype === 'bool'){
-      meta[key] = inp.checked;
-      return;
-    }
-    const raw = inp.value.trim();
-    if(raw === ''){ meta[key] = ''; return; }   // clear
-    if(itype === 'number'){
-      const n = Number(raw);
-      if(!Number.isFinite(n)){
-        toast((def.label || key) + ': 숫자를 입력하세요.', true);
-        meta[key] = undefined;   // mark invalid
-        return;
-      }
-      meta[key] = n;
-    }else{
-      meta[key] = raw;
-    }
-  });
-  // abort if any numeric field was invalid
-  if(Object.values(meta).some(v=>v === undefined)) return;
-
-  try{
-    const res = await putJSON('/api/candidates/' + encodeURIComponent(slug), {meta});
-    toast('부가정보를 저장했습니다: ' + slug);
-    // update just this row from the refreshed candidate
-    if(res && res.candidate){ refreshRow(el, res.candidate); }
-    else{ await loadPool(); }
-  }catch(e){
-    toast(e.message, true);
-  }
-}
-
-// Re-render the meta block of a single row from a refreshed candidate.
-function refreshRow(el, c){
-  const meta = el.querySelector('.meta');
-  if(!meta){ return; }
-  const wrap = document.createElement('div');
-  wrap.innerHTML = renderMetaBlock(c);
-  const fresh = wrap.querySelector('.meta');
-  if(!fresh){ meta.remove(); return; }
-  meta.replaceWith(fresh);
-  prefillMeta(el, c);
-  const btn = el.querySelector('.savemeta');
-  if(btn){ btn.addEventListener('click', ()=>{ saveMeta(c.slug, el); }); }
-}
-
-// ── init ─────────────────────────────────────────────────────────────
-document.getElementById('catSearch').addEventListener('input', scheduleCatSearch);
-loadMetaFields().then(loadPool);
-</script>
-</body>
-</html>
+</body></html>
