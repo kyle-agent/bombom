@@ -36,7 +36,8 @@ from ..export import build_data, build_report_data, inject
 from ..gitops import add_commit
 from ..health import build_health
 from ..hierarchy import list_hierarchy, node_dir, remove_node
-from ..overlay import required_missing
+from ..overlay import FieldDef, load_fields, required_missing, save_fields
+from ..overlay.meta import FIELD_TYPES
 from ..release.diff import WORKING, compare_releases
 from ..render import rack_elevation_drawio, rack_elevation_svg
 from ..report import investment_csv, investment_rows, placed_rows
@@ -66,6 +67,61 @@ def _safe_id(value: str, field: str) -> str:
     if not _SAFE_ID.match(value) or ".." in value:
         raise ValueError(f"{field} must match [A-Za-z0-9._-] (no leading dot, no '..')")
     return value
+
+
+_MD_LINK = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
+
+
+def _comp_list(items) -> list[dict]:
+    """Normalize a component list (interfaces/power-ports/…) to plain dicts, dropping nulls."""
+    out = []
+    for c in items or []:
+        d = c.model_dump(by_alias=True) if hasattr(c, "model_dump") else dict(c)
+        out.append({k: v for k, v in d.items() if v is not None and v != []})
+    return out
+
+
+def _device_detail(spec, category: str) -> dict:
+    """Full NetBox device spec + a compact summary (powers the 후보풀 detail + 배치 요약).
+
+    Everything here is straight from the synced devicetype-library record; the `summary`
+    block is derived (max power, ports grouped by type, component counts) for the lighter
+    placement/tagging views."""
+    comps = {
+        "interfaces": _comp_list(spec.interfaces),
+        "power_ports": _comp_list(spec.power_ports),
+        "power_outlets": _comp_list(spec.power_outlets),
+        "console_ports": _comp_list(spec.console_ports),
+        "console_server_ports": _comp_list(spec.console_server_ports),
+        "front_ports": _comp_list(spec.front_ports),
+        "rear_ports": _comp_list(spec.rear_ports),
+        "module_bays": _comp_list(spec.module_bays),
+        "device_bays": _comp_list(spec.device_bays),
+    }
+    # port summary: interfaces grouped by media type, biggest first
+    by_type: dict[str, int] = {}
+    for i in comps["interfaces"]:
+        by_type[i.get("type") or "기타"] = by_type.get(i.get("type") or "기타", 0) + 1
+    port_summary = [{"type": t, "count": n}
+                    for t, n in sorted(by_type.items(), key=lambda kv: (-kv[1], kv[0]))]
+    draws = [p.get("maximum_draw") for p in comps["power_ports"] if p.get("maximum_draw")]
+    comments = getattr(spec, "comments", None) or ""
+    datasheets = [{"label": m.group(1), "url": m.group(2)} for m in _MD_LINK.finditer(comments)]
+    return {
+        "slug": spec.slug, "manufacturer": spec.manufacturer, "model": spec.model,
+        "category": category, "part_number": getattr(spec, "part_number", None),
+        "u_height": spec.u_height, "is_full_depth": getattr(spec, "is_full_depth", None),
+        "weight": getattr(spec, "weight", None), "weight_unit": getattr(spec, "weight_unit", None),
+        "airflow": getattr(spec, "airflow", None), "is_powered": getattr(spec, "is_powered", None),
+        "comments": comments, "datasheets": datasheets,
+        "front_image": getattr(spec, "front_image", None), "rear_image": getattr(spec, "rear_image", None),
+        "summary": {
+            "max_power_w": sum(draws) if draws else None,
+            "port_summary": port_summary,
+            "counts": {k: len(v) for k, v in comps.items()},
+        },
+        "components": comps,
+    }
 
 
 class NewRackBody(BaseModel):
@@ -143,6 +199,22 @@ class CloneRackBulkBody(BaseModel):
         if len(set(out)) != len(out):
             raise ValueError("duplicate rack ids")
         return out
+
+
+class FieldDefBody(BaseModel):
+    """Define one candidate 부가정보 field (managed from 기준정보)."""
+
+    key: str
+    label: str = ""
+    type: str = "string"
+    options: list[str] = Field(default_factory=list)
+    required: bool = False
+    applies_to: str = "candidate"
+
+    @field_validator("key")
+    @classmethod
+    def _check_key(cls, v: str) -> str:
+        return _safe_id(v, "key")
 
 
 class MoveRackBody(BaseModel):
@@ -243,6 +315,14 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
             if category:
                 rows = [r for r in rows if r["category"] == category]
         return rows
+
+    @app.get("/api/catalog/device/{slug}")
+    def catalog_device(slug: str):
+        spec = ws.catalog.get_device_type(slug)
+        if spec is None:
+            raise HTTPException(404, f"unknown device: {slug}")
+        category = ws.categories.get(slug, model=spec.model, manufacturer=spec.manufacturer)
+        return _device_detail(spec, category)
 
     @app.get("/api/bom")
     def bom(path: str = "offerings", release: Optional[str] = None):
@@ -746,6 +826,42 @@ def create_app(root: Path | str = ".", *, db_path: Path | None = None) -> FastAP
     def candidate_fields():
         # org-defined fields scoped to candidates (meta/fields.yaml, applies_to: candidate)
         return [f.model_dump() for f in ws.fields if f.applies_to == "candidate"]
+
+    _FIELDS_FILE = Path(root) / "meta" / "fields.yaml"
+
+    def _reload_fields():
+        ws.fields = load_fields(_FIELDS_FILE)
+
+    @app.get("/api/meta/fields")
+    def meta_fields_list(applies_to: Optional[str] = None):
+        # manage which 부가정보 fields exist (기준정보). applies_to filters (e.g. "candidate").
+        return [f.model_dump() for f in ws.fields if not applies_to or f.applies_to == applies_to]
+
+    @app.post("/api/meta/fields")
+    def meta_fields_add(body: FieldDefBody):
+        if body.type not in FIELD_TYPES:
+            raise HTTPException(422, f"type must be one of {FIELD_TYPES}")
+        if any(f.key == body.key and f.applies_to == body.applies_to for f in ws.fields):
+            raise HTTPException(409, f"field already exists: {body.key}")
+        defs = list(ws.fields) + [FieldDef(key=body.key, label=body.label or body.key,
+                                           type=body.type, options=body.options,
+                                           required=body.required, applies_to=body.applies_to)]
+        save_fields(_FIELDS_FILE, defs)
+        add_commit([_FIELDS_FILE], f"meta field add {body.key}", cwd=Path(root))
+        _reload_fields()
+        return {"ok": True, "fields": [f.model_dump() for f in ws.fields
+                                       if f.applies_to == body.applies_to]}
+
+    @app.delete("/api/meta/fields/{key}")
+    def meta_fields_delete(key: str, applies_to: str = "candidate"):
+        key = _safe_slug(key)
+        if not any(f.key == key and f.applies_to == applies_to for f in ws.fields):
+            raise HTTPException(404, f"no such field: {key}")
+        defs = [f for f in ws.fields if not (f.key == key and f.applies_to == applies_to)]
+        save_fields(_FIELDS_FILE, defs)
+        add_commit([_FIELDS_FILE], f"meta field remove {key}", cwd=Path(root))
+        _reload_fields()
+        return {"ok": True, "key": key}
 
     @app.post("/api/candidates")
     def candidates_add(body: CandidateAddBody):

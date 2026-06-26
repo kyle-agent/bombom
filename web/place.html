@@ -81,6 +81,25 @@
  .armbar button{background:#334155;color:#fff;border:0;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer}
  .hint{position:absolute;left:12px;bottom:10px;color:#94a3b8;font-size:12px;z-index:4}
  .empty{padding:24px;color:#94a3b8;text-align:center;font-size:13px}
+ .chip .sinfo{flex:0 0 auto;border:1px solid #e2e8f0;background:#fff;color:#64748b;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:600;cursor:pointer}
+ .chip .sinfo:hover{border-color:var(--accent);color:var(--accent)}
+ .blk .i{cursor:pointer;opacity:.85;flex:0 0 auto;font-size:9px}.blk .i:hover{opacity:1}
+ /* device summary popover (read-only, NetBox 요약) */
+ #sumpop{position:fixed;z-index:40;display:none;min-width:220px;max-width:300px;background:#fff;color:#0f172a;
+   border:1px solid #e7ebf0;border-radius:10px;box-shadow:0 8px 28px rgba(15,23,42,.16);padding:10px 12px;font-size:12px}
+ #sumpop.on{display:block}
+ #sumpop .shd{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+ #sumpop .nbtag{display:inline-flex;align-items:center;gap:5px;border:1px solid #e2e8f0;border-radius:8px;padding:1px 7px;color:#64748b;font-weight:600;font-size:10px}
+ #sumpop .nbtag .d{width:6px;height:6px;border-radius:50%;background:#94a3b8}
+ #sumpop .stitle{font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+ #sumpop .sx{margin-left:auto;cursor:pointer;color:#94a3b8;font-weight:700}
+ #sumpop .sphys{color:#0f172a;font-variant-numeric:tabular-nums;line-height:1.5}
+ #sumpop .ports{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+ #sumpop .pchip{border:1px solid #e7ebf0;border-radius:8px;padding:1px 7px;font-size:11px;color:#334155;font-variant-numeric:tabular-nums}
+ #sumpop .ds{margin-top:6px}
+ #sumpop .ds a{color:var(--accent);text-decoration:none;font-size:11px;font-weight:600}
+ #sumpop .ds a:hover{text-decoration:underline}
+ #sumpop .muted{color:#94a3b8}
  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
  #toast.on{opacity:.96}
 </style><style id="cxbar">
@@ -126,6 +145,7 @@ header nav a.on,header .topnav a.on,header .links a.on{background:#eff6ff!import
  </div>
 </div>
 <div id="toast"></div>
+<div id="sumpop"></div>
 <script>
 const CAT={server:"#2563eb",network:"#16a34a",storage:"#9333ea",other:"#64748b"};
 const UPX=18, DRAFT="DRAFT";
@@ -133,6 +153,56 @@ const PATH=new URLSearchParams(location.search).get('path')||'offerings';
 const cur='₩';
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1900);}
+
+// ── device summary popover (lazy, read-only, cached) ─────────────────────────
+const SUM_CACHE={};                       // slug -> summary obj | {error}
+const PORT_SHORT={'100gbase-x-qsfp28':'100G','40gbase-x-qsfpp':'40G','25gbase-x-sfp28':'25G','10gbase-x-sfpp':'10G','1000base-t':'1G','1000base-x-sfp':'1G'};
+function portLabel(t){ return PORT_SHORT[t] || (t||'?'); }
+function fmtDepth(full){ return full===true?'풀뎁스':(full===false?'하프뎁스':'뎁스 미상'); }
+const sumpop=document.getElementById('sumpop');
+function hideSummary(){ sumpop.classList.remove('on'); sumpop._slug=null; }
+async function loadSummary(slug){
+  if(SUM_CACHE[slug]) return SUM_CACHE[slug];
+  try{
+    const r=await fetch('/api/catalog/device/'+encodeURIComponent(slug));
+    if(!r.ok){ return SUM_CACHE[slug]={error:r.status===404?'요약 정보 없음':'요약 조회 실패 ('+r.status+')'}; }
+    return SUM_CACHE[slug]=await r.json();
+  }catch(e){ return SUM_CACHE[slug]={error:'요약 조회 실패'}; }
+}
+function summaryBody(name,d){
+  const head=`<div class="shd"><span class="nbtag"><span class="d"></span>NetBox 요약</span><span class="stitle" title="${esc(name)}">${esc(name)}</span><span class="sx" data-sumclose="1">✕</span></div>`;
+  if(!d||d.error) return head+`<div class="muted">${esc((d&&d.error)||'요약 없음')}</div>`;
+  const s=d.summary||{}, parts=[];
+  if(d.u_height!=null) parts.push('U'+esc(d.u_height));
+  parts.push(fmtDepth(d.is_full_depth));
+  if(d.weight!=null) parts.push(esc(d.weight)+esc(d.weight_unit||''));
+  if(d.airflow) parts.push('공조 '+esc(d.airflow));
+  if(s.max_power_w!=null) parts.push('최대 '+esc(s.max_power_w)+'W');
+  const ports=(s.port_summary||[]).map(p=>`<span class="pchip">${esc(portLabel(p.type))}×${esc(p.count)}</span>`).join('');
+  const ds=(d.datasheets||[]).filter(x=>x&&x.url);
+  return head+`<div class="sphys">${parts.join(' · ')}</div>`
+    + (ports?`<div class="ports">${ports}</div>`:'')
+    + (ds.length?`<div class="ds">${ds.map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">📄 ${esc(x.label||'데이터시트')}</a>`).join(' · ')}</div>`:'');
+}
+function placeSummaryPop(anchor){
+  const r=anchor.getBoundingClientRect();
+  sumpop.style.visibility='hidden'; sumpop.classList.add('on');
+  const pw=sumpop.offsetWidth, ph=sumpop.offsetHeight;
+  let left=r.right+8; if(left+pw>innerWidth-8) left=Math.max(8,r.left-pw-8);
+  let top=r.top; if(top+ph>innerHeight-8) top=Math.max(8,innerHeight-ph-8);
+  sumpop.style.left=left+'px'; sumpop.style.top=top+'px'; sumpop.style.visibility='';
+}
+async function showSummary(slug,name,anchor){
+  if(sumpop.classList.contains('on')&&sumpop._slug===slug){ hideSummary(); return; }
+  sumpop._slug=slug;
+  sumpop.innerHTML=summaryBody(name, SUM_CACHE[slug] || null);
+  if(!SUM_CACHE[slug]){ sumpop.innerHTML=summaryBody(name,{error:'요약 불러오는 중…'}); }
+  placeSummaryPop(anchor);
+  if(!SUM_CACHE[slug]){ await loadSummary(slug); if(sumpop._slug!==slug) return; sumpop.innerHTML=summaryBody(name,SUM_CACHE[slug]); placeSummaryPop(anchor); }
+}
+sumpop.addEventListener('click',e=>{ if(e.target.closest('[data-sumclose]')) hideSummary(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') hideSummary(); });
+
 document.getElementById('back').href='/';
 document.getElementById('tagLink').href='/placed?path='+encodeURIComponent(PATH);
 
@@ -167,16 +237,26 @@ function render(){
     let slots='';for(let u=rk.rack_u;u>=1;u--)slots+=`<div class="uslot" style="height:${UPX}px" data-rack="${ri}" data-u="${u}"><span class="un">${u}</span></div>`;
     const blks=rk.placements.map(p=>{
       const draft=(p.release||DRAFT)===DRAFT;
+      const info=`<span class="i" data-info="${ri}:${p._id}" title="장비 요약 보기">ⓘ</span>`;
       const ctl=editMode?`<span class="x" data-del="${ri}:${p._id}">✕</span>`:'';
       return `<div class="blk${draft?' draft':''}" draggable="${editMode}" data-move="${ri}:${p._id}"
         style="bottom:${(p.position-1)*UPX}px;height:${p.u*UPX-1}px;background:${CAT[p.category]||CAT.other}"
         title="${esc(p.name)} · U${p.position} · ${p.u}U · ${draft?'미태그(작업본)':esc(p.release)}">
-        <span class="bnm">${esc(p.name)}</span>${ctl}</div>`;
+        <span class="bnm">${esc(p.name)}</span>${info}${ctl}</div>`;
     }).join('');
     return `<div class="rackcol"><div class="rhead">▣ ${esc(rk.id)} <small>${esc(rk.rack_type)} · ${rk.rack_u}U</small></div>
       <div class="rackbody" style="height:${rk.rack_u*UPX}px">${slots}${blks}</div></div>`;
   }).join('');
-  wireCanvas(); renderTree();
+  wireCanvas(); wireSummaryControls(); renderTree();
+}
+// summary ⓘ on placed blocks — active in both view and edit mode
+function wireSummaryControls(){
+  scene.querySelectorAll('.blk .i[data-info]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const [ri,id]=el.dataset.info.split(':').map(Number);
+    const p=RACKS[ri]&&RACKS[ri].placements.find(x=>x._id===id);
+    if(p&&p.device) showSummary(p.device,p.name,el); else toast('이 장비는 슬러그가 없어 요약을 볼 수 없습니다');
+  }));
 }
 function renderTree(){
   const order=['server','network','storage','other']; let total=0;
@@ -203,10 +283,11 @@ function renderPalette(){
   if(!pool.length){ el.innerHTML='<div class="phint">후보풀이 비었습니다 — <b>후보풀</b> 화면에서 1차 후보를 먼저 뽑으세요.</div>'; return; }
   el.innerHTML=items.map((d,i)=>`<div class="chip${armed&&armed._k===d._k?' armed':''}" draggable="true" data-i="${pool.indexOf(d)}" title="${esc(d.name)} · ${d.u}U">
     <span class="dot" style="background:${CAT[d.category]||CAT.other}"></span>
-    <span class="cn">${esc(d.name)}</span><span class="cu">${d.u}U</span></div>`).join('')
+    <span class="cn">${esc(d.name)}</span><span class="cu">${d.u}U</span>
+    <span class="sinfo" data-sinfo="1" title="장비 요약 보기">ⓘ</span></div>`).join('')
     || '<div class="phint">검색 결과 없음</div>';
   el.querySelectorAll('.chip').forEach(c=>{
-    c.addEventListener('click',()=>arm(pool[+c.dataset.i]));
+    c.addEventListener('click',e=>{ if(e.target.closest('[data-sinfo]')){ const d=pool[+c.dataset.i]; showSummary(d.slug,d.name,e.target); return; } arm(pool[+c.dataset.i]); });
     c.addEventListener('dragstart',e=>{ payload={type:'new',dev:pool[+c.dataset.i]}; e.dataTransfer.setData('text/plain','new'); });
   });
 }

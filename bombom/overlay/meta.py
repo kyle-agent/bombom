@@ -49,6 +49,25 @@ def load_fields(fields_path: Path) -> list[FieldDef]:
     return [FieldDef.model_validate(f) for f in doc.get("fields", [])]
 
 
+def save_fields(fields_path: Path, defs: list[FieldDef]) -> Path:
+    """Serialize the full field-def list back to meta/fields.yaml (round-trips every applies_to).
+
+    Only non-default attributes are written so the file stays readable. Returns the path."""
+    fields_path = Path(fields_path)
+    fields_path.parent.mkdir(parents=True, exist_ok=True)
+    out = []
+    for d in defs:
+        row = {"key": d.key, "label": d.label or d.key, "type": d.type,
+               "applies_to": d.applies_to, "scope": d.scope}
+        if d.required:
+            row["required"] = True
+        if d.options:
+            row["options"] = list(d.options)
+        out.append(row)
+    fields_path.write_text(yaml.safe_dump({"fields": out}, allow_unicode=True, sort_keys=False))
+    return fields_path
+
+
 class TypeMetaBook:
     """Type-level meta values (slug → {field: value}) from meta/devicetypes/*.yaml."""
 

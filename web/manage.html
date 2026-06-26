@@ -96,6 +96,23 @@
   #toast .t.bad{border-color:#7f1d1d;color:#fecaca}
   @keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   @media(max-width:720px){ .addform input.id,.addform input.nm{width:100%} }
+  /* ── candidate meta-fields card ── */
+  .metacard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .metacard > .head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .metacard > .head h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .metacard .help{color:var(--muted);font-size:12px;margin:6px 0 10px;line-height:1.5}
+  .metalist{display:flex;flex-direction:column;gap:6px}
+  .metarow{display:flex;align-items:center;gap:10px;padding:7px 10px;background:#f8fafc;border:1px solid var(--line2);border-radius:8px;flex-wrap:wrap}
+  .metarow .mkey{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--ink);background:#fff;border:1px solid var(--line2);border-radius:5px;padding:2px 7px}
+  .metarow .mlabel{font-weight:600;font-size:12.5px}
+  .metarow .mopts{color:var(--muted);font-size:11px}
+  .metarow .spacer{flex:1}
+  .mbadge{font-size:10px;text-transform:uppercase;letter-spacing:.5px;border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:5px;padding:1px 6px;font-weight:600}
+  .mbadge.req{border-color:#fcd34d;background:#fffbeb;color:#b45309}
+  .meta-empty{color:#94a3b8;font-size:12.5px;padding:10px 2px}
+  .addform select{border:1px solid var(--line2);border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff}
+  .addform .opts{width:200px}
+  .addform label.chk{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer}
 </style>
 </head>
 <body>
@@ -122,6 +139,32 @@
     <span>ℹ️</span>
     <span>여기서는 <b>조직 계층만 정의합니다.</b> 실제 랙 추가·모델 지정은
       <a href="/edit">랙관리</a>에서, 장비 배치는 <a href="/place">배치 화면</a>에서 진행합니다.</span>
+  </div>
+
+  <!-- candidate custom meta-fields -->
+  <div class="metacard">
+    <div class="head">
+      <h3>후보 부가정보 항목</h3>
+      <span class="spacer"></span>
+      <button type="button" class="addbtn" data-toggle="add-meta">＋ 항목 추가</button>
+    </div>
+    <p class="help">후보풀 장비에 입력할 부가정보 항목입니다. (NetBox 원본에 없는, 우리 조직이 관리하는 값 — 예: 리드타임, 보증, 담당자)</p>
+    <div class="addform" id="add-meta">
+      <input type="text" class="id" placeholder="key (영문/숫자/.-_)" data-field="key">
+      <input type="text" class="nm" placeholder="표시 이름 (label)" data-field="label">
+      <select data-field="type">
+        <option value="string">string</option>
+        <option value="int">int</option>
+        <option value="enum">enum</option>
+        <option value="bool">bool</option>
+        <option value="date">date</option>
+      </select>
+      <input type="text" class="opts" placeholder="옵션 (쉼표로 구분)" data-field="options" style="display:none">
+      <label class="chk"><input type="checkbox" data-field="required"> 필수</label>
+      <button type="button">＋ 항목 추가</button>
+      <span class="err"></span>
+    </div>
+    <div class="metalist" id="metalist"></div>
   </div>
 
   <!-- top-level add offering -->
@@ -199,6 +242,106 @@ function friendly(err){
 
 // ── state ────────────────────────────────────────────────────────────
 let HIER = [];
+let META = [];   // candidate custom meta-field definitions
+
+// ── candidate meta-fields ────────────────────────────────────────────
+function renderMeta(){
+  const list = document.getElementById('metalist');
+  if(!list) return;
+  if(!META.length){
+    list.innerHTML = '<div class="meta-empty">아직 정의된 후보 부가정보 항목이 없습니다.</div>';
+    return;
+  }
+  list.innerHTML = META.map(function(f){
+    const opts = (f.type === 'enum' && (f.options||[]).length)
+      ? '<span class="mopts">[' + f.options.map(esc).join(', ') + ']</span>' : '';
+    const req = f.required ? '<span class="mbadge req">필수</span>' : '';
+    return '<div class="metarow">'
+      + '<span class="mkey">' + esc(f.key) + '</span>'
+      + '<span class="mlabel">' + esc(f.label || f.key) + '</span>'
+      + '<span class="mbadge">' + esc(f.type || 'string') + '</span>'
+      + opts + req
+      + '<span class="spacer"></span>'
+      + '<button type="button" class="delbtn" data-delmeta="' + esc(f.key) + '">✕ 삭제</button>'
+      + '</div>';
+  }).join('');
+}
+
+function loadMeta(){
+  return fetch('/api/meta/fields?applies_to=candidate')
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data){
+      META = Array.isArray(data) ? data : [];
+      renderMeta();
+    })
+    .catch(function(err){
+      META = [];
+      renderMeta();
+      toast('부가정보 항목을 불러오지 못했습니다: ' + (err && err.message ? err.message : err), 'bad');
+    });
+}
+
+// add a candidate meta-field via POST
+async function submitMetaForm(form){
+  const errEl = form.querySelector('.err');
+  errEl.textContent = '';
+  const key = (form.querySelector('input[data-field="key"]').value || '').trim();
+  const label = (form.querySelector('input[data-field="label"]').value || '').trim();
+  const type = form.querySelector('select[data-field="type"]').value;
+  const required = form.querySelector('input[data-field="required"]').checked;
+  const optsRaw = (form.querySelector('input[data-field="options"]').value || '').trim();
+  if(!key){ errEl.textContent = 'key를 입력하세요'; return; }
+  if(!/^[A-Za-z0-9._-]+$/.test(key)){ errEl.textContent = 'key 형식 오류 (영문/숫자/.-_)'; return; }
+  const options = (type === 'enum')
+    ? optsRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean)
+    : [];
+  if(type === 'enum' && !options.length){ errEl.textContent = 'enum 옵션을 입력하세요'; return; }
+
+  const body = { key:key, label:label || key, type:type, options:options, required:required, applies_to:'candidate' };
+  try{
+    const data = await postJSON('/api/meta/fields', body);
+    META = (data && data.fields) ? data.fields : META;
+    form.querySelector('input[data-field="key"]').value = '';
+    form.querySelector('input[data-field="label"]').value = '';
+    form.querySelector('input[data-field="options"]').value = '';
+    form.querySelector('input[data-field="required"]').checked = false;
+    form.classList.remove('show');
+    renderMeta();
+    toast('부가정보 항목 “' + (label || key) + '” 추가됨', 'ok');
+  }catch(err){
+    let msg;
+    if(err && err.status === 409) msg = '이미 있는 key';
+    else if(err && err.status === 422) msg = 'type 오류';
+    else msg = (err && err.message) ? err.message : '추가에 실패했습니다';
+    errEl.textContent = msg;
+    toast(msg, 'bad');
+  }
+}
+
+// delete a candidate meta-field via DELETE
+async function submitDeleteMeta(btn){
+  const key = btn.getAttribute('data-delmeta');
+  if(!key) return;
+  if(!window.confirm('정말 삭제할까요? ' + key)) return;
+  try{
+    const res = await fetch('/api/meta/fields/' + encodeURIComponent(key) + '?applies_to=candidate', { method:'DELETE' });
+    let data = null;
+    try { data = await res.json(); } catch(e){ data = null; }
+    if(!res.ok){
+      if(res.status === 404){ toast('이미 삭제된 항목입니다', 'bad'); await loadMeta(); return; }
+      const detail = (data && data.detail) ? data.detail : ('HTTP ' + res.status);
+      toast(detail, 'bad');
+      return;
+    }
+    await loadMeta();
+    toast('삭제됨 → ' + key, 'ok');
+  }catch(err){
+    toast((err && err.message) ? err.message : '삭제에 실패했습니다', 'bad');
+  }
+}
 
 // ── tree render ──────────────────────────────────────────────────────
 function rackTypeChip(rt, zCtx){
@@ -488,6 +631,17 @@ document.addEventListener('click', function(ev){
     document.getElementById('add-offering').classList.toggle('show');
     return;
   }
+  // toggle the candidate meta-field form
+  if(t.matches('[data-toggle="add-meta"]')){
+    document.getElementById('add-meta').classList.toggle('show');
+    return;
+  }
+  // delete a candidate meta-field
+  const delMetaBtn = t.closest('.delbtn[data-delmeta]');
+  if(delMetaBtn){
+    submitDeleteMeta(delMetaBtn);
+    return;
+  }
   // delete an empty node
   const delBtn = t.closest('.delbtn[data-del]');
   if(delBtn){
@@ -518,10 +672,22 @@ document.addEventListener('click', function(ev){
     const form = submitBtn.closest('.addform');
     if(form.id === 'add-offering'){
       submitOfferingForm(form);
+    } else if(form.id === 'add-meta'){
+      submitMetaForm(form);
     } else {
       submitForm(form);
     }
     return;
+  }
+});
+
+// toggle the enum options input when the meta-field type changes
+document.addEventListener('change', function(ev){
+  const t = ev.target;
+  if(!(t instanceof Element)) return;
+  if(t.matches('#add-meta select[data-field="type"]')){
+    const optsInput = document.querySelector('#add-meta input[data-field="options"]');
+    if(optsInput) optsInput.style.display = (t.value === 'enum') ? '' : 'none';
   }
 });
 
@@ -534,6 +700,7 @@ document.addEventListener('keydown', function(ev){
   if(!form) return;
   ev.preventDefault();
   if(form.id === 'add-offering'){ submitOfferingForm(form); }
+  else if(form.id === 'add-meta'){ submitMetaForm(form); }
   else { submitForm(form); }
 });
 
@@ -565,6 +732,7 @@ async function submitOfferingForm(form){
 // ── load ─────────────────────────────────────────────────────────────
 (function load(){
   renderSkeleton();
+  loadMeta();
   fetch('/api/hierarchy')
     .then(function(res){
       if(!res.ok) throw new Error('HTTP ' + res.status);

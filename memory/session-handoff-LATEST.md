@@ -25,9 +25,11 @@ Run `bombom serve` then:
 - `/` (home.html) — **메인 대시보드**. ① 오퍼링→리전→존 구조(빈 노드 포함, 존 칩→`/place`),
   ② 랙타입별/리전별/오퍼링별 투자 막대, KPI=전체 랙·서버·리전·존 수. 검은 총액 히어로 없음.
   `GET /api/overview?path=offerings`.
-- `/candidates` — **후보풀**: 등록된 후보를 카테고리(server/network/storage/other)별 목록으로
-  보여주고 **인라인 가격 입력** + 비고/메타 필드. `＋ 후보 추가`는 카탈로그 검색 팝업(85+ 결과).
-  후보=`candidates/pool.yaml`, 가격=`pricing/`. `GET /api/candidate-fields`.
+- `/candidates` — **후보풀**: 행마다 **두 영역 분리** — ① **부가정보(우리, 편집)**: 단가·비고 +
+  후보 메타 필드(타입별 입력, accent 밴드/배지), ② **원본 사양(NetBox, 읽기전용)**: `▸ 원본 사양`
+  펼치면 `GET /api/catalog/device/{slug}`로 전체 스펙(물리/전원 maximum_draw/인터페이스/모듈베이/
+  데이터시트…). `＋ 후보 추가` 팝업도 각 결과 `상세` 토글로 전체 확인 후 추가. 후보=
+  `candidates/pool.yaml`, 가격=`pricing/`, 메타=`meta/fields.yaml`(applies_to:candidate).
 - `/edit` — **랙관리 · 랙타입 분류**(재설계). 전체 랙을 **랙타입별 그룹 표**로 보여주고 각 행의
   **랙타입 셀렉트**로 재분류 → `POST /api/rack/move`(같은 존 내 rack-type 디렉터리 이동, 검증·
   롤백·단일 커밋; `scaffold.move_rack`). `＋ 랙 추가`=카탈로그(`kind=rack`) 모델 모달(존+타입+모델+
@@ -40,8 +42,13 @@ Run `bombom serve` then:
   `unit_cost`. `GET /api/layout?path=` + 랙별 `GET /api/rack`.
 - `/summary` — **투자 리포트**: 오퍼링/리전/존/랙타입 그룹 집계 + 릴리즈 필터
   (`/api/overview?release=`).
-- `/manage` — **기준정보**: 조직 계층(오퍼링·리전·존·랙타입) 골격만. 상단 카운트 스트립 +
-  역할 분리 안내. 노드 추가·삭제(빈 노드)·서브트리 복제. `/api/hierarchy`.
+- `/manage` — **기준정보**: 조직 계층(오퍼링·리전·존·랙타입) 골격 + **후보 부가정보 항목 관리**
+  (어떤 커스텀 부가정보를 쓸지 정의: `GET/POST /api/meta/fields`, `DELETE /api/meta/fields/{key}`,
+  타입 string/int/enum/bool/date → `meta/fields.yaml` 기록 후 `ws.fields` 리로드). 카운트 스트립 +
+  역할 안내. 노드 추가·삭제(빈 노드)·서브트리 복제. `/api/hierarchy`.
+- **장비 상세 API**: `GET /api/catalog/device/{slug}` — NetBox 전체 스펙(`components`) +
+  파생 `summary`(max_power_w·port_summary·counts·물리·datasheets). 후보풀/후보추가=전체,
+  /place·/placed=요약(장비행 `ⓘ 요약` 팝오버). 원본 카탈로그는 읽기전용, 부가정보만 우리 오버레이.
 - 확정 워크플로우 `bombom/confirm/`, 보고서 export `GET /api/report.html`은 백엔드 유지.
 - **메뉴 비노출(백엔드는 유지):** `/diff`(변경 비교, `bombom/release/diff.py`), `/health`(검증,
   `bombom/health.py`), `/search`(전역 검색). 라우트·테스트 살아있음. 완전 삭제는 사용자 확인 후.

@@ -77,6 +77,20 @@
  .row .tg{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:2px 11px;font-size:12px;font-weight:600;min-width:74px;justify-content:center}
  .row .tg .sq{width:7px;height:7px;border-radius:2px}
  .empty{padding:50px;text-align:center;color:#94a3b8}
+ /* device summary (read-only, NetBox 요약) */
+ .row .info{flex:0 0 auto;border:1px solid #e2e8f0;background:#fff;color:#64748b;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+ .row .info:hover{border-color:#2563eb;color:#2563eb}
+ .sumrow{padding:8px 14px 10px 32px;border-bottom:1px solid #f6f8fa;background:#fbfdff;font-size:12px;color:#0f172a}
+ .sumrow .sline{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
+ .sumrow .nbtag{display:inline-flex;align-items:center;gap:5px;border:1px solid #e2e8f0;border-radius:8px;padding:1px 8px;color:#64748b;font-weight:600;font-size:11px;background:#fff}
+ .sumrow .nbtag .d{width:6px;height:6px;border-radius:50%;background:#94a3b8}
+ .sumrow .sphys{color:#0f172a}
+ .sumrow .ports{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+ .sumrow .pchip{border:1px solid #e7ebf0;border-radius:8px;padding:1px 8px;font-size:11px;color:#334155;background:#fff;font-variant-numeric:tabular-nums}
+ .sumrow .ds{margin-top:6px}
+ .sumrow .ds a{color:#2563eb;text-decoration:none;font-size:11px;font-weight:600}
+ .sumrow .ds a:hover{text-decoration:underline}
+ .sumrow .muted{color:#94a3b8}
  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
  #toast.on{opacity:.97}
 </style>
@@ -104,6 +118,47 @@ const PATH=new URLSearchParams(location.search).get('path')||'offerings';
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function won(n){return '₩'+Number(n||0).toLocaleString();}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1900);}
+
+// ── device summary (lazy, read-only, cached) ─────────────────────────────
+const SUM_CACHE={};                       // slug -> summary obj | {error}
+const SUM_OPEN={};                         // _id -> true (expanded rows)
+const PORT_SHORT={'100gbase-x-qsfp28':'100G','40gbase-x-qsfpp':'40G','25gbase-x-sfp28':'25G','10gbase-x-sfpp':'10G','1000base-t':'1G','1000base-x-sfp':'1G'};
+function portLabel(t){ return PORT_SHORT[t] || (t||'?'); }
+function fmtDepth(full){ return full===true?'풀뎁스':(full===false?'하프뎁스':'뎁스 미상'); }
+async function loadSummary(slug){
+  if(SUM_CACHE[slug]) return SUM_CACHE[slug];
+  try{
+    const r=await fetch('/api/catalog/device/'+encodeURIComponent(slug));
+    if(!r.ok){ return SUM_CACHE[slug]={error:r.status===404?'요약 정보 없음':'요약 조회 실패 ('+r.status+')'}; }
+    return SUM_CACHE[slug]=await r.json();
+  }catch(e){ return SUM_CACHE[slug]={error:'요약 조회 실패'}; }
+}
+function summaryHtml(d){
+  if(!d||d.error) return `<span class="muted">${esc((d&&d.error)||'요약 없음')}</span>`;
+  const s=d.summary||{}, parts=[];
+  if(d.u_height!=null) parts.push('U'+esc(d.u_height));
+  parts.push(fmtDepth(d.is_full_depth));
+  if(d.weight!=null) parts.push(esc(d.weight)+esc(d.weight_unit||''));
+  if(d.airflow) parts.push('공조 '+esc(d.airflow));
+  if(s.max_power_w!=null) parts.push('최대 '+esc(s.max_power_w)+'W');
+  const ports=(s.port_summary||[]).map(p=>`<span class="pchip">${esc(portLabel(p.type))}×${esc(p.count)}</span>`).join('');
+  const ds=(d.datasheets||[]).filter(x=>x&&x.url);
+  return `<div class="sline"><span class="nbtag"><span class="d"></span>NetBox 요약</span>`
+    + `<span class="sphys">${parts.join(' · ')}</span></div>`
+    + (ports?`<div class="ports">${ports}</div>`:'')
+    + (ds.length?`<div class="ds">${ds.map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">📄 ${esc(x.label||'데이터시트')}</a>`).join(' · ')}</div>`:'');
+}
+async function toggleSummary(slug,_id){
+  if(SUM_OPEN[_id]){ delete SUM_OPEN[_id]; render(); return; }
+  SUM_OPEN[_id]=true;
+  if(!SUM_CACHE[slug]){ render(); await loadSummary(slug); }   // render placeholder, then fill
+  render();
+}
+function summaryRowHtml(p){
+  if(!SUM_OPEN[p._id]) return '';
+  const d=SUM_CACHE[p.device];
+  return `<div class="sumrow">${d?summaryHtml(d):'<span class="muted">요약 불러오는 중…</span>'}</div>`;
+}
 
 // state
 let RACKS=[];          // {file,id,loc,model_slug,customs,placements:[{_id,device,name,category,position,u,release,meta,cost,_sel}]}
@@ -223,7 +278,8 @@ function render(){
           <span class="u">U${p.position}</span>
           <span class="cost" style="color:${p.cost==null?'#b45309':'#0f172a'}">${p.cost==null?'미가격':won(p.cost)}</span>
           <span class="tg" style="background:${has?col+'1f':'#f1f5f9'};color:${has?col:'#94a3b8'}">${has?`<span class="sq" style="background:${col}"></span>`:''}${esc(id||'미태그')}</span>
-        </div>`;
+          <span data-stop="1"><button class="info" data-sum="${esc(rk.file)}|${esc(p._id)}" title="장비 요약 보기">ⓘ 요약</button></span>
+        </div>`+summaryRowHtml(p);
       }).join('');
       h+=`<div class="rack"><div class="rh"><label><input type="checkbox" ${allChecked?'checked':''} data-rackall="${esc(rk.file)}"><b>▣ ${esc(rk.id)}</b></label>
         <span class="loc">${esc(rk.loc)}</span><span class="cnt">${rk.placements.length}대${ut?' · 미태그 '+ut:''}</span></div>${body}</div>`;
@@ -237,6 +293,7 @@ const app=document.getElementById('app');
 app.addEventListener('click',e=>{
   const t=e.target;
   const mb=t.closest('[data-m]'); if(mb){ mode=mb.dataset.m; render(); return; }
+  const sum=t.closest('[data-sum]'); if(sum){ const [f,id]=sum.dataset.sum.split('|'); const rk=RACKS.find(r=>r.file===f); const p=rk&&rk.placements.find(x=>x._id===id); if(p) toggleSummary(p.device,p._id); return; }
   if(t.closest('[data-stop]')) return;                 // checkbox cell — let change fire, no row click
   const tag=t.closest('[data-tag]'); if(tag){ activeTag=tag.dataset.tag==='__none'?'':tag.dataset.tag; render(); return; }
   if(t.closest('#defBtn')){ showForm=true; render(); return; }

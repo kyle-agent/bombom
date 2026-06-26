@@ -158,6 +158,21 @@ def capture(client: _AsgiClient, root: Path) -> dict[str, dict]:
         grab("/api/catalog/search", {"q": "", "kind": "device", "pool": pool, "limit": "500"})
     grab("/api/catalog/search", {"q": "", "kind": "rack", "limit": "500"})
 
+    # candidate 부가정보 field definitions (기준정보 관리 화면)
+    grab("/api/meta/fields", {"applies_to": "candidate"})
+
+    # full NetBox device detail (후보풀 전체 상세 + 후보추가 팝업 상세 + 배치/태그 요약).
+    # cover the pool, every placed device, and the baked device search corpus (add-popup).
+    detail_slugs: set[str] = set()
+    detail_slugs.update(c["slug"] for c in json.loads(cache[_key("/api/candidates", {})]["body"]))
+    for lr in load_racks(root).racks:
+        detail_slugs.update(pl.device for pl in lr.design.placements)
+    dev_corpus = json.loads(
+        cache[_key("/api/catalog/search", {"q": "", "kind": "device", "pool": "0", "limit": "500"})]["body"])
+    detail_slugs.update(r["slug"] for r in dev_corpus if r.get("slug"))
+    for slug in sorted(detail_slugs):
+        grab(f"/api/catalog/device/{slug}", {})
+
     # release diff — every ordered pair among the sealed tags + WORKING, root + per zone
     confs = json.loads(cache[_key("/api/confirm", {})]["body"])
     refs = [c["tag"] for c in confs if c.get("tag")] + ["WORKING"]
