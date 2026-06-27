@@ -1,14 +1,26 @@
 # bombom
 
-> Status: bootstrapped for agentic development. Stack not yet decided — run
-> `/project-init` to lock it in.
+**bombom** is a tool for cloud-infrastructure designers to select hardware, lay it out in racks
+under an **Offering → Region → Zone → Rack-Type → Rack → Device** hierarchy, and derive the
+capital investment (**BOM / CAPEX**). Hardware specs are reused read-only from the NetBox
+community `devicetype-library`; bombom adds the price overlay, the org placement model, and a
+NetBox-style rack elevation view.
 
-This repo is set up for AI-assisted development with [Claude Code](https://claude.com/claude-code),
-using the [claude-code-skills](https://github.com/AlexZio00/claude-code-skills) lifecycle
-pipeline. Agents have a full harness: lifecycle skills, review agents, tiered rules, a
-session-start hook, and a memory layer.
+- **Live demo (read-only):** https://kyle-agent.github.io/bombom/
+- **Hand-off / getting started:** [`docs/HANDOFF.md`](docs/HANDOFF.md) — quick start, routes, API, code map
+- **Design & rationale:** [`docs/DESIGN.md`](docs/DESIGN.md) · ADRs in [`docs/decisions/`](docs/decisions/)
 
-## What's installed
+Stack: Python + FastAPI backend (`bombom/`), dependency-free vanilla-HTML pages (`web/`),
+Git/YAML as the source of truth, a rebuildable SQLite catalog index. See **Running the app** below.
+
+---
+
+This repo is also set up for AI-assisted development with [Claude Code](https://claude.com/claude-code)
+(the [claude-code-skills](https://github.com/AlexZio00/claude-code-skills) lifecycle pipeline):
+lifecycle skills, review agents, tiered rules, a session-start hook, and a memory layer. If your
+team doesn't use Claude Code, the `.claude/`, `memory/`, and `BRIEF.md` paths can be ignored or removed.
+
+## Dev harness (Claude Code) — what's installed
 
 | Path | What it is |
 |------|------------|
