@@ -108,17 +108,15 @@ FIELDS = (
     "  - { key: serial, label: 시리얼, type: string, required: true,\n"
     "      applies_to: placement, scope: \"category:server\" }\n"
     "  - { key: owner, label: 담당팀, type: string, required: false, applies_to: placement, scope: all }\n"
-    "  - { key: lead_time_weeks, label: 리드타임(주), type: number, required: true,\n"
-    "      applies_to: candidate, scope: all }\n"
 )
 CANDIDATES = (
     "candidates:\n"
-    f"  - {{ slug: {SERVER_2U}, added_at: '2026-06-20', meta: {{ lead_time_weeks: 8 }} }}\n"
-    f"  - {{ slug: {SERVER_1U}, added_at: '2026-06-20', meta: {{ lead_time_weeks: 6 }} }}\n"
-    f"  - {{ slug: {GPU_3U}, added_at: '2026-06-20', meta: {{ lead_time_weeks: 16 }} }}\n"
-    f"  - {{ slug: {STOR_2U}, added_at: '2026-06-20', meta: {{ lead_time_weeks: 10 }} }}\n"
-    f"  - {{ slug: {SW_1U}, added_at: '2026-06-20', meta: {{ lead_time_weeks: 5 }} }}\n"
-    f"  - {{ slug: {SERVER_1U_B}, added_at: '2026-06-20' }}  # 필수 lead_time 누락 → /health 갭\n"
+    f"  - {{ slug: {SERVER_2U}, added_at: '2026-06-20' }}\n"
+    f"  - {{ slug: {SERVER_1U}, added_at: '2026-06-20' }}\n"
+    f"  - {{ slug: {GPU_3U}, added_at: '2026-06-20' }}\n"
+    f"  - {{ slug: {STOR_2U}, added_at: '2026-06-20' }}\n"
+    f"  - {{ slug: {SW_1U}, added_at: '2026-06-20' }}\n"
+    f"  - {{ slug: {SERVER_1U_B}, added_at: '2026-06-20' }}\n"
 )
 
 

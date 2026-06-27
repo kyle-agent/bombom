@@ -62,15 +62,13 @@ STATE_A: dict[str, str] = {
         "  - { key: serial, label: 시리얼, type: string, required: true,\n"
         "      applies_to: placement, scope: \"category:server\" }\n"
         "  - { key: owner, label: 담당팀, type: string, required: false, applies_to: placement, scope: all }\n"
-        "  - { key: lead_time_weeks, label: 리드타임(주), type: number, required: true,\n"
-        "      applies_to: candidate, scope: all }\n"
     ),
     "candidates/pool.yaml": (
-        "# 후보풀: 가격/메타 입력 대상. 일부러 불완전하게 둬서 /health 갭을 보여준다.\n"
+        "# 후보풀: 가격 입력 대상. 일부러 불완전하게 둬서 /health 갭을 보여준다.\n"
         "candidates:\n"
-        "  - { slug: dell-poweredge-r760, added_at: '2026-06-20', meta: { lead_time_weeks: 8 } }\n"
-        "  - { slug: dell-poweredge-r650, added_at: '2026-06-20', meta: { lead_time_weeks: 12 } }  # 미가격 후보\n"
-        "  - { slug: dell-poweredge-r660, added_at: '2026-06-20' }  # 필수 lead_time 누락\n"
+        "  - { slug: dell-poweredge-r760, added_at: '2026-06-20' }\n"
+        "  - { slug: dell-poweredge-r650, added_at: '2026-06-20' }  # 미가격 후보\n"
+        "  - { slug: dell-poweredge-r660, added_at: '2026-06-20' }\n"
     ),
     OFF.format(reg="kr-east", az="az1", rt="data", rack="R01"): (
         _rack("vertiv-vr3300")
